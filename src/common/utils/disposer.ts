@@ -9,7 +9,7 @@ interface Extendable<T> {
   push(...vals: T[]): void;
 }
 
-export type ExtendableDisposer = Disposer & Extendable<Disposer>;
+export type ExtendableDisposer = Disposer & Extendable<Disposer | { dispose: Disposer }>;
 
 export function disposer(...args: (Disposer | undefined | null)[]): ExtendableDisposer {
   const res = () => {
@@ -17,8 +17,14 @@ export function disposer(...args: (Disposer | undefined | null)[]): ExtendableDi
     args.length = 0;
   };
 
-  res.push = (...vals: Disposer[]) => {
-    args.push(...vals);
+  res.push = (...vals: (Disposer | { dispose: Disposer })[]) => {
+    for (const val of vals) {
+      if (typeof val === "function") {
+        args.push(val);
+      } else {
+        args.push(() => val.dispose());
+      }
+    }
   };
 
   return res;

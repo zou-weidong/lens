@@ -3,7 +3,7 @@
  * Licensed under MIT License. See LICENSE in root directory for more information.
  */
 
-import "./hpa-details.scss";
+import "./horizontal-pod-autoscaler-details.scss";
 
 import React from "react";
 import { observer } from "mobx-react";
@@ -104,6 +104,8 @@ class NonInjectedHpaDetails extends React.Component<HpaDetailsProps & Dependenci
               {JSON.stringify(metric.external.metricSelector)}
             </>
           );
+        default:
+          return <>Unknown metric type</>;
       }
     };
 

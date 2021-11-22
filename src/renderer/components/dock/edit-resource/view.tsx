@@ -6,20 +6,17 @@
 import React from "react";
 import { autorun, makeObservable, observable } from "mobx";
 import { disposeOnUnmount, observer } from "mobx-react";
-import yaml from "js-yaml";
 import type { DockTab, TabId } from "../dock/store";
-import type { EditingResource, EditResourceTabStore } from "./store";
+import type { EditResourceTabStore } from "./store";
 import { InfoPanel } from "../info-panel";
 import { Badge } from "../../badge";
 import { EditorPanel } from "../editor-panel";
 import { Spinner } from "../../spinner";
-import type { KubeObject } from "../../../../common/k8s-api/kube-object";
-import { createPatch } from "rfc6902";
 import { withInjectables } from "@ogre-tools/injectable-react";
 import editResourceTabStoreInjectable from "./store.injectable";
 import { noop, onceDefined } from "../../../utils";
 import closeDockTabInjectable from "../dock/close-dock-tab.injectable";
-import type { KubeObjectStore } from "../../../../common/k8s-api/kube-object.store";
+import yaml from "js-yaml";
 
 export interface EditResourceProps {
   tab: DockTab;
@@ -28,12 +25,6 @@ export interface EditResourceProps {
 interface Dependencies {
   editResourceStore: EditResourceTabStore;
   closeTab: (tabId: TabId) => void;
-}
-
-interface SaveDraftArgs {
-  tabData: EditingResource;
-  resource: KubeObject;
-  store: KubeObjectStore;
 }
 
 @observer
@@ -101,23 +92,23 @@ class NonInjectedEditResource extends React.Component<EditResourceProps & Depend
     return this.props.editResourceStore.getData(this.tabId);
   }
 
-  async save({ resource, store, tabData }: SaveDraftArgs) {
+  async save() {
     if (this.error) {
       return null;
     }
 
-    const currentVersion = yaml.load(this.draft);
-    const firstVersion = yaml.load(tabData.firstDraft ?? this.draft);
-    const patches = createPatch(firstVersion, currentVersion);
-    const updatedResource = await store.patch(resource, patches);
+    const result = await this.props.editResourceStore.commitEdits(this.tabId);
 
-    this.props.editResourceStore.clearInitialDraft(this.tabId);
+    if (!result) {
+      return;
+    }
+
+    const { kind, name } = result;
 
     return (
       <p>
-        {updatedResource.kind}
-        {" "}
-        <b>{updatedResource.getName()}</b>
+        {`${kind} `}
+        <b>{name}</b>
         {" updated."}
       </p>
     );
@@ -135,7 +126,7 @@ class NonInjectedEditResource extends React.Component<EditResourceProps & Depend
         <InfoPanel
           tabId={tabId}
           error={error}
-          submit={() => this.save({ resource, store, tabData })}
+          submit={() => this.save()}
           submitLabel="Save"
           submittingMessage="Applying.."
           controls={(
