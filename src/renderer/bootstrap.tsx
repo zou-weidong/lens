@@ -46,6 +46,7 @@ import kubernetesClusterCategoryInjectable from "../common/catalog/categories/ku
 import autoRegistrationInjectable from "../common/k8s-api/api-manager/auto-registration.injectable";
 import assert from "assert";
 import startFrameInjectable from "./start-frame/start-frame.injectable";
+import entityPreferencesStoreInjectable from "../common/entity-preferences/store.injectable";
 
 configurePackages(); // global packages
 registerCustomThemes(); // monaco editor themes
@@ -136,6 +137,9 @@ export async function bootstrap(di: DiContainer) {
   const clusterStore = di.inject(clusterStoreInjectable);
 
   await clusterStore.loadInitialOnRenderer();
+
+  // TODO replace with the runMany
+  di.inject(entityPreferencesStoreInjectable);
 
   // HotbarStore depends on: ClusterStore
   di.inject(hotbarStoreInjectable).load();
