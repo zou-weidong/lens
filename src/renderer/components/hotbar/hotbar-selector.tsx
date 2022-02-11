@@ -7,30 +7,35 @@ import styles from "./hotbar-selector.module.scss";
 import React, { useRef, useState } from "react";
 import { Icon } from "../icon";
 import { Badge } from "../badge";
-import hotbarManagerInjectable from "../../../common/hotbar-store.injectable";
 import { HotbarSwitchCommand } from "./hotbar-switch-command";
 import { Tooltip, TooltipPosition } from "../tooltip";
 import { observer } from "mobx-react";
-import type { Hotbar } from "../../../common/hotbar-types";
 import { withInjectables } from "@ogre-tools/injectable-react";
 import commandOverlayInjectable from "../command-palette/command-overlay.injectable";
 import { cssNames } from "../../utils";
+import type { Hotbar } from "../../../common/hotbars/hotbar";
+import type { SwitchHotbar } from "../../../common/hotbars/switch-hotbar.injectable";
+import { OrderDirection } from "../../../common/hotbars/store";
+import switchHotbarInjectable from "../../../common/hotbars/switch-hotbar.injectable";
+import type { GetDisplayIndex } from "../../../common/hotbars/get-display-index.injectable";
+import getDisplayIndexInjectable from "../../../common/hotbars/get-display-index.injectable";
 
 interface Dependencies {
-  hotbarManager: {
-    switchToPrevious: () => void;
-    switchToNext: () => void;
-    getActive: () => Hotbar;
-    getDisplayIndex: (hotbar: Hotbar) => string;
-  };
   openCommandOverlay: (component: React.ReactElement) => void;
+  switchHotbar: SwitchHotbar;
+  getDisplayIndex: GetDisplayIndex;
 }
 
 export interface HotbarSelectorProps extends Partial<Dependencies> {
   hotbar: Hotbar;
 }
 
-const NonInjectedHotbarSelector = observer(({ hotbar, hotbarManager, openCommandOverlay }: HotbarSelectorProps & Dependencies) => {
+const NonInjectedHotbarSelector = observer(({
+  hotbar,
+  openCommandOverlay,
+  switchHotbar,
+  getDisplayIndex,
+}: HotbarSelectorProps & Dependencies) => {
   const [tooltipVisible, setTooltipVisible] = useState(false);
   const tooltipTimeout = useRef<NodeJS.Timeout>();
 
@@ -44,11 +49,6 @@ const NonInjectedHotbarSelector = observer(({ hotbar, hotbarManager, openCommand
     tooltipTimeout.current = setTimeout(() => setTooltipVisible(false), 1500);
   }
 
-  function onArrowClick(switchTo: () => void) {
-    onTooltipShow();
-    switchTo();
-  }
-
   function onMouseEvent(event: React.MouseEvent) {
     clearTimer();
     setTooltipVisible(event.type == "mouseenter");
@@ -59,13 +59,16 @@ const NonInjectedHotbarSelector = observer(({ hotbar, hotbarManager, openCommand
       <Icon
         material="play_arrow"
         className={cssNames(styles.Icon, styles.previous)}
-        onClick={() => onArrowClick(hotbarManager.switchToPrevious)}
+        onClick={() => {
+          onTooltipShow();
+          switchHotbar(OrderDirection.PREVIOUS);
+        }}
       />
       <div className={styles.HotbarIndex}>
         <Badge
           id="hotbarIndex"
           small
-          label={hotbarManager.getDisplayIndex(hotbarManager.getActive())}
+          label={getDisplayIndex(hotbar)}
           onClick={() => openCommandOverlay(<HotbarSwitchCommand />)}
           className={styles.Badge}
           onMouseEnter={onMouseEvent}
@@ -79,15 +82,23 @@ const NonInjectedHotbarSelector = observer(({ hotbar, hotbarManager, openCommand
           {hotbar.name}
         </Tooltip>
       </div>
-      <Icon material="play_arrow" className={styles.Icon} onClick={() => onArrowClick(hotbarManager.switchToNext)} />
+      <Icon
+        material="play_arrow"
+        className={styles.Icon}
+        onClick={() => {
+          onTooltipShow();
+          switchHotbar(OrderDirection.NEXT);
+        }}
+      />
     </div>
   );
 });
 
 export const HotbarSelector = withInjectables<Dependencies, HotbarSelectorProps>(NonInjectedHotbarSelector, {
   getProps: (di, props) => ({
-    hotbarManager: di.inject(hotbarManagerInjectable),
-    openCommandOverlay: di.inject(commandOverlayInjectable).open,
     ...props,
+    openCommandOverlay: di.inject(commandOverlayInjectable).open,
+    switchHotbar: di.inject(switchHotbarInjectable),
+    getDisplayIndex: di.inject(getDisplayIndexInjectable),
   }),
 });

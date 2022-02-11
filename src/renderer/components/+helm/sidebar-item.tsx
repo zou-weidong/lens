@@ -6,28 +6,34 @@ import React from "react";
 import { withInjectables } from "@ogre-tools/injectable-react";
 import type { IComputedValue } from "mobx";
 import { observer } from "mobx-react";
-import { isActiveRoute } from "../../navigation";
 import { Icon } from "../icon";
-import { SidebarItem } from "../layout/sidebar-item";
+import { SidebarItem } from "../layout/sidebar/item";
 import type { TabLayoutRoute } from "../layout/tab-layout";
-import { renderTabRoutesSidebarItems } from "../layout/tab-routes-sidebar-items";
+import renderTabRoutesSidebarItemsInjectable, { RenderTabRoutesSidebarItems } from "../layout/render-tab-routes-sidebar-items.injectable";
 import { helmRoute, helmURL } from "../../../common/routes";
 import networkRouteTabsInjectable from "./route-tabs.injectable";
+import isRouteActiveInjectable, { type IsRouteActive } from "../../navigation/is-route-active.injectable";
 
 export interface HelmSidebarItemProps {}
 
 interface Dependencies {
   routes: IComputedValue<TabLayoutRoute[]>;
+  renderTabRoutesSidebarItems: RenderTabRoutesSidebarItems;
+  isRouteActive: IsRouteActive;
 }
 
-const NonInjectedHelmSidebarItem = observer(({ routes }: Dependencies & HelmSidebarItemProps) => {
+const NonInjectedHelmSidebarItem = observer(({
+  routes,
+  renderTabRoutesSidebarItems,
+  isRouteActive,
+}: Dependencies & HelmSidebarItemProps) => {
   const tabRoutes = routes.get();
 
   return (
     <SidebarItem
       id="helm"
       text="Helm"
-      isActive={isActiveRoute(helmRoute)}
+      isActive={isRouteActive(helmRoute)}
       url={helmURL()}
       icon={<Icon svg="helm" />}
     >
@@ -38,7 +44,9 @@ const NonInjectedHelmSidebarItem = observer(({ routes }: Dependencies & HelmSide
 
 export const HelmSidebarItem = withInjectables<Dependencies, HelmSidebarItemProps>(NonInjectedHelmSidebarItem, {
   getProps: (di, props) => ({
-    routes: di.inject(networkRouteTabsInjectable),
     ...props,
+    routes: di.inject(networkRouteTabsInjectable),
+    renderTabRoutesSidebarItems: di.inject(renderTabRoutesSidebarItemsInjectable),
+    isRouteActive: di.inject(isRouteActiveInjectable),
   }),
 });

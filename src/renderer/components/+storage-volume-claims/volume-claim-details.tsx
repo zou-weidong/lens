@@ -10,27 +10,36 @@ import { makeObservable, observable, reaction } from "mobx";
 import { disposeOnUnmount, observer } from "mobx-react";
 import { DrawerItem, DrawerTitle } from "../drawer";
 import { Badge } from "../badge";
-import { podsStore } from "../+workloads-pods/pods.store";
-import { Link } from "react-router-dom";
 import { ResourceMetrics } from "../resource-metrics";
 import { VolumeClaimDiskChart } from "./volume-claim-disk-chart";
 import type { KubeObjectDetailsProps } from "../kube-object-details";
 import { getMetricsForPvc, type IPvcMetrics, PersistentVolumeClaim } from "../../../common/k8s-api/endpoints";
-import { getActiveClusterEntity } from "../../api/catalog-entity-registry";
-import { ClusterMetricsResourceType } from "../../../common/cluster-types";
+import { ClusterMetricsResourceType } from "../../../common/clusters/cluster-types";
 import { KubeObjectMeta } from "../kube-object-meta";
-import { getDetailsUrl } from "../kube-detail-params";
-import { boundMethod } from "../../utils";
+import { prevDefault } from "../../utils";
 import logger from "../../../common/logger";
+import type { ShouldDisplayMetric } from "../../clusters/should-display-metric.injectable";
+import { withInjectables } from "@ogre-tools/injectable-react";
+import shouldDisplayMetricInjectable from "../../clusters/should-display-metric.injectable";
+import type { ShowDetails } from "../kube-object/details/show.injectable";
+import showDetailsInjectable from "../kube-object/details/show.injectable";
+import type { PodStore } from "../+workloads-pods/store";
+import podStoreInjectable from "../+workloads-pods/store.injectable";
 
 export interface PersistentVolumeClaimDetailsProps extends KubeObjectDetailsProps<PersistentVolumeClaim> {
 }
 
+interface Dependencies {
+  shouldDisplayMetric: ShouldDisplayMetric;
+  showDetails: ShowDetails;
+  podStore: PodStore;
+}
+
 @observer
-export class PersistentVolumeClaimDetails extends React.Component<PersistentVolumeClaimDetailsProps> {
+class NonInjectedPersistentVolumeClaimDetails extends React.Component<PersistentVolumeClaimDetailsProps & Dependencies> {
   @observable metrics: IPvcMetrics = null;
 
-  constructor(props: PersistentVolumeClaimDetailsProps) {
+  constructor(props: PersistentVolumeClaimDetailsProps & Dependencies) {
     super(props);
     makeObservable(this);
   }
@@ -43,15 +52,8 @@ export class PersistentVolumeClaimDetails extends React.Component<PersistentVolu
     ]);
   }
 
-  @boundMethod
-  async loadMetrics() {
-    const { object: volumeClaim } = this.props;
-
-    this.metrics = await getMetricsForPvc(volumeClaim);
-  }
-
   render() {
-    const { object: volumeClaim } = this.props;
+    const { object: volumeClaim, shouldDisplayMetric, showDetails, podStore } = this.props;
 
     if (!volumeClaim) {
       return null;
@@ -64,19 +66,20 @@ export class PersistentVolumeClaimDetails extends React.Component<PersistentVolu
     }
 
     const { storageClassName, accessModes } = volumeClaim.spec;
-    const { metrics } = this;
-    const pods = volumeClaim.getPods(podsStore.items);
-    const metricTabs = [
-      "Disk",
-    ];
-    const isMetricHidden = getActiveClusterEntity()?.isMetricHidden(ClusterMetricsResourceType.VolumeClaim);
+    const pods = volumeClaim.getPods(podStore.items);
 
     return (
       <div className="PersistentVolumeClaimDetails">
-        {!isMetricHidden && (
+        {shouldDisplayMetric(ClusterMetricsResourceType.VolumeClaim) && (
           <ResourceMetrics
-            loader={this.loadMetrics}
-            tabs={metricTabs} object={volumeClaim} params={{ metrics }}
+            loader={async () => {
+              this.metrics = await getMetricsForPvc(volumeClaim);
+            }}
+            tabs={[
+              "Disk",
+            ]}
+            object={volumeClaim}
+            metrics={this.metrics}
           >
             <VolumeClaimDiskChart/>
           </ResourceMetrics>
@@ -93,9 +96,9 @@ export class PersistentVolumeClaimDetails extends React.Component<PersistentVolu
         </DrawerItem>
         <DrawerItem name="Pods" className="pods">
           {pods.map(pod => (
-            <Link key={pod.getId()} to={getDetailsUrl(pod.selfLink)}>
+            <a key={pod.getId()} onClick={prevDefault(() => showDetails(pod))}>
               {pod.getName()}
-            </Link>
+            </a>
           ))}
         </DrawerItem>
         <DrawerItem name="Status">
@@ -121,3 +124,12 @@ export class PersistentVolumeClaimDetails extends React.Component<PersistentVolu
     );
   }
 }
+
+export const PersistentVolumeClaimDetails = withInjectables<Dependencies, PersistentVolumeClaimDetailsProps>(NonInjectedPersistentVolumeClaimDetails, {
+  getProps: (di, props) => ({
+    ...props,
+    shouldDisplayMetric: di.inject(shouldDisplayMetricInjectable),
+    showDetails: di.inject(showDetailsInjectable),
+    podStore: di.inject(podStoreInjectable),
+  }),
+});

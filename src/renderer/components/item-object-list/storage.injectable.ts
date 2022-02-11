@@ -3,18 +3,21 @@
  * Licensed under MIT License. See LICENSE in root directory for more information.
  */
 import { getInjectable } from "@ogre-tools/injectable";
-import createStorageInjectable from "../../utils/create-storage/create-storage.injectable";
+import createStorageInjectable, { type StorageLayer } from "../../utils/storage/create.injectable";
+import type { ItemListLayoutStorageState } from "./list-layout";
+
+let storage: StorageLayer<ItemListLayoutStorageState>;
 
 const itemListLayoutStorageInjectable = getInjectable({
-  id: "item-list-layout-storage",
+  setup: async (di) => {
+    const createStorage = await di.inject(createStorageInjectable);
 
-  instantiate: (di) => {
-    const createStorage = di.inject(createStorageInjectable);
-
-    return createStorage("item_list_layout", {
-      showFilters: false, // setup defaults
+    storage = createStorage("item_list_layout", {
+      showFilters: false,
     });
   },
+  instantiate: () => storage,
+  id: "item-list-layout-storage",
 });
 
 export default itemListLayoutStorageInjectable;

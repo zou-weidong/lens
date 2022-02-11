@@ -6,24 +6,26 @@
 import type * as registries from "./registries";
 import { Disposers, LensExtension } from "./lens-extension";
 import { getExtensionPageUrl } from "./registries/page-registry";
-import type { CatalogEntity } from "../common/catalog";
+import type { CatalogEntity } from "../common/catalog/entity";
 import type { Disposer } from "../common/utils";
-import { catalogEntityRegistry, EntityFilter } from "../renderer/api/catalog-entity-registry";
-import { catalogCategoryRegistry, CategoryFilter } from "../renderer/api/catalog-category-registry";
+import type { EntityFilter } from "../renderer/catalog/entity/registry";
 import type { TopBarRegistration } from "../renderer/components/layout/top-bar/top-bar-registration";
-import type { KubernetesCluster } from "../common/catalog-entities";
-import type { WelcomeMenuRegistration } from "../renderer/components/+welcome/welcome-menu-items/welcome-menu-registration";
-import type { WelcomeBannerRegistration } from "../renderer/components/+welcome/welcome-banner-items/welcome-banner-registration";
+import type { KubernetesCluster } from "../common/catalog/entity/declarations";
+import type { WelcomeMenuRegistration } from "../renderer/components/+welcome/menu-items.injectable";
+import type { WelcomeBannerRegistration } from "../renderer/components/+welcome/banner-items.injectable";
 import type { CommandRegistration } from "../renderer/components/command-palette/registered-commands/commands";
-import type { AppPreferenceRegistration } from "../renderer/components/+preferences/app-preferences/app-preference-registration";
+import type { AppPreferenceRegistration } from "../renderer/components/+preferences/app-preferences.injectable";
 import type { AdditionalCategoryColumnRegistration } from "../renderer/components/+catalog/custom-category-columns";
 import type { CustomCategoryViewRegistration } from "../renderer/components/+catalog/custom-views";
 import type { StatusBarRegistration } from "../renderer/components/status-bar/status-bar-registration";
-import type { KubeObjectMenuRegistration } from "../renderer/components/kube-object-menu/dependencies/kube-object-menu-items/kube-object-menu-registration";
 import type { WorkloadsOverviewDetailRegistration } from "../renderer/components/+workloads-overview/workloads-overview-detail-registration";
 import type { KubeObjectStatusRegistration } from "../renderer/components/kube-object-status-icon/kube-object-status-registration";
+import type { KubeObjectMenuRegistration } from "../renderer/components/kube-object-menu/registration";
+import type { LensRendererExtensionDependencies } from "./lens-extension-set-dependencies";
+import { extensionDependencies } from "./lens-extension-set-dependencies";
+import type { CategoryFilter } from "../renderer/catalog/category/registry";
 
-export class LensRendererExtension extends LensExtension {
+export class LensRendererExtension extends LensExtension<LensRendererExtensionDependencies> {
   globalPages: registries.PageRegistration[] = [];
   clusterPages: registries.PageRegistration[] = [];
   clusterPageMenus: registries.ClusterPageMenuRegistration[] = [];
@@ -42,15 +44,19 @@ export class LensRendererExtension extends LensExtension {
   additionalCategoryColumns: AdditionalCategoryColumnRegistration[] = [];
   customCategoryViews: CustomCategoryViewRegistration[] = [];
 
-  async navigate<P extends object>(pageId?: string, params?: P) {
-    const { navigate } = await import("../renderer/navigation");
-    const pageUrl = getExtensionPageUrl({
+  navigate(pageId?: string, params?: Record<string, any>): void;
+  /**
+   * @deprecated This function is not really async, it just returns a resolved promise
+   */
+  navigate<P>(pageId?: string, params?: Record<string, any>): Promise<P extends void ? void : void>;
+  navigate<P>(pageId?: string, params: Record<string, any> = {}): Promise<P extends void ? void : void> {
+    this[extensionDependencies].navigate(getExtensionPageUrl({
       extensionId: this.name,
       pageId,
-      params: params ?? {}, // compile to url with params
-    });
+      params,
+    }));
 
-    navigate(pageUrl);
+    return Promise.resolve();
   }
 
   /**
@@ -69,7 +75,7 @@ export class LensRendererExtension extends LensExtension {
    * @returns A function to clean up the filter
    */
   addCatalogFilter(fn: EntityFilter): Disposer {
-    const dispose = catalogEntityRegistry.addCatalogFilter(fn);
+    const dispose = this[extensionDependencies].addEntityFilter(fn);
 
     this[Disposers].push(dispose);
 
@@ -82,7 +88,7 @@ export class LensRendererExtension extends LensExtension {
    * @returns A function to clean up the filter
    */
   addCatalogCategoryFilter(fn: CategoryFilter): Disposer {
-    const dispose = catalogCategoryRegistry.addCatalogCategoryFilter(fn);
+    const dispose = this[extensionDependencies].addCategoryFilter(fn);
 
     this[Disposers].push(dispose);
 

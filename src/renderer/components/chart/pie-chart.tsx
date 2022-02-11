@@ -6,21 +6,34 @@
 import "./pie-chart.scss";
 import React from "react";
 import { observer } from "mobx-react";
-import ChartJS, { ChartOptions } from "chart.js";
-import { Chart, ChartProps } from "./chart";
+import type { ChartOptions } from "chart.js";
+import ChartJS from "chart.js";
+import type { ChartProps } from "./chart";
+import { Chart } from "./chart";
 import { cssNames } from "../../utils";
-import { ThemeStore } from "../../theme.store";
+import { withInjectables } from "@ogre-tools/injectable-react";
+import type { ActiveTheme } from "../../themes/active.injectable";
+import activeThemeInjectable from "../../themes/active.injectable";
 
 export interface PieChartProps extends ChartProps {
 }
 
-@observer
-export class PieChart extends React.Component<PieChartProps> {
-  render() {
-    const { data, className, options, ...chartProps } = this.props;
-    const { contentColor } = ThemeStore.getInstance().activeTheme.colors;
-    const cutouts = [88, 76, 63];
-    const opts: ChartOptions = this.props.showChart === false ? {} : {
+interface Dependencies {
+  activeTheme: ActiveTheme;
+}
+
+const NonInjectedPieChart = observer(({
+  activeTheme,
+  data,
+  className,
+  options,
+  ...chartProps
+}: Dependencies & PieChartProps) => {
+  const { contentColor } = activeTheme.value.colors;
+  const cutouts = [88, 76, 63];
+  const opts: ChartOptions = chartProps.showChart === false
+    ? {}
+    : {
       maintainAspectRatio: false,
       tooltips: {
         mode: "index",
@@ -57,16 +70,22 @@ export class PieChart extends React.Component<PieChartProps> {
       ...options,
     };
 
-    return (
-      <Chart
-        className={cssNames("PieChart flex column align-center", className)}
-        data={data}
-        options={opts}
-        {...chartProps}
-      />
-    );
-  }
-}
+  return (
+    <Chart
+      className={cssNames("PieChart flex column align-center", className)}
+      data={data}
+      options={opts}
+      {...chartProps}
+    />
+  );
+});
+
+export const PieChart = withInjectables<Dependencies, PieChartProps>(NonInjectedPieChart, {
+  getProps: (di, props) => ({
+    ...props,
+    activeTheme: di.inject(activeThemeInjectable),
+  }),
+});
 
 ChartJS.Tooltip.positioners.cursor = function (elements: any, position: { x: number; y: number }) {
   return position;

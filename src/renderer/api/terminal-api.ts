@@ -3,8 +3,8 @@
  * Licensed under MIT License. See LICENSE in root directory for more information.
  */
 
-import { getHostedClusterId } from "../utils";
-import { WebSocketApi, WebSocketEvents } from "./websocket-api";
+import type { WebSocketEvents } from "./websocket-api";
+import { WebSocketApi } from "./websocket-api";
 import isEqual from "lodash/isEqual";
 import url from "url";
 import { makeObservable, observable } from "mobx";
@@ -12,6 +12,8 @@ import { ipcRenderer } from "electron";
 import logger from "../../common/logger";
 import { deserialize, serialize } from "v8";
 import { once } from "lodash";
+import { apiPrefix, shellRoute } from "../../common/vars";
+import type { ClusterId } from "../../common/clusters/cluster-types";
 
 export enum TerminalChannels {
   STDIN = "stdin",
@@ -59,12 +61,16 @@ export interface TerminalEvents extends WebSocketEvents {
   connected: () => void;
 }
 
+export interface TerminalApiDependencies {
+  readonly clusterId: ClusterId;
+}
+
 export class TerminalApi extends WebSocketApi<TerminalEvents> {
   protected size: { width: number; height: number };
 
   @observable public isReady = false;
 
-  constructor(protected query: TerminalApiQuery) {
+  constructor(protected readonly dependencies: TerminalApiDependencies, protected query: TerminalApiQuery) {
     super({
       flushOnOpen: false,
       pingInterval: 30,
@@ -85,7 +91,7 @@ export class TerminalApi extends WebSocketApi<TerminalEvents> {
       this.emitStatus("Connecting ...");
     }
 
-    const authTokenArray = await ipcRenderer.invoke("cluster:shell-api", getHostedClusterId(), this.query.id);
+    const authTokenArray = await ipcRenderer.invoke("cluster:shell-api", this.dependencies.clusterId, this.query.id);
 
     if (!(authTokenArray instanceof Uint8Array)) {
       throw new TypeError("ShellApi token is not a Uint8Array");
@@ -96,7 +102,7 @@ export class TerminalApi extends WebSocketApi<TerminalEvents> {
       protocol: protocol.includes("https") ? "wss" : "ws",
       hostname,
       port,
-      pathname: "/api",
+      pathname: `${apiPrefix}${shellRoute}`,
       query: {
         ...this.query,
         shellToken: Buffer.from(authTokenArray).toString("base64"),
@@ -126,6 +132,7 @@ export class TerminalApi extends WebSocketApi<TerminalEvents> {
 
     super.connect(socketUrl);
     this.socket.binaryType = "arraybuffer";
+    this.on("close", () => this.isReady = false);
   }
 
   sendMessage(message: TerminalMessage) {
@@ -174,11 +181,6 @@ export class TerminalApi extends WebSocketApi<TerminalEvents> {
     // But this size will be changed by terminal.fit()
     this.sendTerminalSize(120, 80);
     super._onOpen(evt);
-  }
-
-  protected _onClose(evt: CloseEvent) {
-    super._onClose(evt);
-    this.isReady = false;
   }
 
   protected emitStatus(data: string, options: { color?: TerminalColor; showTime?: boolean } = {}) {

@@ -8,23 +8,32 @@ import "./details.scss";
 import { autorun, observable, makeObservable } from "mobx";
 import { disposeOnUnmount, observer } from "mobx-react";
 import React from "react";
-import { Link } from "react-router-dom";
 
-import { secretsStore } from "../../+config-secrets/secrets.store";
-import { Secret, SecretType, ServiceAccount } from "../../../../common/k8s-api/endpoints";
+import type { SecretStore } from "../../+config-secrets/store";
+import type { ServiceAccount } from "../../../../common/k8s-api/endpoints";
+import { Secret, SecretType } from "../../../../common/k8s-api/endpoints";
 import { DrawerItem, DrawerTitle } from "../../drawer";
 import { Icon } from "../../icon";
 import type { KubeObjectDetailsProps } from "../../kube-object-details";
 import { KubeObjectMeta } from "../../kube-object-meta";
 import { Spinner } from "../../spinner";
 import { ServiceAccountsSecret } from "./secret";
-import { getDetailsUrl } from "../../kube-detail-params";
+import { withInjectables } from "@ogre-tools/injectable-react";
+import type { ShowDetails } from "../../kube-object/details/show.injectable";
+import showDetailsInjectable from "../../kube-object/details/show.injectable";
+import { prevDefault } from "../../../utils";
+import secretStoreInjectable from "../../+config-secrets/store.injectable";
 
 export interface ServiceAccountsDetailsProps extends KubeObjectDetailsProps<ServiceAccount> {
 }
 
+interface Dependencies {
+  showDetails: ShowDetails;
+  secretStore: SecretStore;
+}
+
 @observer
-export class ServiceAccountsDetails extends React.Component<ServiceAccountsDetailsProps> {
+class NonInjectedServiceAccountsDetails extends React.Component<ServiceAccountsDetailsProps & Dependencies> {
   @observable secrets: Secret[];
   @observable imagePullSecrets: Secret[];
 
@@ -33,19 +42,19 @@ export class ServiceAccountsDetails extends React.Component<ServiceAccountsDetai
       autorun(async () => {
         this.secrets = null;
         this.imagePullSecrets = null;
-        const { object: serviceAccount } = this.props;
+        const { object: serviceAccount, secretStore } = this.props;
 
         if (!serviceAccount) {
           return;
         }
         const namespace = serviceAccount.getNs();
         const secrets = serviceAccount.getSecrets().map(({ name }) => {
-          return secretsStore.load({ name, namespace });
+          return secretStore.load({ name, namespace });
         });
 
         this.secrets = await Promise.all(secrets);
         const imagePullSecrets = serviceAccount.getImagePullSecrets().map(async ({ name }) => {
-          return secretsStore.load({ name, namespace }).catch(() => this.generateDummySecretObject(name));
+          return secretStore.load({ name, namespace }).catch(() => this.generateDummySecretObject(name));
         });
 
         this.imagePullSecrets = await Promise.all(imagePullSecrets);
@@ -53,7 +62,7 @@ export class ServiceAccountsDetails extends React.Component<ServiceAccountsDetai
     ]);
   }
 
-  constructor(props: ServiceAccountsDetailsProps) {
+  constructor(props: ServiceAccountsDetailsProps & Dependencies) {
     super(props);
     makeObservable(this);
   }
@@ -81,6 +90,8 @@ export class ServiceAccountsDetails extends React.Component<ServiceAccountsDetai
   }
 
   renderSecretLinks(secrets: Secret[]) {
+    const { showDetails } = this.props;
+
     return secrets.map((secret) => {
       if (secret.getId() === null) {
         return (
@@ -95,9 +106,9 @@ export class ServiceAccountsDetails extends React.Component<ServiceAccountsDetai
       }
 
       return (
-        <Link key={secret.getId()} to={getDetailsUrl(secret.selfLink)}>
+        <a key={secret.getId()} onClick={prevDefault(() => showDetails(secret))}>
           {secret.getName()}
-        </Link>
+        </a>
       );
     });
   }
@@ -117,12 +128,12 @@ export class ServiceAccountsDetails extends React.Component<ServiceAccountsDetai
   }
 
   render() {
-    const { object: serviceAccount } = this.props;
+    const { object: serviceAccount, secretStore } = this.props;
 
     if (!serviceAccount) {
       return null;
     }
-    const tokens = secretsStore.items.filter(secret =>
+    const tokens = secretStore.items.filter(secret =>
       secret.getNs() == serviceAccount.getNs() &&
       secret.getAnnotations().some(annot => annot == `kubernetes.io/service-account.name: ${serviceAccount.getName()}`),
     );
@@ -151,3 +162,11 @@ export class ServiceAccountsDetails extends React.Component<ServiceAccountsDetai
     );
   }
 }
+
+export const ServiceAccountsDetails = withInjectables<Dependencies, ServiceAccountsDetailsProps>(NonInjectedServiceAccountsDetails, {
+  getProps: (di, props) => ({
+    ...props,
+    showDetails: di.inject(showDetailsInjectable),
+    secretStore: di.inject(secretStoreInjectable),
+  }),
+});

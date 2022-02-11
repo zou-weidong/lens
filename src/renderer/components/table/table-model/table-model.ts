@@ -2,7 +2,7 @@
  * Copyright (c) OpenLens Authors. All rights reserved.
  * Licensed under MIT License. See LICENSE in root directory for more information.
  */
-import type { StorageHelper } from "../../../utils";
+import type { StorageLayer } from "../../../utils/storage/create.injectable";
 import type { TableSortParams } from "../table";
 
 export interface TableStorageModel {
@@ -12,21 +12,22 @@ export interface TableStorageModel {
 }
 
 interface Dependencies {
-  storage: StorageHelper<TableStorageModel>;
+  readonly storage: StorageLayer<TableStorageModel>;
 }
 
 export class TableModel {
-  constructor(private dependencies: Dependencies) {}
+  constructor(private readonly dependencies: Dependencies) {}
 
-  getSortParams = (tableId: string): Partial<TableSortParams> =>
-    this.dependencies.storage.get().sortParams[tableId];
+  getSortParams(tableId: string): Partial<TableSortParams> {
+    return this.dependencies.storage.get().sortParams[tableId];
+  }
 
-  setSortParams = (
+  setSortParams(
     tableId: string,
     sortParams: Partial<TableSortParams>,
-  ): void => {
+  ): void {
     this.dependencies.storage.merge((draft) => {
       draft.sortParams[tableId] = sortParams;
     });
-  };
+  }
 }

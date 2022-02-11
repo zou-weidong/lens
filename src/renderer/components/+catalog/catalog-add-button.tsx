@@ -9,11 +9,14 @@ import { SpeedDial, SpeedDialAction } from "@material-ui/lab";
 import { Icon } from "../icon";
 import { observer } from "mobx-react";
 import { observable, makeObservable, action } from "mobx";
-import { boundMethod } from "../../../common/utils";
-import type { CatalogCategory, CatalogEntityAddMenuContext, CatalogEntityAddMenu } from "../../api/catalog-entity";
-import { EventEmitter } from "events";
-import { navigate } from "../../navigation";
-import { catalogCategoryRegistry } from "../../api/catalog-category-registry";
+import { boundMethod, getOrInsert } from "../../../common/utils";
+import type { CatalogCategoryRegistry } from "../../catalog/category/registry";
+import type { CatalogCategory } from "../../../common/catalog/category";
+import type { CatalogEntityAddMenu } from "../../../extensions/common-api/catalog";
+import { withInjectables } from "@ogre-tools/injectable-react";
+import type { OnCatalogAddMenu } from "../../catalog/category/on-catalog-add-menu.injectable";
+import onCatalogAddMenuInjectable from "../../catalog/category/on-catalog-add-menu.injectable";
+import catalogCategoryRegistryInjectable from "../../catalog/category/registry.injectable";
 
 export interface CatalogAddButtonProps {
   category: CatalogCategory;
@@ -21,12 +24,17 @@ export interface CatalogAddButtonProps {
 
 type CategoryId = string;
 
-@observer
-export class CatalogAddButton extends React.Component<CatalogAddButtonProps> {
-  @observable protected isOpen = false;
-  @observable menuItems = new Map<CategoryId, CatalogEntityAddMenu[]>();
+interface Dependencies {
+  categoryRegistry: CatalogCategoryRegistry;
+  onCatalogAddMenu: OnCatalogAddMenu;
+}
 
-  constructor(props: CatalogAddButtonProps) {
+@observer
+class NonInjectedCatalogAddButton extends React.Component<CatalogAddButtonProps & Dependencies> {
+  @observable protected isOpen = false;
+  readonly menuItems = observable.map<CategoryId, CatalogEntityAddMenu[]>();
+
+  constructor(props: CatalogAddButtonProps & Dependencies) {
     super(props);
     makeObservable(this);
   }
@@ -42,7 +50,7 @@ export class CatalogAddButton extends React.Component<CatalogAddButtonProps> {
   }
 
   get categories() {
-    return catalogCategoryRegistry.filteredItems;
+    return this.props.categoryRegistry.filteredCategories.get();
   }
 
   @action
@@ -57,22 +65,13 @@ export class CatalogAddButton extends React.Component<CatalogAddButtonProps> {
     }
   }
 
-  updateCategoryItems = action((category: CatalogCategory) => {
-    if (category instanceof EventEmitter) {
-      const menuItems: CatalogEntityAddMenu[] = [];
-      const context: CatalogEntityAddMenuContext = {
-        navigate: (url: string) => navigate(url),
-        menuItems,
-      };
-
-      category.emit("catalogAddMenu", context);
-      this.menuItems.set(category.getId(), menuItems);
-    }
-  });
-
-  getCategoryFilteredItems = (category: CatalogCategory) => {
-    return category.filteredItems(this.menuItems.get(category.getId()) || []);
+  updateCategoryItems = (category: CatalogCategory) => {
+    this.props.onCatalogAddMenu(category, getOrInsert(this.menuItems, category.getId(), []));
   };
+
+  getCategoryFilteredItems = (category: CatalogCategory) => (
+    category.filteredItems(this.menuItems.get(category.getId()) || [])
+  );
 
   @boundMethod
   onOpen() {
@@ -95,8 +94,9 @@ export class CatalogAddButton extends React.Component<CatalogAddButtonProps> {
   get items() {
     const { category } = this.props;
 
-    return category ? this.getCategoryFilteredItems(category) :
-      this.categories.map(this.getCategoryFilteredItems).flat();
+    return category
+      ? this.getCategoryFilteredItems(category)
+      : this.categories.map(this.getCategoryFilteredItems).flat();
   }
 
   render() {
@@ -115,8 +115,8 @@ export class CatalogAddButton extends React.Component<CatalogAddButtonProps> {
         direction="up"
         onClick={this.onButtonClick}
       >
-        {this.items.map((menuItem, index) => {
-          return <SpeedDialAction
+        {this.items.map((menuItem, index) => (
+          <SpeedDialAction
             key={index}
             icon={<Icon material={menuItem.icon}/>}
             tooltipTitle={menuItem.title}
@@ -127,9 +127,17 @@ export class CatalogAddButton extends React.Component<CatalogAddButtonProps> {
             TooltipClasses={{
               popper: "catalogSpeedDialPopper",
             }}
-          />;
-        })}
+          />
+        ))}
       </SpeedDial>
     );
   }
 }
+
+export const CatalogAddButton = withInjectables<Dependencies, CatalogAddButtonProps>(NonInjectedCatalogAddButton, {
+  getProps: (di, props) => ({
+    ...props,
+    onCatalogAddMenu: di.inject(onCatalogAddMenuInjectable),
+    categoryRegistry: di.inject(catalogCategoryRegistryInjectable),
+  }),
+});

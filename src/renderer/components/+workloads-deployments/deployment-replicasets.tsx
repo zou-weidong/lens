@@ -8,14 +8,18 @@ import "./deployment-replicasets.scss";
 import React from "react";
 import { observer } from "mobx-react";
 import type { ReplicaSet } from "../../../common/k8s-api/endpoints";
-import { KubeObjectMenu, KubeObjectMenuProps } from "../kube-object-menu";
+import type { KubeObjectMenuProps } from "../kube-object-menu";
+import { KubeObjectMenu } from "../kube-object-menu";
 import { Spinner } from "../spinner";
 import { prevDefault, stopPropagation } from "../../utils";
 import { DrawerTitle } from "../drawer";
 import { Table, TableCell, TableHead, TableRow } from "../table";
 import { KubeObjectStatusIcon } from "../kube-object-status-icon";
-import { replicaSetStore } from "../+workloads-replicasets/replicasets.store";
-import { showDetails } from "../kube-detail-params";
+import type { ReplicaSetStore } from "../+workloads-replicasets/replicasets.store";
+import { withInjectables } from "@ogre-tools/injectable-react";
+import replicaSetStoreInjectable from "../+workloads-replicasets/store.injectable";
+import type { ShowDetails } from "../kube-object/details/show.injectable";
+import showDetailsInjectable from "../kube-object/details/show.injectable";
 
 
 enum sortBy {
@@ -29,73 +33,81 @@ export interface DeploymentReplicaSetsProps {
   replicaSets: ReplicaSet[];
 }
 
-@observer
-export class DeploymentReplicaSets extends React.Component<DeploymentReplicaSetsProps> {
-  private sortingCallbacks = {
-    [sortBy.name]: (replicaSet: ReplicaSet) => replicaSet.getName(),
-    [sortBy.namespace]: (replicaSet: ReplicaSet) => replicaSet.getNs(),
-    [sortBy.age]: (replicaSet: ReplicaSet) => replicaSet.metadata.creationTimestamp,
-    [sortBy.pods]: (replicaSet: ReplicaSet) => this.getPodsLength(replicaSet),
-  };
+interface Dependencies {
+  replicaSetStore: ReplicaSetStore;
+  showDetails: ShowDetails;
+}
 
-  getPodsLength(replicaSet: ReplicaSet) {
-    return replicaSetStore.getChildPods(replicaSet).length;
-  }
+const NonInjectedDeploymentReplicaSets = observer(({
+  replicaSetStore,
+  replicaSets,
+  showDetails,
+}: Dependencies & DeploymentReplicaSetsProps) => {
+  const getPodsLength = (replicaSet: ReplicaSet) => replicaSetStore.getChildPods(replicaSet).length;
 
-  render() {
-    const { replicaSets } = this.props;
-
-    if (!replicaSets.length && !replicaSetStore.isLoaded) return (
-      <div className="ReplicaSets"><Spinner center/></div>
-    );
-    if (!replicaSets.length) return null;
-
-    return (
-      <div className="ReplicaSets flex column">
-        <DrawerTitle title="Deploy Revisions"/>
-        <Table
-          selectable
-          tableId="deployment_replica_sets_view"
-          scrollable={false}
-          sortable={this.sortingCallbacks}
-          sortByDefault={{ sortBy: sortBy.pods, orderBy: "desc" }}
-          sortSyncWithUrl={false}
-          className="box grow"
-        >
-          <TableHead>
-            <TableCell className="name" sortBy={sortBy.name}>Name</TableCell>
-            <TableCell className="warning"/>
-            <TableCell className="namespace" sortBy={sortBy.namespace}>Namespace</TableCell>
-            <TableCell className="pods" sortBy={sortBy.pods}>Pods</TableCell>
-            <TableCell className="age" sortBy={sortBy.age}>Age</TableCell>
-            <TableCell className="actions"/>
-          </TableHead>
-          {
-            replicaSets.map(replica => {
-              return (
-                <TableRow
-                  key={replica.getId()}
-                  sortItem={replica}
-                  nowrap
-                  onClick={prevDefault(() => showDetails(replica.selfLink, false))}
-                >
-                  <TableCell className="name">{replica.getName()}</TableCell>
-                  <TableCell className="warning"><KubeObjectStatusIcon key="icon" object={replica}/></TableCell>
-                  <TableCell className="namespace">{replica.getNs()}</TableCell>
-                  <TableCell className="pods">{this.getPodsLength(replica)}</TableCell>
-                  <TableCell className="age">{replica.getAge()}</TableCell>
-                  <TableCell className="actions" onClick={stopPropagation}>
-                    <ReplicaSetMenu object={replica}/>
-                  </TableCell>
-                </TableRow>
-              );
-            })
-          }
-        </Table>
+  if (replicaSets.length === 0) {
+    return replicaSetStore.isLoaded && (
+      <div className="ReplicaSets">
+        <Spinner center/>
       </div>
     );
   }
-}
+
+  return (
+    <div className="ReplicaSets flex column">
+      <DrawerTitle title="Deploy Revisions"/>
+      <Table
+        selectable
+        tableId="deployment_replica_sets_view"
+        scrollable={false}
+        sortable={{
+          [sortBy.name]: replicaSet => replicaSet.getName(),
+          [sortBy.namespace]: replicaSet => replicaSet.getNs(),
+          [sortBy.age]: replicaSet => replicaSet.metadata.creationTimestamp,
+          [sortBy.pods]: replicaSet => getPodsLength(replicaSet),
+        }}
+        sortByDefault={{ sortBy: sortBy.pods, orderBy: "desc" }}
+        sortSyncWithUrl={false}
+        className="box grow"
+        items={replicaSets}
+        renderRow={replica => (
+          <TableRow
+            key={replica.getId()}
+            sortItem={replica}
+            nowrap
+            onClick={prevDefault(() => showDetails(replica, { resetSelected: false }))}
+          >
+            <TableCell className="name">{replica.getName()}</TableCell>
+            <TableCell className="warning"><KubeObjectStatusIcon key="icon" object={replica} /></TableCell>
+            <TableCell className="namespace">{replica.getNs()}</TableCell>
+            <TableCell className="pods">{getPodsLength(replica)}</TableCell>
+            <TableCell className="age">{replica.getAge()}</TableCell>
+            <TableCell className="actions" onClick={stopPropagation}>
+              <ReplicaSetMenu object={replica} />
+            </TableCell>
+          </TableRow>
+        )}
+      >
+        <TableHead>
+          <TableCell className="name" sortBy={sortBy.name}>Name</TableCell>
+          <TableCell className="warning"/>
+          <TableCell className="namespace" sortBy={sortBy.namespace}>Namespace</TableCell>
+          <TableCell className="pods" sortBy={sortBy.pods}>Pods</TableCell>
+          <TableCell className="age" sortBy={sortBy.age}>Age</TableCell>
+          <TableCell className="actions"/>
+        </TableHead>
+      </Table>
+    </div>
+  );
+});
+
+export const DeploymentReplicaSets = withInjectables<Dependencies, DeploymentReplicaSetsProps>(NonInjectedDeploymentReplicaSets, {
+  getProps: (di, props) => ({
+    ...props,
+    replicaSetStore: di.inject(replicaSetStoreInjectable),
+    showDetails: di.inject(showDetailsInjectable),
+  }),
+});
 
 export function ReplicaSetMenu(props: KubeObjectMenuProps<ReplicaSet>) {
   return (

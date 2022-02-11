@@ -4,29 +4,30 @@
  */
 
 import { withInjectables } from "@ogre-tools/injectable-react";
-import { computed, IComputedValue } from "mobx";
+import type { IComputedValue } from "mobx";
 import { observer } from "mobx-react";
 import React from "react";
-import { broadcastMessage } from "../../../common/ipc";
-import { catalogEntityRunListener } from "../../../common/ipc/catalog";
-import type { CatalogEntity } from "../../api/catalog-entity";
-import { catalogEntityRegistry } from "../../api/catalog-entity-registry";
+import type { CatalogEntity } from "../../../common/catalog/entity";
+import catalogEntitiesInjectable from "../../../common/catalog/entity/entities.injectable";
+import emitCatalogEntityRunInjectable from "../../../common/ipc/catalog/entity-run/emit.injectable";
+import type { CatalogEntityRun } from "../../../common/ipc/catalog/entity-run/emit.token";
 import commandOverlayInjectable from "../command-palette/command-overlay.injectable";
 import { Select } from "../select";
 
 interface Dependencies {
   closeCommandOverlay: () => void;
   entities: IComputedValue<CatalogEntity[]>;
+  catalogEntityRun: CatalogEntityRun;
 }
 
-const NonInjectedActivateEntityCommand = observer(({ closeCommandOverlay, entities }: Dependencies) => {
+const NonInjectedActivateEntityCommand = observer(({ closeCommandOverlay, entities, catalogEntityRun }: Dependencies) => {
   const options = entities.get().map(entity => ({
     label: `${entity.kind}: ${entity.getName()}`,
     value: entity,
   }));
 
   const onSelect = (entity: CatalogEntity): void => {
-    broadcastMessage(catalogEntityRunListener, entity.getId());
+    catalogEntityRun(entity.getId());
     closeCommandOverlay();
   };
 
@@ -47,6 +48,7 @@ const NonInjectedActivateEntityCommand = observer(({ closeCommandOverlay, entiti
 export const ActivateEntityCommand = withInjectables<Dependencies>(NonInjectedActivateEntityCommand, {
   getProps: di => ({
     closeCommandOverlay: di.inject(commandOverlayInjectable).close,
-    entities: computed(() => [...catalogEntityRegistry.items]),
+    entities: di.inject(catalogEntitiesInjectable),
+    catalogEntityRun: di.inject(emitCatalogEntityRunInjectable),
   }),
 });

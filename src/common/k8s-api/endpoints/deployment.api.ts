@@ -5,16 +5,25 @@
 
 import moment from "moment";
 
-import { IAffinity, WorkloadKubeObject } from "../workload-kube-object";
+import type { Affinity, Toleration } from "../common-types";
 import { autoBind } from "../../utils";
+import type { DerivedKubeApiOptions, IgnoredKubeApiOptions } from "../kube-api";
 import { KubeApi } from "../kube-api";
 import { metricsApi } from "./metrics.api";
-import type { IPodMetrics } from "./pods.api";
+import type { IPodMetrics } from "./pod.api";
 import type { KubeJsonApiData } from "../kube-json-api";
-import { isClusterPageContext } from "../../utils/cluster-id-url-parsing";
-import type { LabelSelector } from "../kube-object";
+import type { KubeObjectMetadata, LabelSelector } from "../kube-object";
+import { KubeObject } from "../kube-object";
+import type { PodSpec } from ".";
 
 export class DeploymentApi extends KubeApi<Deployment> {
+  constructor(opts: DerivedKubeApiOptions & IgnoredKubeApiOptions = {}) {
+    super({
+      ...opts,
+      objectConstructor: Deployment,
+    });
+  }
+
   protected getScaleApiUrl(params: { namespace: string; name: string }) {
     return `${this.getUrl(params)}/scale`;
   }
@@ -77,131 +86,72 @@ export function getMetricsForDeployments(deployments: Deployment[], namespace: s
   });
 }
 
-interface IContainerProbe {
-  httpGet?: {
-    path?: string;
-    port: number;
-    scheme: string;
-    host?: string;
+export interface DeploymentSpec {
+  replicas: number;
+  selector: LabelSelector;
+  template: {
+    metadata: KubeObjectMetadata;
+    spec: PodSpec;
   };
-  exec?: {
-    command: string[];
+  strategy: {
+    type: string;
+    rollingUpdate: {
+      maxUnavailable: number;
+      maxSurge: number;
+    };
   };
-  tcpSocket?: {
-    port: number;
-  };
-  initialDelaySeconds?: number;
-  timeoutSeconds?: number;
-  periodSeconds?: number;
-  successThreshold?: number;
-  failureThreshold?: number;
 }
 
-export class Deployment extends WorkloadKubeObject {
+export interface DeploymentStatus {
+  observedGeneration: number;
+  replicas: number;
+  updatedReplicas: number;
+  readyReplicas: number;
+  availableReplicas?: number;
+  unavailableReplicas?: number;
+  conditions: {
+    type: string;
+    status: string;
+    lastUpdateTime: string;
+    lastTransitionTime: string;
+    reason: string;
+    message: string;
+  }[];
+}
+
+export class Deployment extends KubeObject<KubeObjectMetadata, DeploymentStatus, DeploymentSpec> {
   static kind = "Deployment";
   static namespaced = true;
   static apiBase = "/apis/apps/v1/deployments";
 
-  constructor(data: KubeJsonApiData) {
+  constructor(data: KubeJsonApiData<KubeObjectMetadata, DeploymentStatus, DeploymentSpec>) {
     super(data);
     autoBind(this);
   }
 
-  declare spec: {
-    replicas: number;
-    selector: LabelSelector;
-    template: {
-      metadata: {
-        creationTimestamp?: string;
-        labels: { [app: string]: string };
-        annotations?: { [app: string]: string };
-      };
-      spec: {
-        containers: {
-          name: string;
-          image: string;
-          args?: string[];
-          ports?: {
-            name: string;
-            containerPort: number;
-            protocol: string;
-          }[];
-          env?: {
-            name: string;
-            value: string;
-          }[];
-          resources: {
-            limits?: {
-              cpu: string;
-              memory: string;
-            };
-            requests: {
-              cpu: string;
-              memory: string;
-            };
-          };
-          volumeMounts?: {
-            name: string;
-            mountPath: string;
-          }[];
-          livenessProbe?: IContainerProbe;
-          readinessProbe?: IContainerProbe;
-          startupProbe?: IContainerProbe;
-          terminationMessagePath: string;
-          terminationMessagePolicy: string;
-          imagePullPolicy: string;
-        }[];
-        restartPolicy: string;
-        terminationGracePeriodSeconds: number;
-        dnsPolicy: string;
-        affinity?: IAffinity;
-        nodeSelector?: {
-          [selector: string]: string;
-        };
-        serviceAccountName: string;
-        serviceAccount: string;
-        securityContext: {};
-        schedulerName: string;
-        tolerations?: {
-          key: string;
-          operator: string;
-          effect: string;
-          tolerationSeconds: number;
-        }[];
-        volumes?: {
-          name: string;
-          configMap: {
-            name: string;
-            defaultMode: number;
-            optional: boolean;
-          };
-        }[];
-      };
-    };
-    strategy: {
-      type: string;
-      rollingUpdate: {
-        maxUnavailable: number;
-        maxSurge: number;
-      };
-    };
-  };
-  declare status: {
-    observedGeneration: number;
-    replicas: number;
-    updatedReplicas: number;
-    readyReplicas: number;
-    availableReplicas?: number;
-    unavailableReplicas?: number;
-    conditions: {
-      type: string;
-      status: string;
-      lastUpdateTime: string;
-      lastTransitionTime: string;
-      reason: string;
-      message: string;
-    }[];
-  };
+  getSelectors(): string[] {
+    return KubeObject.stringifyLabels(this.spec?.selector?.matchLabels);
+  }
+
+  getNodeSelectors(): string[] {
+    return KubeObject.stringifyLabels(this.spec?.template?.spec?.nodeSelector);
+  }
+
+  getTemplateLabels(): string[] {
+    return KubeObject.stringifyLabels(this.spec?.template?.metadata?.labels);
+  }
+
+  getTolerations(): Toleration[] {
+    return this.spec?.template?.spec?.tolerations ?? [];
+  }
+
+  getAffinity(): Affinity {
+    return this.spec?.template?.spec?.affinity ?? {};
+  }
+
+  getAffinityNumber() {
+    return Object.keys(this.getAffinity()).length;
+  }
 
   getConditions(activeOnly = false) {
     const { conditions } = this.status;
@@ -223,15 +173,3 @@ export class Deployment extends WorkloadKubeObject {
     return this.spec.replicas || 0;
   }
 }
-
-let deploymentApi: DeploymentApi;
-
-if (isClusterPageContext()) {
-  deploymentApi = new DeploymentApi({
-    objectConstructor: Deployment,
-  });
-}
-
-export {
-  deploymentApi,
-};

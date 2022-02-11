@@ -7,19 +7,19 @@ import styles from "./main-layout.module.scss";
 
 import React from "react";
 import { observer } from "mobx-react";
-import { cssNames, StorageHelper } from "../../utils";
+import { cssNames } from "../../utils";
 import { ErrorBoundary } from "../error-boundary";
 import { ResizeDirection, ResizeGrowthDirection, ResizeSide, ResizingAnchor } from "../resizing-anchor";
 import { withInjectables } from "@ogre-tools/injectable-react";
-import sidebarStorageInjectable, {
-  defaultSidebarWidth,
-  SidebarStorageState,
-} from "./sidebar-storage/sidebar-storage.injectable";
+import type { SidebarStorageState } from "./sidebar/storage.injectable";
+import sidebarStorageInjectable, { defaultSidebarWidth } from "./sidebar/storage.injectable";
+import type { StorageLayer } from "../../utils/storage/create.injectable";
 
 export interface MainLayoutProps {
   sidebar: React.ReactNode;
   className?: string;
   footer?: React.ReactNode;
+  children?: React.ReactChild | React.ReactChild[];
 }
 
 /**
@@ -29,55 +29,56 @@ export interface MainLayoutProps {
  */
 
 interface Dependencies {
-  sidebarStorage: StorageHelper<SidebarStorageState>;
+  sidebarStorage: StorageLayer<SidebarStorageState>;
 }
 
-@observer
-class NonInjectedMainLayout extends React.Component<MainLayoutProps & Dependencies> {
-  onSidebarResize = (width: number) => {
-    this.props.sidebarStorage.merge({ width });
+const NonInjectedMainLayout = observer(({
+  sidebarStorage,
+  className,
+  footer,
+  children,
+  sidebar,
+}: Dependencies & MainLayoutProps) => {
+  const onSidebarResize = (width: number) => {
+    sidebarStorage.merge({ width });
   };
 
-  render() {
-    const { className, footer, children, sidebar } = this.props;
-    const { width: sidebarWidth } = this.props.sidebarStorage.get();
-    const style = { "--sidebar-width": `${sidebarWidth}px` } as React.CSSProperties;
-
-    return (
-      <div className={cssNames(styles.mainLayout, className)} style={style}>
-        <div className={styles.sidebar}>
-          {sidebar}
-          <ResizingAnchor
-            direction={ResizeDirection.HORIZONTAL}
-            placement={ResizeSide.TRAILING}
-            growthDirection={ResizeGrowthDirection.LEFT_TO_RIGHT}
-            getCurrentExtent={() => sidebarWidth}
-            onDrag={this.onSidebarResize}
-            onDoubleClick={() => this.onSidebarResize(defaultSidebarWidth)}
-            minExtent={120}
-            maxExtent={400}
-          />
-        </div>
-
-        <div className={styles.contents}>
-          <ErrorBoundary>{children}</ErrorBoundary>
-        </div>
-
-        <div className={styles.footer}>{footer}</div>
+  return (
+    <div
+      className={cssNames(styles.mainLayout, className)}
+      style={{ "--sidebar-width": `${sidebarStorage.get().width}px` } as React.CSSProperties}
+    >
+      <div className={styles.sidebar}>
+        {sidebar}
+        <ResizingAnchor
+          direction={ResizeDirection.HORIZONTAL}
+          placement={ResizeSide.TRAILING}
+          growthDirection={ResizeGrowthDirection.LEFT_TO_RIGHT}
+          getCurrentExtent={() => sidebarStorage.get().width}
+          onDrag={onSidebarResize}
+          onDoubleClick={() => onSidebarResize(defaultSidebarWidth)}
+          minExtent={120}
+          maxExtent={400}
+        />
       </div>
-    );
-  }
-}
 
-export const MainLayout = withInjectables<Dependencies, MainLayoutProps>(
-  NonInjectedMainLayout,
+      <div className={styles.contents}>
+        <ErrorBoundary>
+          {children}
+        </ErrorBoundary>
+      </div>
 
-  {
-    getProps: (di, props) => ({
-      sidebarStorage: di.inject(sidebarStorageInjectable),
+      <div className={styles.footer}>
+        {footer}
+      </div>
+    </div>
+  );
+});
 
-      ...props,
-    }),
-  },
-);
+export const MainLayout = withInjectables<Dependencies, MainLayoutProps>(NonInjectedMainLayout, {
+  getProps: (di, props) => ({
+    ...props,
+    sidebarStorage: di.inject(sidebarStorageInjectable),
+  }),
+});
 

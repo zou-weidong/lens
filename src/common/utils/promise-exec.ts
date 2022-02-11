@@ -6,4 +6,7 @@
 import * as util from "util";
 import { execFile } from "child_process";
 
+/**
+ * @deprecated use `di.inject(execFileInjectable)` instead
+ */
 export const promiseExecFile = util.promisify(execFile);

@@ -3,7 +3,9 @@
  * Licensed under MIT License. See LICENSE in root directory for more information.
  */
 
-import { CatalogCategory, CatalogCategoryRegistry, CatalogCategorySpec } from "../catalog";
+import { CatalogCategoryRegistry } from "../../renderer/catalog/category/registry";
+import { CatalogCategory, type CatalogCategorySpec } from "../catalog/category";
+
 
 class TestCatalogCategoryRegistry extends CatalogCategoryRegistry { }
 
@@ -43,18 +45,18 @@ describe("CatalogCategoryRegistry", () => {
   it("should remove only the category registered when running the disposer", () => {
     const registry = new TestCatalogCategoryRegistry();
 
-    expect(registry.items.length).toBe(0);
+    expect(registry.categories.get().length).toBe(0);
 
     const d1 = registry.add(new TestCatalogCategory());
     const d2 = registry.add(new TestCatalogCategory2());
 
-    expect(registry.items.length).toBe(2);
+    expect(registry.categories.get().length).toBe(2);
 
     d1();
-    expect(registry.items.length).toBe(1);
+    expect(registry.categories.get().length).toBe(1);
 
     d2();
-    expect(registry.items.length).toBe(0);
+    expect(registry.categories.get().length).toBe(0);
   });
 
   it("doesn't return items that are filtered out", () => {
@@ -63,27 +65,27 @@ describe("CatalogCategoryRegistry", () => {
     registry.add(new TestCatalogCategory());
     registry.add(new TestCatalogCategory2());
 
-    expect(registry.items.length).toBe(2);
-    expect(registry.filteredItems.length).toBe(2);
+    expect(registry.categories.get().length).toBe(2);
+    expect(registry.filteredCategories.get().length).toBe(2);
 
-    const disposer = registry.addCatalogCategoryFilter(category => category.metadata.name === "Test Category");
+    const disposer = registry.addFilter(category => category.metadata.name === "Test Category");
 
-    expect(registry.items.length).toBe(2);
-    expect(registry.filteredItems.length).toBe(1);
+    expect(registry.categories.get().length).toBe(2);
+    expect(registry.filteredCategories.get().length).toBe(1);
 
-    const disposer2 = registry.addCatalogCategoryFilter(category => category.metadata.name === "foo");
+    const disposer2 = registry.addFilter(category => category.metadata.name === "foo");
 
-    expect(registry.items.length).toBe(2);
-    expect(registry.filteredItems.length).toBe(0);
+    expect(registry.categories.get().length).toBe(2);
+    expect(registry.filteredCategories.get().length).toBe(0);
 
     disposer();
 
-    expect(registry.items.length).toBe(2);
-    expect(registry.filteredItems.length).toBe(0);
+    expect(registry.categories.get().length).toBe(2);
+    expect(registry.filteredCategories.get().length).toBe(0);
 
     disposer2();
 
-    expect(registry.items.length).toBe(2);
-    expect(registry.filteredItems.length).toBe(2);
+    expect(registry.categories.get().length).toBe(2);
+    expect(registry.filteredCategories.get().length).toBe(2);
   });
 });

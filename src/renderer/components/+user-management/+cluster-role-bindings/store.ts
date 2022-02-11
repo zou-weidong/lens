@@ -3,17 +3,14 @@
  * Licensed under MIT License. See LICENSE in root directory for more information.
  */
 
-import { apiManager } from "../../../../common/k8s-api/api-manager";
-import { ClusterRoleBinding, clusterRoleBindingApi, ClusterRoleBindingSubject } from "../../../../common/k8s-api/endpoints";
+import type { ClusterRoleBinding, ClusterRoleBindingSubject, ClusterRoleBindingApi } from "../../../../common/k8s-api/endpoints";
 import { KubeObjectStore } from "../../../../common/k8s-api/kube-object.store";
 import { autoBind, HashSet } from "../../../utils";
 import { hashClusterRoleBindingSubject } from "./hashers";
 
-export class ClusterRoleBindingsStore extends KubeObjectStore<ClusterRoleBinding> {
-  api = clusterRoleBindingApi;
-
-  constructor() {
-    super();
+export class ClusterRoleBindingStore extends KubeObjectStore<ClusterRoleBinding, ClusterRoleBindingApi> {
+  constructor(api: ClusterRoleBindingApi) {
+    super(api);
     autoBind(this);
   }
 
@@ -41,7 +38,3 @@ export class ClusterRoleBindingsStore extends KubeObjectStore<ClusterRoleBinding
     return this.updateSubjects(clusterRoleBinding, currentSubjects.toJSON());
   }
 }
-
-export const clusterRoleBindingsStore = new ClusterRoleBindingsStore();
-
-apiManager.registerStore(clusterRoleBindingsStore);

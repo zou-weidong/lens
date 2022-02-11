@@ -4,25 +4,25 @@
  */
 import { makeObservable } from "mobx";
 
-import { podsStore } from "../+workloads-pods/pods.store";
-import { apiManager } from "../../../common/k8s-api/api-manager";
-import { Deployment, ReplicaSet, replicaSetApi } from "../../../common/k8s-api/endpoints";
-import { PodStatus } from "../../../common/k8s-api/endpoints/pods.api";
+import type { PodStore } from "../+workloads-pods/store";
+import type { Deployment, ReplicaSet, ReplicaSetApi } from "../../../common/k8s-api/endpoints";
+import { PodStatusKind } from "../../../common/k8s-api/endpoints";
 import { KubeObjectStore } from "../../../common/k8s-api/kube-object.store";
 import { autoBind } from "../../utils";
 
+interface Dependencies {
+  readonly podStore: PodStore;
+}
+
 export class ReplicaSetStore extends KubeObjectStore<ReplicaSet> {
-  api = replicaSetApi;
-
-  constructor() {
-    super();
-
+  constructor(protected readonly dependencies: Dependencies, api: ReplicaSetApi) {
+    super(api);
     makeObservable(this);
     autoBind(this);
   }
 
   getChildPods(replicaSet: ReplicaSet) {
-    return podsStore.getPodsByOwnerId(replicaSet.getId());
+    return this.dependencies.podStore.getPodsByOwnerId(replicaSet.getId());
   }
 
   getStatuses(replicaSets: ReplicaSet[]) {
@@ -31,10 +31,10 @@ export class ReplicaSetStore extends KubeObjectStore<ReplicaSet> {
     replicaSets.forEach(replicaSet => {
       const pods = this.getChildPods(replicaSet);
 
-      if (pods.some(pod => pod.getStatus() === PodStatus.FAILED)) {
+      if (pods.some(pod => pod.getStatus() === PodStatusKind.FAILED)) {
         status.failed++;
       }
-      else if (pods.some(pod => pod.getStatus() === PodStatus.PENDING)) {
+      else if (pods.some(pod => pod.getStatus() === PodStatusKind.PENDING)) {
         status.pending++;
       }
       else {
@@ -51,6 +51,3 @@ export class ReplicaSetStore extends KubeObjectStore<ReplicaSet> {
     );
   }
 }
-
-export const replicaSetStore = new ReplicaSetStore();
-apiManager.registerStore(replicaSetStore);

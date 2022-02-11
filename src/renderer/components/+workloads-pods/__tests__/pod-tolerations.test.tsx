@@ -6,11 +6,12 @@
 import React from "react";
 import "@testing-library/jest-dom/extend-expect";
 import { fireEvent } from "@testing-library/react";
-import type { IToleration } from "../../../../common/k8s-api/workload-kube-object";
+import type { Toleration } from "../../../../common/k8s-api/common-types";
 import { PodTolerations } from "../pod-tolerations";
 import { getDiForUnitTesting } from "../../../getDiForUnitTesting";
-import { DiRender, renderFor } from "../../test-utils/renderFor";
-import directoryForLensLocalStorageInjectable from "../../../../common/directory-for-lens-local-storage/directory-for-lens-local-storage.injectable";
+import type { DiRender } from "../../test-utils/renderFor";
+import { renderFor } from "../../test-utils/renderFor";
+import directoryForLensLocalStorageInjectable from "../../../../common/paths/local-storage.injectable";
 
 jest.mock("electron", () => ({
   app: {
@@ -18,7 +19,7 @@ jest.mock("electron", () => ({
   },
 }));
 
-const tolerations: IToleration[] =[
+const tolerations: Toleration[] =[
   {
     key: "CriticalAddonsOnly",
     operator: "Exist",

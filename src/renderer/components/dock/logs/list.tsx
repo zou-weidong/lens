@@ -5,21 +5,23 @@
 
 import "./list.scss";
 
-import React from "react";
+import React, { createRef, forwardRef, useEffect, useImperativeHandle, useState } from "react";
 import AnsiUp from "ansi_up";
 import DOMPurify from "dompurify";
 import debounce from "lodash/debounce";
-import { action, computed, observable, makeObservable, reaction } from "mobx";
-import { disposeOnUnmount, observer } from "mobx-react";
+import { computed, reaction } from "mobx";
+import { observer } from "mobx-react";
 import moment from "moment-timezone";
 import type { Align, ListOnScrollProps } from "react-window";
 import { SearchStore } from "../../../search-store/search-store";
-import { UserStore } from "../../../../common/user-store";
-import { array, boundMethod, cssNames } from "../../../utils";
+import { array, cssNames } from "../../../utils";
 import { VirtualList } from "../../virtual-list";
 import { ToBottom } from "./to-bottom";
 import type { LogTabViewModel } from "../logs/logs-view-model";
 import { Spinner } from "../../spinner";
+import type { LocaleTimezone } from "../../../../common/user-preferences/locale-timezone.injectable";
+import { withInjectables } from "@ogre-tools/injectable-react";
+import localeTimezoneInjectable from "../../../../common/user-preferences/locale-timezone.injectable";
 
 export interface LogListProps {
   model: LogTabViewModel;
@@ -27,137 +29,124 @@ export interface LogListProps {
 
 const colorConverter = new AnsiUp();
 
-@observer
-export class LogList extends React.Component<LogListProps> {
-  @observable isJumpButtonVisible = false;
-  @observable isLastLineVisible = true;
+interface Dependencies {
+  localeTimezone: LocaleTimezone;
+}
 
-  private virtualListDiv = React.createRef<HTMLDivElement>(); // A reference for outer container in VirtualList
-  private virtualListRef = React.createRef<VirtualList>(); // A reference for VirtualList component
-  private lineHeight = 18; // Height of a log line. Should correlate with styles in pod-log-list.scss
+const lineHeight = 18; // Height of a log line. Should correlate with styles in pod-log-list.scss
 
-  constructor(props: LogListProps) {
-    super(props);
-    makeObservable(this);
-  }
+export interface LogListRef {
+  scrollToItem: (index: number, align: Align) => void;
+}
 
-  componentDidMount() {
-    disposeOnUnmount(this, [
-      reaction(() => this.props.model.logs.get(), (logs, prevLogs) => {
-        this.onLogsInitialLoad(logs, prevLogs);
-        this.onLogsUpdate();
-        this.onUserScrolledUp(logs, prevLogs);
-      }),
-    ]);
-  }
+const NonInjectedLogList = observer(forwardRef<LogListRef, Dependencies & LogListProps>(({
+  model,
+  localeTimezone,
+}, ref) => {
+  const [isJumpButtonVisible, setIsJumpButtonVisible] = useState(false);
+  const [isLastLineVisible, setIsLastLineVisible] = useState(true);
+  const [computedLogs] = useState(computed(() => {
+    const { showTimestamps } = model.logTabData.get();
 
-  @boundMethod
-  onLogsInitialLoad(logs: string[], prevLogs: string[]) {
+    if (!showTimestamps) {
+      return model.logsWithoutTimestamps.get();
+    }
+
+    return model.timestampSplitLogs
+      .get()
+      .map(([logTimestamp, log]) => `${logTimestamp && moment.tz(logTimestamp, localeTimezone.value).format()}${log}`);
+  }));
+  const divRef = createRef<HTMLDivElement>(); // A reference for outer container in VirtualList
+  const listRef = createRef<VirtualList>(); // A reference for VirtualList component
+  const logs = computedLogs.get();
+
+  useImperativeHandle(ref, () => ({
+    scrollToItem,
+  }));
+
+  const onLogsInitialLoad = (logs: string[], prevLogs: string[]) => {
     if (!prevLogs.length && logs.length) {
-      this.isLastLineVisible = true;
+      setIsLastLineVisible(true);
     }
-  }
-
-  @boundMethod
-  onLogsUpdate() {
-    if (this.isLastLineVisible) {
+  };
+  const onLogsUpdate = () => {
+    if (isLastLineVisible) {
       setTimeout(() => {
-        this.scrollToBottom();
-      }, 500);  // Giving some time to VirtualList to prepare its outerRef (this.virtualListDiv) element
+        scrollToBottom();
+      }, 500);  // Giving some time to VirtualList to prepare its outerRef (divRef) element
     }
-  }
-
-  @boundMethod
-  onUserScrolledUp(logs: string[], prevLogs: string[]) {
-    if (!this.virtualListDiv.current) return;
+  };
+  const onUserScrolledUp = (logs: string[], prevLogs: string[]) => {
+    if (!divRef.current) return;
 
     const newLogsAdded = prevLogs.length < logs.length;
-    const scrolledToBeginning = this.virtualListDiv.current.scrollTop === 0;
+    const scrolledToBeginning = divRef.current.scrollTop === 0;
 
     if (newLogsAdded && scrolledToBeginning) {
       const firstLineContents = prevLogs[0];
       const lineToScroll = logs.findIndex((value) => value == firstLineContents);
 
       if (lineToScroll !== -1) {
-        this.scrollToItem(lineToScroll, "start");
+        scrollToItem(lineToScroll, "start");
       }
     }
-  }
-
-  /**
-   * Returns logs with or without timestamps regarding to showTimestamps prop
-   */
-  @computed
-  get logs(): string[] {
-    const { showTimestamps } = this.props.model.logTabData.get();
-
-    if (!showTimestamps) {
-      return this.props.model.logsWithoutTimestamps.get();
-    }
-
-    return this.props.model.timestampSplitLogs
-      .get()
-      .map(([logTimestamp, log]) => (`${logTimestamp && moment.tz(logTimestamp, UserStore.getInstance().localeTimezone).format()}${log}`));
-  }
+  };
 
   /**
    * Checks if JumpToBottom button should be visible and sets its observable
    * @param props Scrolling props from virtual list core
    */
-  setButtonVisibility = action((props: ListOnScrollProps) => {
-    const offset = 100 * this.lineHeight;
-    const { scrollHeight } = this.virtualListDiv.current;
+  const setButtonVisibility = (props: ListOnScrollProps) => {
+    const offset = 100 * lineHeight;
+    const { scrollHeight } = divRef.current;
     const { scrollOffset } = props;
 
-    if (scrollHeight - scrollOffset < offset) {
-      this.isJumpButtonVisible = false;
-    } else {
-      this.isJumpButtonVisible = true;
-    }
-  });
+    setIsJumpButtonVisible(scrollHeight - scrollOffset >= offset);
+  };
 
   /**
    * Checks if last log line considered visible to user, setting its observable
    * @param props Scrolling props from virtual list core
    */
-  setLastLineVisibility = action((props: ListOnScrollProps) => {
-    const { scrollHeight, clientHeight } = this.virtualListDiv.current;
+  const setLastLineVisibility = (props: ListOnScrollProps) => {
+    const { scrollHeight, clientHeight } = divRef.current;
     const { scrollOffset } = props;
 
-    this.isLastLineVisible = (clientHeight + scrollOffset) === scrollHeight;
-  });
+    setIsLastLineVisible(clientHeight + scrollOffset === scrollHeight);
+  };
 
   /**
    * Check if user scrolled to top and new logs should be loaded
    * @param props Scrolling props from virtual list core
    */
-  checkLoadIntent = (props: ListOnScrollProps) => {
+  const checkLoadIntent = (props: ListOnScrollProps) => {
     const { scrollOffset } = props;
 
     if (scrollOffset === 0) {
-      this.props.model.loadLogs();
+      model.loadLogs();
     }
   };
 
-  scrollToBottom = () => {
-    if (!this.virtualListDiv.current) return;
-    this.virtualListDiv.current.scrollTop = this.virtualListDiv.current.scrollHeight;
+  const scrollToBottom = () => {
+    if (!divRef.current) return;
+    divRef.current.scrollTop = divRef.current.scrollHeight;
   };
 
-  scrollToItem = (index: number, align: Align) => {
-    this.virtualListRef.current.scrollToItem(index, align);
+  const scrollToItem = (index: number, align: Align) => {
+    listRef.current?.scrollToItem(index, align);
   };
 
-  onScroll = (props: ListOnScrollProps) => {
-    this.isLastLineVisible = false;
-    this.onScrollDebounced(props);
+  const onScroll = (props: ListOnScrollProps) => {
+    setIsLastLineVisible(false);
+    onScrollDebounced(props);
   };
 
-  onScrollDebounced = debounce((props: ListOnScrollProps) => {
-    if (!this.virtualListDiv.current) return;
-    this.setButtonVisibility(props);
-    this.setLastLineVisibility(props);
-    this.checkLoadIntent(props);
+  const onScrollDebounced = debounce((props: ListOnScrollProps) => {
+    if (divRef.current) {
+      setButtonVisibility(props);
+      setLastLineVisibility(props);
+      checkLoadIntent(props);
+    }
   }, 700); // Increasing performance and giving some time for virtual list to settle down
 
   /**
@@ -165,9 +154,9 @@ export class LogList extends React.Component<LogListProps> {
    * @param rowIndex index of the log element in logs array
    * @returns A react element with a row itself
    */
-  getLogRow = (rowIndex: number) => {
-    const { searchQuery, isActiveOverlay } = this.props.model.searchStore;
-    const item = this.logs[rowIndex];
+  const getLogRow = (rowIndex: number) => {
+    const { searchQuery, isActiveOverlay } = model.searchStore;
+    const item = logs[rowIndex];
     const contents: React.ReactElement[] = [];
     const ansiToHtml = (ansi: string) => DOMPurify.sanitize(colorConverter.ansi_to_html(ansi));
 
@@ -210,38 +199,49 @@ export class LogList extends React.Component<LogListProps> {
     );
   };
 
-  render() {
-    if (this.props.model.isLoading.get()) {
-      return (
-        <div className="LogList flex box grow align-center justify-center">
-          <Spinner />
-        </div>
-      );
-    }
+  useEffect(reaction(() => model.logs.get(), (logs, prevLogs) => {
+    onLogsInitialLoad(logs, prevLogs);
+    onLogsUpdate();
+    onUserScrolledUp(logs, prevLogs);
+  }), []);
 
-    if (!this.logs.length) {
-      return (
-        <div className="LogList flex box grow align-center justify-center">
-          There are no logs available for container {this.props.model.logTabData.get()?.selectedContainer}
-        </div>
-      );
-    }
-
+  if (model.isLoading.get()) {
     return (
-      <div className={cssNames("LogList flex" )}>
-        <VirtualList
-          items={this.logs}
-          rowHeights={array.filled(this.logs.length, this.lineHeight)}
-          getRow={this.getLogRow}
-          onScroll={this.onScroll}
-          outerRef={this.virtualListDiv}
-          ref={this.virtualListRef}
-          className="box grow"
-        />
-        {this.isJumpButtonVisible && (
-          <ToBottom onClick={this.scrollToBottom} />
-        )}
+      <div className="LogList flex box grow align-center justify-center">
+        <Spinner />
       </div>
     );
   }
-}
+
+  if (!logs.length) {
+    return (
+      <div className="LogList flex box grow align-center justify-center">
+          There are no logs available for container {model.logTabData.get()?.selectedContainer}
+      </div>
+    );
+  }
+
+  return (
+    <div className={cssNames("LogList flex" )}>
+      <VirtualList
+        items={logs}
+        rowHeights={array.filled(logs.length, lineHeight)}
+        getRow={getLogRow}
+        onScroll={onScroll}
+        outerRef={divRef}
+        ref={listRef}
+        className="box grow"
+      />
+      {isJumpButtonVisible && (
+        <ToBottom onClick={scrollToBottom} />
+      )}
+    </div>
+  );
+}));
+
+export const LogList = withInjectables<Dependencies, LogListProps, LogListRef>(NonInjectedLogList, {
+  getProps: (di, props) => ({
+    ...props,
+    localeTimezone: di.inject(localeTimezoneInjectable),
+  }),
+});

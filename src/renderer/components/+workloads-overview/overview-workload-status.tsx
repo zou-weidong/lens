@@ -5,39 +5,47 @@
 
 import "./overview-workload-status.scss";
 
-import React from "react";
+import React, { useRef } from "react";
 import capitalize from "lodash/capitalize";
 import { observer } from "mobx-react";
 import { PieChart } from "../chart";
 import { cssVar } from "../../utils";
 import type { ChartData } from "chart.js";
-import { ThemeStore } from "../../theme.store";
+import { withInjectables } from "@ogre-tools/injectable-react";
+import type { ActiveTheme } from "../../themes/active.injectable";
+import activeThemeInjectable from "../../themes/active.injectable";
 
 export interface OverviewWorkloadStatusProps {
   status: Record<string, number>;
 }
 
-@observer
-export class OverviewWorkloadStatus extends React.Component<OverviewWorkloadStatusProps> {
-  elem?: HTMLElement;
+interface Dependencies {
+  activeTheme: ActiveTheme;
+}
 
-  renderChart() {
-    if (!this.elem) {
+const NonInjectedOverviewWorkloadStatus = observer(({
+  activeTheme,
+  status,
+}: Dependencies & OverviewWorkloadStatusProps) => {
+  const elem = useRef<HTMLDivElement>();
+
+  const renderChart = () => {
+    if (!elem.current) {
       return null;
     }
 
-    const cssVars = cssVar(this.elem);
+    const cssVars = cssVar(elem.current);
     const chartData: Required<ChartData> = {
       labels: [],
       datasets: [],
     };
 
-    const statuses = Object.entries(this.props.status).filter(([, val]) => val > 0);
+    const statuses = Object.entries(status).filter(([, val]) => val > 0);
 
     if (statuses.length === 0) {
       chartData.datasets.push({
         data: [1],
-        backgroundColor: [ThemeStore.getInstance().activeTheme.colors.pieChartDefaultColor],
+        backgroundColor: [activeTheme.value.colors.pieChartDefaultColor],
         label: "Empty",
       });
     } else {
@@ -69,15 +77,20 @@ export class OverviewWorkloadStatus extends React.Component<OverviewWorkloadStat
         }}
       />
     );
-  }
+  };
 
-  render() {
-    return (
-      <div className="OverviewWorkloadStatus" ref={e => this.elem = e}>
-        <div className="flex column align-center box grow">
-          {this.renderChart()}
-        </div>
+  return (
+    <div className="OverviewWorkloadStatus" ref={elem}>
+      <div className="flex column align-center box grow">
+        {renderChart()}
       </div>
-    );
-  }
-}
+    </div>
+  );
+});
+
+export const OverviewWorkloadStatus = withInjectables<Dependencies, OverviewWorkloadStatusProps>(NonInjectedOverviewWorkloadStatus, {
+  getProps: (di, props) => ({
+    ...props,
+    activeTheme: di.inject(activeThemeInjectable),
+  }),
+});

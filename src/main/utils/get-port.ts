@@ -31,13 +31,13 @@ interface GetPortArgs {
  * @param args The args concerning the stream
  * @returns A Promise for port number
  */
-export function getPortFrom(stream: Readable, args: GetPortArgs): Promise<number> {
+export function getPortFrom(stream: Readable, { lineRegex, onFind, timeout = 15_000 }: GetPortArgs): Promise<number> {
   const logLines: string[] = [];
 
   return new Promise<number>((resolve, reject) => {
     const handler = (data: any) => {
       const logItem: string = data.toString();
-      const match = logItem.match(args.lineRegex);
+      const match = logItem.match(lineRegex);
 
       logLines.push(logItem);
 
@@ -45,7 +45,7 @@ export function getPortFrom(stream: Readable, args: GetPortArgs): Promise<number
         // use unknown protocol so that there is no default port
         const addr = new URLParse(`s://${match.groups.address.trim()}`);
 
-        args.onFind?.();
+        onFind?.();
         stream.off("data", handler);
         clearTimeout(timeoutID);
         resolve(+addr.port);
@@ -53,9 +53,9 @@ export function getPortFrom(stream: Readable, args: GetPortArgs): Promise<number
     };
     const timeoutID = setTimeout(() => {
       stream.off("data", handler);
-      logger.warn(`[getPortFrom]: failed to retrieve port via ${args.lineRegex.toString()}: ${logLines}`);
+      logger.warn(`[getPortFrom]: failed to retrieve port via ${lineRegex.toString()}: ${logLines}`);
       reject(new Error("failed to retrieve port from stream"));
-    }, args.timeout ?? 15000);
+    }, timeout);
 
     stream.on("data", handler);
   });

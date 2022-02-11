@@ -4,16 +4,16 @@
  */
 
 import { jest } from "@jest/globals";
-import { ClusterPageRegistry, getExtensionPageUrl, GlobalPageRegistry, PageParams } from "../page-registry";
+import type { PageParams } from "../page-registry";
+import { ClusterPageRegistry, getExtensionPageUrl, GlobalPageRegistry } from "../page-registry";
 import { LensExtension } from "../../lens-extension";
 import React from "react";
 import fse from "fs-extra";
 import { Console } from "console";
 import { stderr, stdout } from "process";
-import { ThemeStore } from "../../../renderer/theme.store";
-import { UserStore } from "../../../common/user-store";
 import { getDisForUnitTesting } from "../../../test-utils/get-dis-for-unit-testing";
 import mockFs from "mock-fs";
+import { SemVer } from "semver";
 
 jest.mock("electron", () => ({
   app: {
@@ -50,17 +50,18 @@ describe("page registry tests", () => {
     ext = new LensExtension({
       manifest: {
         name: "foo-bar",
-        version: "0.1.1",
+        version: new SemVer("0.1.1"),
+        description: "",
+        engines: {
+          lens: "",
+        },
       },
       id: "/this/is/fake/package.json",
       absolutePath: "/absolute/fake/",
       manifestPath: "/this/is/fake/package.json",
       isBundled: false,
-      isEnabled: true,
       isCompatible: true,
     });
-    UserStore.createInstance();
-    ThemeStore.createInstance();
     ClusterPageRegistry.createInstance();
     GlobalPageRegistry.createInstance().add({
       id: "page-with-params",
@@ -96,8 +97,6 @@ describe("page registry tests", () => {
   afterEach(() => {
     GlobalPageRegistry.resetInstance();
     ClusterPageRegistry.resetInstance();
-    ThemeStore.resetInstance();
-    UserStore.resetInstance();
     fse.remove("tmp");
     mockFs.restore();
   });

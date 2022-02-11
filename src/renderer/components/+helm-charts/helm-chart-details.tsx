@@ -6,7 +6,8 @@
 import "./helm-chart-details.scss";
 
 import React, { Component } from "react";
-import { getChartDetails, HelmChart } from "../../../common/k8s-api/endpoints/helm-charts.api";
+import type { HelmChart } from "../../../common/k8s-api/endpoints";
+import { getChartDetails } from "../../../common/k8s-api/endpoints";
 import { observable, makeObservable, reaction } from "mobx";
 import { disposeOnUnmount, observer } from "mobx-react";
 import { Drawer, DrawerItem } from "../drawer";
@@ -18,8 +19,11 @@ import { Select, type SelectOption } from "../select";
 import { Badge } from "../badge";
 import { Tooltip, withStyles } from "@material-ui/core";
 import { withInjectables } from "@ogre-tools/injectable-react";
+import type { CreateInstallChartTab } from "../dock/install-chart/create-install-chart-tab.injectable";
 import createInstallChartTabInjectable from "../dock/install-chart/create-install-chart-tab.injectable";
-import { Notifications } from "../notifications";
+import HelmPlaceholder from "./helm-placeholder.svg";
+import type { ErrorNotification } from "../notifications/error.injectable";
+import errorNotificationInjectable from "../notifications/error.injectable";
 
 export interface HelmChartDetailsProps {
   chart: HelmChart;
@@ -33,7 +37,8 @@ const LargeTooltip = withStyles({
 })(Tooltip);
 
 interface Dependencies {
-  createInstallChartTab: (helmChart: HelmChart) => void;
+  createInstallChartTab: CreateInstallChartTab;
+  errorNotification: ErrorNotification;
 }
 
 @observer
@@ -67,7 +72,7 @@ class NonInjectedHelmChartDetails extends Component<HelmChartDetailsProps & Depe
           this.chartVersions = versions;
           this.selectedChart = versions[0];
         } catch (error) {
-          Notifications.error(error);
+          this.props.errorNotification(error);
           this.selectedChart = null;
         }
       }, {
@@ -89,7 +94,7 @@ class NonInjectedHelmChartDetails extends Component<HelmChartDetailsProps & Depe
 
       this.readme = readme;
     } catch (error) {
-      Notifications.error(error);
+      this.props.errorNotification(error);
     }
   }
 
@@ -101,14 +106,13 @@ class NonInjectedHelmChartDetails extends Component<HelmChartDetailsProps & Depe
 
   renderIntroduction() {
     const { selectedChart, chartVersions, onVersionChange } = this;
-    const placeholder = require("./helm-placeholder.svg");
 
     return (
       <div className="introduction flex align-flex-start">
         <img
           className="intro-logo"
-          src={selectedChart.getIcon() || placeholder}
-          onError={(event) => event.currentTarget.src = placeholder}
+          src={selectedChart.getIcon() || HelmPlaceholder}
+          onError={(event) => event.currentTarget.src = HelmPlaceholder}
         />
         <div className="intro-contents box grow">
           <div className="description flex align-center justify-space-between">
@@ -197,13 +201,10 @@ class NonInjectedHelmChartDetails extends Component<HelmChartDetailsProps & Depe
   }
 }
 
-export const HelmChartDetails = withInjectables<Dependencies, HelmChartDetailsProps>(
-  NonInjectedHelmChartDetails,
-
-  {
-    getProps: (di, props) => ({
-      createInstallChartTab: di.inject(createInstallChartTabInjectable),
-      ...props,
-    }),
-  },
-);
+export const HelmChartDetails = withInjectables<Dependencies, HelmChartDetailsProps>(NonInjectedHelmChartDetails, {
+  getProps: (di, props) => ({
+    ...props,
+    createInstallChartTab: di.inject(createInstallChartTabInjectable),
+    errorNotification: di.inject(errorNotificationInjectable),
+  }),
+});

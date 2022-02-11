@@ -9,14 +9,15 @@ import React from "react";
 import { disposeOnUnmount, observer } from "mobx-react";
 import { KubeObject } from "../../../common/k8s-api/kube-object";
 import { DrawerItem, DrawerTitle } from "../drawer";
-import { cssNames, Disposer } from "../../utils";
+import type { Disposer } from "../../utils";
+import { cssNames } from "../../utils";
 import { LocaleDate } from "../locale-date";
-import { eventStore } from "./event.store";
 import logger from "../../../common/logger";
 import type { KubeObjectStore } from "../../../common/k8s-api/kube-object.store";
 import { withInjectables } from "@ogre-tools/injectable-react";
-import kubeWatchApiInjectable
-  from "../../kube-watch-api/kube-watch-api.injectable";
+import type { KubeEventStore } from "./store";
+import kubeEventStoreInjectable from "./store.injectable";
+import subscribeStoresInjectable from "../../kube-watch-api/subscribe-stores.injectable";
 
 export interface KubeEventDetailsProps {
   object: KubeObject;
@@ -24,20 +25,26 @@ export interface KubeEventDetailsProps {
 
 interface Dependencies {
   subscribeStores: (stores: KubeObjectStore<KubeObject>[]) => Disposer;
+  kubeEventStore: KubeEventStore;
 }
 
 @observer
 class NonInjectedKubeEventDetails extends React.Component<KubeEventDetailsProps & Dependencies> {
   componentDidMount() {
+    const {
+      kubeEventStore,
+      subscribeStores,
+    } = this.props;
+
     disposeOnUnmount(this, [
-      this.props.subscribeStores([
-        eventStore,
+      subscribeStores([
+        kubeEventStore,
       ]),
     ]);
   }
 
   render() {
-    const { object } = this.props;
+    const { object, kubeEventStore } = this.props;
 
     if (!object) {
       return null;
@@ -49,7 +56,7 @@ class NonInjectedKubeEventDetails extends React.Component<KubeEventDetailsProps 
       return null;
     }
 
-    const events = eventStore.getEventsByObject(object);
+    const events = kubeEventStore.getEventsByObject(object);
 
     if (!events.length) {
       return (
@@ -94,16 +101,13 @@ class NonInjectedKubeEventDetails extends React.Component<KubeEventDetailsProps 
   }
 }
 
-export const KubeEventDetails = withInjectables<Dependencies, KubeEventDetailsProps>(
-  NonInjectedKubeEventDetails,
-
-  {
-    getProps: (di, props) => ({
-      subscribeStores: di.inject(kubeWatchApiInjectable).subscribeStores,
-      ...props,
-    }),
-  },
-);
+export const KubeEventDetails = withInjectables<Dependencies, KubeEventDetailsProps>(NonInjectedKubeEventDetails, {
+  getProps: (di, props) => ({
+    ...props,
+    subscribeStores: di.inject(subscribeStoresInjectable),
+    kubeEventStore: di.inject(kubeEventStoreInjectable),
+  }),
+});
 
 
 

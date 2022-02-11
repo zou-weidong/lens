@@ -3,7 +3,7 @@
  * Licensed under MIT License. See LICENSE in root directory for more information.
  */
 import { getInjectable } from "@ogre-tools/injectable";
-import { getRelease } from "../../../../common/k8s-api/endpoints/helm-releases.api";
+import { getRelease } from "../../../../common/k8s-api/endpoints";
 import { asyncComputed } from "@ogre-tools/injectable-react";
 import releaseInjectable from "./release.injectable";
 

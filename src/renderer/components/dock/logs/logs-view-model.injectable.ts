@@ -13,10 +13,10 @@ import getLogTabDataInjectable from "./get-log-tab-data.injectable";
 import loadLogsInjectable from "./load-logs.injectable";
 import setLogTabDataInjectable from "./set-log-tab-data.injectable";
 import stopLoadingLogsInjectable from "./stop-loading-logs.injectable";
-import { podsStore } from "../../+workloads-pods/pods.store";
 import renameTabInjectable from "../dock/rename-tab.injectable";
 import areLogsPresentInjectable from "./are-logs-present.injectable";
 import searchStoreInjectable from "../../../search-store/search-store.injectable";
+import podStoreInjectable from "../../+workloads-pods/store.injectable";
 
 export interface InstantiateArgs {
   tabId: TabId;
@@ -25,21 +25,25 @@ export interface InstantiateArgs {
 const logsViewModelInjectable = getInjectable({
   id: "logs-view-model",
 
-  instantiate: (di, { tabId }: InstantiateArgs) => new LogTabViewModel(tabId, {
-    getLogs: di.inject(getLogsInjectable),
-    getLogsWithoutTimestamps: di.inject(getLogsWithoutTimestampsInjectable),
-    getTimestampSplitLogs: di.inject(getTimestampSplitLogsInjectable),
-    reloadLogs: di.inject(reloadLogsInjectable),
-    getLogTabData: di.inject(getLogTabDataInjectable),
-    setLogTabData: di.inject(setLogTabDataInjectable),
-    loadLogs: di.inject(loadLogsInjectable),
-    renameTab: di.inject(renameTabInjectable),
-    stopLoadingLogs: di.inject(stopLoadingLogsInjectable),
-    areLogsPresent: di.inject(areLogsPresentInjectable),
-    getPodById: id => podsStore.getById(id),
-    getPodsByOwnerId: id => podsStore.getPodsByOwnerId(id),
-    searchStore: di.inject(searchStoreInjectable),
-  }),
+  instantiate: (di, { tabId }: InstantiateArgs) => {
+    const podStore = di.inject(podStoreInjectable);
+
+    return new LogTabViewModel(tabId, {
+      getLogs: di.inject(getLogsInjectable),
+      getLogsWithoutTimestamps: di.inject(getLogsWithoutTimestampsInjectable),
+      getTimestampSplitLogs: di.inject(getTimestampSplitLogsInjectable),
+      reloadLogs: di.inject(reloadLogsInjectable),
+      getLogTabData: di.inject(getLogTabDataInjectable),
+      setLogTabData: di.inject(setLogTabDataInjectable),
+      loadLogs: di.inject(loadLogsInjectable),
+      renameTab: di.inject(renameTabInjectable),
+      stopLoadingLogs: di.inject(stopLoadingLogsInjectable),
+      areLogsPresent: di.inject(areLogsPresentInjectable),
+      getPodById: id => podStore.getById(id),
+      getPodsByOwnerId: id => podStore.getPodsByOwnerId(id),
+      searchStore: di.inject(searchStoreInjectable),
+    });
+  },
   lifecycle: lifecycleEnum.transient,
 });
 

@@ -9,12 +9,19 @@ import React from "react";
 import type { RouteComponentProps } from "react-router";
 import { KubeObjectListLayout } from "../../kube-object-list-layout";
 import { KubeObjectStatusIcon } from "../../kube-object-status-icon";
-import { RoleBindingDialog } from "./dialog";
-import { roleBindingsStore } from "./store";
-import { rolesStore } from "../+roles/store";
-import { clusterRolesStore } from "../+cluster-roles/store";
-import { serviceAccountsStore } from "../+service-accounts/store";
+import { RoleBindingDialog } from "./dialog/view";
+import type { RoleBindingStore } from "./store";
+import type { RoleStore } from "../+roles/store";
+import type { ClusterRoleStore } from "../+cluster-roles/store";
+import type { ServiceAccountStore } from "../+service-accounts/store";
 import type { RoleBindingsRouteParams } from "../../../../common/routes";
+import { withInjectables } from "@ogre-tools/injectable-react";
+import type { OpenRoleBindingDialog } from "./dialog/open.injectable";
+import openRoleBindingDialogInjectable from "./dialog/open.injectable";
+import clusterRoleStoreInjectable from "../+cluster-roles/store.injectable";
+import roleStoreInjectable from "../+roles/store.injectable";
+import serviceAccountStoreInjectable from "../+service-accounts/store.injectable";
+import roleBindingStoreInjectable from "./store.injectable";
 
 enum columnId {
   name = "name",
@@ -26,49 +33,69 @@ enum columnId {
 export interface RoleBindingsProps extends RouteComponentProps<RoleBindingsRouteParams> {
 }
 
-@observer
-export class RoleBindings extends React.Component<RoleBindingsProps> {
-  render() {
-    return (
-      <>
-        <KubeObjectListLayout
-          isConfigurable
-          tableId="access_role_bindings"
-          className="RoleBindings"
-          store={roleBindingsStore}
-          dependentStores={[rolesStore, clusterRolesStore, serviceAccountsStore]}
-          sortingCallbacks={{
-            [columnId.name]: binding => binding.getName(),
-            [columnId.namespace]: binding => binding.getNs(),
-            [columnId.bindings]: binding => binding.getSubjectNames(),
-            [columnId.age]: binding => binding.getTimeDiffFromNow(),
-          }}
-          searchFilters={[
-            binding => binding.getSearchFields(),
-            binding => binding.getSubjectNames(),
-          ]}
-          renderHeaderTitle="Role Bindings"
-          renderTableHeader={[
-            { title: "Name", className: "name", sortBy: columnId.name, id: columnId.name },
-            { className: "warning", showWithColumn: columnId.name },
-            { title: "Namespace", className: "namespace", sortBy: columnId.namespace, id: columnId.namespace },
-            { title: "Bindings", className: "bindings", sortBy: columnId.bindings, id: columnId.bindings },
-            { title: "Age", className: "age", sortBy: columnId.age, id: columnId.age },
-          ]}
-          renderTableContents={binding => [
-            binding.getName(),
-            <KubeObjectStatusIcon key="icon" object={binding} />,
-            binding.getNs(),
-            binding.getSubjectNames(),
-            binding.getAge(),
-          ]}
-          addRemoveButtons={{
-            onAdd: () => RoleBindingDialog.open(),
-            addTooltip: "Create new RoleBinding",
-          }}
-        />
-        <RoleBindingDialog />
-      </>
-    );
-  }
+interface Dependencies {
+  openRoleBindingDialog: OpenRoleBindingDialog;
+  roleBindingStore: RoleBindingStore;
+  roleStore: RoleStore;
+  clusterRoleStore: ClusterRoleStore;
+  serviceAccountStore: ServiceAccountStore;
 }
+
+const NonInjectedRoleBindings = observer(({
+  openRoleBindingDialog,
+  roleBindingStore,
+  roleStore,
+  clusterRoleStore,
+  serviceAccountStore,
+}: Dependencies & RoleBindingsProps) => (
+  <>
+    <KubeObjectListLayout
+      isConfigurable
+      tableId="access_role_bindings"
+      className="RoleBindings"
+      store={roleBindingStore}
+      dependentStores={[roleStore, clusterRoleStore, serviceAccountStore]}
+      sortingCallbacks={{
+        [columnId.name]: binding => binding.getName(),
+        [columnId.namespace]: binding => binding.getNs(),
+        [columnId.bindings]: binding => binding.getSubjectNames(),
+        [columnId.age]: binding => binding.getTimeDiffFromNow(),
+      }}
+      searchFilters={[
+        binding => binding.getSearchFields(),
+        binding => binding.getSubjectNames(),
+      ]}
+      renderHeaderTitle="Role Bindings"
+      renderTableHeader={[
+        { title: "Name", className: "name", sortBy: columnId.name, id: columnId.name },
+        { className: "warning", showWithColumn: columnId.name },
+        { title: "Namespace", className: "namespace", sortBy: columnId.namespace, id: columnId.namespace },
+        { title: "Bindings", className: "bindings", sortBy: columnId.bindings, id: columnId.bindings },
+        { title: "Age", className: "age", sortBy: columnId.age, id: columnId.age },
+      ]}
+      renderTableContents={binding => [
+        binding.getName(),
+        <KubeObjectStatusIcon key="icon" object={binding} />,
+        binding.getNs(),
+        binding.getSubjectNames(),
+        binding.getAge(),
+      ]}
+      addRemoveButtons={{
+        onAdd: openRoleBindingDialog,
+        addTooltip: "Create new RoleBinding",
+      }}
+    />
+    <RoleBindingDialog />
+  </>
+));
+
+export const RoleBindings = withInjectables<Dependencies, RoleBindingsProps>(NonInjectedRoleBindings, {
+  getProps: (di, props) => ({
+    ...props,
+    openRoleBindingDialog: di.inject(openRoleBindingDialogInjectable),
+    roleBindingStore: di.inject(roleBindingStoreInjectable),
+    roleStore: di.inject(roleStoreInjectable),
+    clusterRoleStore: di.inject(clusterRoleStoreInjectable),
+    serviceAccountStore: di.inject(serviceAccountStoreInjectable),
+  }),
+});

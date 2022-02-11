@@ -10,9 +10,12 @@ import React from "react";
 import type { RouteComponentProps } from "react-router";
 import { KubeObjectListLayout } from "../../kube-object-list-layout";
 import { KubeObjectStatusIcon } from "../../kube-object-status-icon";
-import { AddClusterRoleDialog } from "./add-dialog";
-import { clusterRolesStore } from "./store";
+import { AddClusterRoleDialog } from "./dialogs/add/view";
+import type { ClusterRoleStore } from "./store";
 import type { ClusterRolesRouteParams } from "../../../../common/routes";
+import { withInjectables } from "@ogre-tools/injectable-react";
+import openAddClusterRoleDialogInjectable from "./dialogs/add/open.injectable";
+import clusterRoleStoreInjectable from "./store.injectable";
 
 enum columnId {
   name = "name",
@@ -23,41 +26,52 @@ enum columnId {
 export interface ClusterRolesProps extends RouteComponentProps<ClusterRolesRouteParams> {
 }
 
-@observer
-export class ClusterRoles extends React.Component<ClusterRolesProps> {
-  render() {
-    return (
-      <>
-        <KubeObjectListLayout
-          isConfigurable
-          tableId="access_cluster_roles"
-          className="ClusterRoles"
-          store={clusterRolesStore}
-          sortingCallbacks={{
-            [columnId.name]: clusterRole => clusterRole.getName(),
-            [columnId.age]: clusterRole => clusterRole.getTimeDiffFromNow(),
-          }}
-          searchFilters={[
-            clusterRole => clusterRole.getSearchFields(),
-          ]}
-          renderHeaderTitle="Cluster Roles"
-          renderTableHeader={[
-            { title: "Name", className: "name", sortBy: columnId.name, id: columnId.name },
-            { className: "warning", showWithColumn: columnId.name },
-            { title: "Age", className: "age", sortBy: columnId.age, id: columnId.age },
-          ]}
-          renderTableContents={clusterRole => [
-            clusterRole.getName(),
-            <KubeObjectStatusIcon key="icon" object={clusterRole} />,
-            clusterRole.getAge(),
-          ]}
-          addRemoveButtons={{
-            onAdd: () => AddClusterRoleDialog.open(),
-            addTooltip: "Create new ClusterRole",
-          }}
-        />
-        <AddClusterRoleDialog/>
-      </>
-    );
-  }
+interface Dependencies {
+  openAddClusterRoleDialog: () => void;
+  clusterRoleStore: ClusterRoleStore;
 }
+
+const NonInjectedClusterRoles = observer(({
+  openAddClusterRoleDialog,
+  clusterRoleStore,
+}: Dependencies & ClusterRolesProps) => (
+  <>
+    <KubeObjectListLayout
+      isConfigurable
+      tableId="access_cluster_roles"
+      className="ClusterRoles"
+      store={clusterRoleStore}
+      sortingCallbacks={{
+        [columnId.name]: clusterRole => clusterRole.getName(),
+        [columnId.age]: clusterRole => clusterRole.getTimeDiffFromNow(),
+      }}
+      searchFilters={[
+        clusterRole => clusterRole.getSearchFields(),
+      ]}
+      renderHeaderTitle="Cluster Roles"
+      renderTableHeader={[
+        { title: "Name", className: "name", sortBy: columnId.name, id: columnId.name },
+        { className: "warning", showWithColumn: columnId.name },
+        { title: "Age", className: "age", sortBy: columnId.age, id: columnId.age },
+      ]}
+      renderTableContents={clusterRole => [
+        clusterRole.getName(),
+        <KubeObjectStatusIcon key="icon" object={clusterRole} />,
+        clusterRole.getAge(),
+      ]}
+      addRemoveButtons={{
+        onAdd: openAddClusterRoleDialog,
+        addTooltip: "Create new ClusterRole",
+      }}
+    />
+    <AddClusterRoleDialog/>
+  </>
+));
+
+export const ClusterRoles = withInjectables<Dependencies, ClusterRolesProps>(NonInjectedClusterRoles, {
+  getProps: (di, props) => ({
+    ...props,
+    openAddClusterRoleDialog: di.inject(openAddClusterRoleDialogInjectable),
+    clusterRoleStore: di.inject(clusterRoleStoreInjectable),
+  }),
+});

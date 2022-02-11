@@ -3,37 +3,42 @@
  * Licensed under MIT License. See LICENSE in root directory for more information.
  */
 import { getInjectable } from "@ogre-tools/injectable";
-import { requestOpenFilePickingDialog } from "../../ipc";
 import { supportedExtensionFormats } from "./supported-extension-formats";
-import attemptInstallsInjectable from "./attempt-installs/attempt-installs.injectable";
-import directoryForDownloadsInjectable from "../../../common/app-paths/directory-for-downloads/directory-for-downloads.injectable";
+import attemptInstallsInjectable from "./attempt-installs.injectable";
+import directoryForDownloadsInjectable from "../../../common/paths/downloads.injectable";
+import type { PickPaths } from "../path-picker/pick.injectable";
+import pickPathsInjectable from "../path-picker/pick.injectable";
+
+export type InstallFromSelectFileDialog = () => void;
 
 interface Dependencies {
   attemptInstalls: (filePaths: string[]) => Promise<void>;
   directoryForDownloads: string;
+  pickPaths: PickPaths;
 }
 
-const installFromSelectFileDialog = ({ attemptInstalls, directoryForDownloads }: Dependencies) => async () => {
-  const { canceled, filePaths } = await requestOpenFilePickingDialog({
+const installFromSelectFileDialog = ({
+  attemptInstalls,
+  directoryForDownloads,
+  pickPaths,
+}: Dependencies): InstallFromSelectFileDialog => (
+  () => pickPaths({
     defaultPath: directoryForDownloads,
     properties: ["openFile", "multiSelections"],
-    message: `Select extensions to install (formats: ${supportedExtensionFormats.join(", ")}), `,
+    label: `Select extensions to install (formats: ${supportedExtensionFormats.join(", ")})`,
+    onPick: attemptInstalls,
     buttonLabel: "Use configuration",
     filters: [{ name: "tarball", extensions: supportedExtensionFormats }],
-  });
-
-  if (!canceled) {
-    await attemptInstalls(filePaths);
-  }
-};
+  })
+);
 
 const installFromSelectFileDialogInjectable = getInjectable({
-  id: "install-from-select-file-dialog",
-
   instantiate: (di) => installFromSelectFileDialog({
     attemptInstalls: di.inject(attemptInstallsInjectable),
     directoryForDownloads: di.inject(directoryForDownloadsInjectable),
+    pickPaths: di.inject(pickPathsInjectable),
   }),
+  id: "install-from-select-file-dialog",
 });
 
 export default installFromSelectFileDialogInjectable;

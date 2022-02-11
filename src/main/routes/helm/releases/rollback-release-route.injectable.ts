@@ -7,6 +7,9 @@ import type { Route } from "../../../router/router";
 import { helmService } from "../../../helm/helm-service";
 import { routeInjectionToken } from "../../../router/router.injectable";
 import { getInjectable } from "@ogre-tools/injectable";
+import Joi from "joi";
+
+const revisionValidator = Joi.number();
 
 const rollbackReleaseRouteInjectable = getInjectable({
   id: "rollback-release-route",
@@ -15,10 +18,16 @@ const rollbackReleaseRouteInjectable = getInjectable({
     method: "put",
     path: `${apiPrefix}/v2/releases/{namespace}/{release}/rollback`,
 
-    handler: async (request) => {
-      const { cluster, params, payload } = request;
+    handler: async ({ cluster, params, payload }) => {
+      const revision = revisionValidator.validate(payload);
 
-      await helmService.rollback(cluster, params.release, params.namespace, payload.revision);
+      if (revision.error) {
+        return { error: revision.error };
+      }
+
+      await helmService.rollback(cluster, params.release, params.namespace, revision.value);
+
+      return undefined;
     },
   }),
 

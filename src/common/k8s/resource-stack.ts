@@ -2,20 +2,36 @@
  * Copyright (c) OpenLens Authors. All rights reserved.
  * Licensed under MIT License. See LICENSE in root directory for more information.
  */
-import fse from "fs-extra";
 import path from "path";
 import hb from "handlebars";
-import { ResourceApplier } from "../../main/resource-applier";
-import type { KubernetesCluster } from "../catalog-entities";
-import logger from "../../main/logger";
-import { app } from "electron";
-import { ClusterStore } from "../cluster-store/cluster-store";
+import type { KubernetesCluster } from "../catalog/entity/declarations";
 import yaml from "js-yaml";
-import { productName } from "../vars";
-import { requestKubectlApplyAll, requestKubectlDeleteAll } from "../../renderer/ipc";
+import type { KubectlApplyAll } from "../ipc/kubectl/apply-all.token";
+import type { KubectlDeleteAll } from "../ipc/kubectl/delete-all.token";
+import type { ReadDir } from "../fs/read-dir.injectable";
+import type { ReadFile } from "../fs/read-file.injectable";
+import type { LensLogger } from "../logger";
 
-export class ResourceStack {
-  constructor(protected cluster: KubernetesCluster, protected name: string) {}
+export interface ResourceStackDependencies {
+  kubectlApplyAll: KubectlApplyAll;
+  kubectlDeleteAll: KubectlDeleteAll;
+  readonly logger: LensLogger;
+  readonly productName: string;
+  readDir: ReadDir;
+  readFile: ReadFile;
+}
+
+export interface ResourceApplingStack {
+  kubectlApplyFolder(folderPath: string, templateContext?: any, extraArgs?: string[]): Promise<string>;
+  kubectlDeleteFolder(folderPath: string, templateContext?: any, extraArgs?: string[]): Promise<string>;
+}
+
+export class ResourceStack implements ResourceApplingStack {
+  constructor(
+    protected readonly dependencies: ResourceStackDependencies,
+    protected readonly cluster: KubernetesCluster,
+    protected readonly name: string,
+  ) {}
 
   /**
    *
@@ -39,75 +55,53 @@ export class ResourceStack {
     return this.deleteResources(resources, extraArgs);
   }
 
-  protected async applyResources(resources: string[], extraArgs?: string[]): Promise<string> {
-    const clusterModel = ClusterStore.getInstance().getById(this.cluster.getId());
+  protected async applyResources(resources: string[], extraArgs: string[] = []): Promise<string> {
+    this.appendKubectlArgs(extraArgs);
 
-    if (!clusterModel) {
-      throw new Error(`cluster not found`);
+    const response = await this.dependencies.kubectlApplyAll(this.cluster.getId(), resources, extraArgs);
+
+    if (response.stderr) {
+      throw new Error(response.stderr);
     }
 
-    let kubectlArgs = extraArgs || [];
-
-    kubectlArgs = this.appendKubectlArgs(kubectlArgs);
-
-    if (app) {
-      return await new ResourceApplier(clusterModel).kubectlApplyAll(resources, kubectlArgs);
-    } else {
-      const response = await requestKubectlApplyAll(this.cluster.getId(), resources, kubectlArgs);
-
-      if (response.stderr) {
-        throw new Error(response.stderr);
-      }
-
-      return response.stdout;
-    }
+    return response.stdout;
   }
 
   protected async deleteResources(resources: string[], extraArgs?: string[]): Promise<string> {
-    const clusterModel = ClusterStore.getInstance().getById(this.cluster.getId());
+    this.appendKubectlArgs(extraArgs);
 
-    if (!clusterModel) {
-      throw new Error(`cluster not found`);
+    const response = await this.dependencies.kubectlDeleteAll(this.cluster.getId(), resources, extraArgs);
+
+    if (response.stderr) {
+      throw new Error(response.stderr);
     }
 
-    let kubectlArgs = extraArgs || [];
-
-    kubectlArgs = this.appendKubectlArgs(kubectlArgs);
-
-    if (app) {
-      return await new ResourceApplier(clusterModel).kubectlDeleteAll(resources, kubectlArgs);
-    } else {
-      const response = await requestKubectlDeleteAll(this.cluster.getId(), resources, kubectlArgs);
-
-      if (response.stderr) {
-        throw new Error(response.stderr);
-      }
-
-      return response.stdout;
-    }
+    return response.stdout;
   }
 
   protected appendKubectlArgs(kubectlArgs: string[]) {
     if (!kubectlArgs.includes("-l") && !kubectlArgs.includes("--label")) {
-      return kubectlArgs.concat(["-l", `app.kubernetes.io/name=${this.name}`]);
+      kubectlArgs.push("-l", `app.kubernetes.io/name=${this.name}`);
     }
-
-    return kubectlArgs;
   }
 
   protected async renderTemplates(folderPath: string, templateContext: any): Promise<string[]> {
     const resources: string[] = [];
 
-    logger.info(`[RESOURCE-STACK]: render templates from ${folderPath}`);
-    const files = await fse.readdir(folderPath);
+    this.dependencies.logger.info(`rendering templates from ${folderPath}`);
+    const entries = await this.dependencies.readDir(folderPath, { withFileTypes: true });
 
-    for(const filename of files) {
-      const file = path.join(folderPath, filename);
-      const raw = await fse.readFile(file);
+    for(const entry of entries) {
+      if (!entry.isFile()) {
+        continue;
+      }
+
+      const file = path.join(folderPath, entry.name);
+      const raw = await this.dependencies.readFile(file, { encoding: "utf-8" });
       const data = (
-        filename.endsWith(".hb")
-          ? hb.compile(raw.toString())(templateContext)
-          : raw.toString()
+        entry.name.endsWith(".hb")
+          ? hb.compile(raw)(templateContext)
+          : raw
       ).trim();
 
       if (!data) {
@@ -124,7 +118,7 @@ export class ResourceStack {
         if (typeof resource.metadata === "object") {
           resource.metadata.labels ??= {};
           resource.metadata.labels["app.kubernetes.io/name"] = this.name;
-          resource.metadata.labels["app.kubernetes.io/managed-by"] = productName;
+          resource.metadata.labels["app.kubernetes.io/managed-by"] = this.dependencies.productName;
           resource.metadata.labels["app.kubernetes.io/created-by"] = "resource-stack";
         }
 

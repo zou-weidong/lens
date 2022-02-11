@@ -4,19 +4,18 @@
  */
 import { getInjectable } from "@ogre-tools/injectable";
 import { browseCatalogTab } from "../../../../common/routes";
-import createStorageInjectable from "../../../utils/create-storage/create-storage.injectable";
+import createStorageInjectable, { type StorageLayer } from "../../../utils/storage/create.injectable";
+
+let storage: StorageLayer<string>;
 
 const catalogPreviousActiveTabStorageInjectable = getInjectable({
-  id: "catalog-previous-active-tab-storage",
+  setup: async (di) => {
+    const createStorage = await di.inject(createStorageInjectable);
 
-  instantiate: (di) => {
-    const createStorage = di.inject(createStorageInjectable);
-
-    return createStorage(
-      "catalog-previous-active-tab",
-      browseCatalogTab,
-    );
+    storage = createStorage("catalog-previous-active-tab", browseCatalogTab);
   },
+  instantiate: () => storage,
+  id: "catalog-previous-active-tab-storage",
 });
 
 export default catalogPreviousActiveTabStorageInjectable;

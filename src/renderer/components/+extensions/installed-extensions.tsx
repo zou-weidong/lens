@@ -5,51 +5,57 @@
 
 import styles from "./installed-extensions.module.scss";
 import React, { useMemo } from "react";
-import type {
-  ExtensionDiscovery,
-  InstalledExtension,
-} from "../../../extensions/extension-discovery/extension-discovery";
 import { Icon } from "../icon";
 import { List } from "../list/list";
 import { MenuActions, MenuItem } from "../menu";
 import { Spinner } from "../spinner";
 import { cssNames } from "../../utils";
-import { observer } from "mobx-react";
 import type { Row } from "react-table";
-import type { LensExtensionId } from "../../../extensions/lens-extension";
-import extensionDiscoveryInjectable
-  from "../../../extensions/extension-discovery/extension-discovery.injectable";
-
 import { withInjectables } from "@ogre-tools/injectable-react";
-import extensionInstallationStateStoreInjectable
-  from "../../../extensions/extension-installation-state-store/extension-installation-state-store.injectable";
-import type { ExtensionInstallationStateStore } from "../../../extensions/extension-installation-state-store/extension-installation-state-store";
+import type { IObservableValue } from "mobx";
+import { observable } from "mobx";
+import isExtensionDiscoveryLoadedInjectable from "../../extensions/discovery-is-loaded.injectable";
+import type { InstalledExtension } from "../../../common/extensions/installed.injectable";
+import type { IsExtensionEnabled } from "../../../common/extensions/preferences/is-enabled.injectable";
+import type { ExtensionInstallationStateManager } from "../../../common/extensions/installation-state/manager";
+import extensionInstallationStateManagerInjectable from "../../../common/extensions/installation-state/manager.injectable";
+import isExtensionEnabledInjectable from "../../../common/extensions/preferences/is-enabled.injectable";
+import type { SetExtensionEnabled } from "../../../common/extensions/preferences/set-enabled.injectable";
+import type { ConfirmUninstallExtension } from "./confirm-uninstall-extension.injectable";
+import confirmUninstallExtensionInjectable from "./confirm-uninstall-extension.injectable";
+import setExtensionEnabledInjectable from "../../../common/extensions/preferences/set-enabled.injectable";
 
 export interface InstalledExtensionsProps {
   extensions: InstalledExtension[];
-  enable: (id: LensExtensionId) => void;
-  disable: (id: LensExtensionId) => void;
-  uninstall: (extension: InstalledExtension) => void;
 }
 
 interface Dependencies {
-  extensionDiscovery: ExtensionDiscovery;
-  extensionInstallationStateStore: ExtensionInstallationStateStore;
+  extensionInstallationStateStore: ExtensionInstallationStateManager;
+  isExtensionDiscoveryLoaded: IObservableValue<boolean>;
+  isExtensionEnabled: IsExtensionEnabled;
+  setExtensionEnabled: SetExtensionEnabled;
+  confirmUninstallExtension: ConfirmUninstallExtension;
 }
 
-function getStatus(extension: InstalledExtension) {
-  if (!extension.isCompatible) {
-    return "Incompatible";
-  }
+const NonInjectedInstalledExtensions = observable(({
+  extensionInstallationStateStore,
+  isExtensionDiscoveryLoaded,
+  extensions,
+  setExtensionEnabled,
+  confirmUninstallExtension,
+  isExtensionEnabled,
+}: Dependencies & InstalledExtensionsProps) => {
+  const getStatus = (extension: InstalledExtension) => {
+    if (!extension.isCompatible) {
+      return "Incompatible";
+    }
 
-  return extension.isEnabled ? "Enabled" : "Disabled";
-}
-
-const NonInjectedInstalledExtensions = observer(({ extensionDiscovery, extensionInstallationStateStore, extensions, uninstall, enable, disable }: Dependencies & InstalledExtensionsProps) => {
+    return isExtensionEnabled(extension) ? "Enabled" : "Disabled";
+  };
   const filters = [
     (extension: InstalledExtension) => extension.manifest.name,
     (extension: InstalledExtension) => getStatus(extension),
-    (extension: InstalledExtension) => extension.manifest.version,
+    (extension: InstalledExtension) => extension.manifest.version.raw,
   ];
 
   const columns = useMemo(
@@ -87,11 +93,12 @@ const NonInjectedInstalledExtensions = observer(({ extensionDiscovery, extension
   );
 
   const data = useMemo(
-    () => {
-      return extensions.map(extension => {
-        const { id, isEnabled, isCompatible, manifest } = extension;
+    () => (
+      extensions.map(extension => {
+        const { id, isCompatible, manifest } = extension;
         const { name, description, version } = manifest;
         const isUninstalling = extensionInstallationStateStore.isExtensionUninstalling(id);
+        const isEnabled = isExtensionEnabled(extension);
 
         return {
           extension: (
@@ -110,31 +117,21 @@ const NonInjectedInstalledExtensions = observer(({ extensionDiscovery, extension
           ),
           actions: (
             <MenuActions usePortal toolbar={false}>
-              { isCompatible && (
-                <>
-                  {isEnabled ? (
-                    <MenuItem
-                      disabled={isUninstalling}
-                      onClick={() => disable(id)}
-                    >
-                      <Icon material="unpublished"/>
-                      <span className="title" aria-disabled={isUninstalling}>Disable</span>
-                    </MenuItem>
-                  ) : (
-                    <MenuItem
-                      disabled={isUninstalling}
-                      onClick={() => enable(id)}
-                    >
-                      <Icon material="check_circle"/>
-                      <span className="title" aria-disabled={isUninstalling}>Enable</span>
-                    </MenuItem>
-                  )}
-                </>
+              {isCompatible && (
+                <MenuItem
+                  disabled={isUninstalling}
+                  onClick={() => setExtensionEnabled(id, !isEnabled)}
+                >
+                  <Icon material={isEnabled ? "unpublished" : "check_circle"}/>
+                  <span className="title" aria-disabled={isUninstalling}>
+                    {isEnabled ? "Disable" : "Enable"}
+                  </span>
+                </MenuItem>
               )}
 
               <MenuItem
                 disabled={isUninstalling}
-                onClick={() => uninstall(extension)}
+                onClick={() => confirmUninstallExtension(extension)}
               >
                 <Icon material="delete"/>
                 <span className="title" aria-disabled={isUninstalling}>Uninstall</span>
@@ -142,11 +139,11 @@ const NonInjectedInstalledExtensions = observer(({ extensionDiscovery, extension
             </MenuActions>
           ),
         };
-      });
-    }, [extensions, extensionInstallationStateStore.anyUninstalling],
+      })
+    ), [extensions, extensionInstallationStateStore.anyUninstalling],
   );
 
-  if (!extensionDiscovery.isLoaded) {
+  if (!isExtensionDiscoveryLoaded.get()) {
     return <div><Spinner center /></div>;
   }
 
@@ -177,8 +174,11 @@ const NonInjectedInstalledExtensions = observer(({ extensionDiscovery, extension
 
 export const InstalledExtensions = withInjectables<Dependencies, InstalledExtensionsProps>(NonInjectedInstalledExtensions, {
   getProps: (di, props) => ({
-    extensionDiscovery: di.inject(extensionDiscoveryInjectable),
-    extensionInstallationStateStore: di.inject(extensionInstallationStateStoreInjectable),
     ...props,
+    extensionInstallationStateStore: di.inject(extensionInstallationStateManagerInjectable),
+    isExtensionDiscoveryLoaded: di.inject(isExtensionDiscoveryLoadedInjectable),
+    isExtensionEnabled: di.inject(isExtensionEnabledInjectable),
+    confirmUninstallExtension: di.inject(confirmUninstallExtensionInjectable),
+    setExtensionEnabled: di.inject(setExtensionEnabledInjectable),
   }),
 });

@@ -6,15 +6,18 @@
 import React from "react";
 import { boundMethod, cssNames } from "../../utils";
 import type { KubeObject } from "../../../common/k8s-api/kube-object";
-import { MenuActions, MenuActionsProps } from "../menu";
+import type { MenuActionsProps } from "../menu";
+import { MenuActions } from "../menu";
 import identity from "lodash/identity";
 import type { ApiManager } from "../../../common/k8s-api/api-manager";
 import { withInjectables } from "@ogre-tools/injectable-react";
-import clusterNameInjectable from "./dependencies/cluster-name.injectable";
 import createEditResourceTabInjectable from "../dock/edit-resource/edit-resource-tab.injectable";
-import hideDetailsInjectable from "./dependencies/hide-details.injectable";
-import kubeObjectMenuItemsInjectable from "./dependencies/kube-object-menu-items/kube-object-menu-items.injectable";
-import apiManagerInjectable from "./dependencies/api-manager.injectable";
+import kubeObjectMenuItemsInjectable from "./items.injectable";
+import apiManagerInjectable from "../../../common/k8s-api/api-manager.injectable";
+import hostedClusterInjectable from "../../clusters/hosted-cluster.injectable";
+import type { Cluster } from "../../../common/clusters/cluster";
+import hideDetailsInjectable from "../kube-object/details/hide.injectable";
+import type { KubeObjectMenuItemProps } from "./registration";
 
 export interface KubeObjectMenuProps<TKubeObject extends KubeObject> extends MenuActionsProps {
   object: TKubeObject | null | undefined;
@@ -24,8 +27,8 @@ export interface KubeObjectMenuProps<TKubeObject extends KubeObject> extends Men
 
 interface Dependencies {
   apiManager: ApiManager;
-  kubeObjectMenuItems: React.ElementType[];
-  clusterName: string;
+  kubeObjectMenuItems: React.ComponentType<KubeObjectMenuItemProps>[];
+  cluster: Cluster;
   hideDetails: () => void;
   createEditResourceTab: (kubeObject: KubeObject) => void;
 }
@@ -77,7 +80,7 @@ class NonInjectedKubeObjectMenu<TKubeObject extends KubeObject> extends React.Co
 
     return (
       <p>
-        Remove {object.kind} <b>{breadcrumb}</b> from <b>{this.props.clusterName}</b>?
+        Remove {object.kind} <b>{breadcrumb}</b> from <b>{this.props.cluster.name}</b>?
       </p>
     );
   }
@@ -108,25 +111,19 @@ class NonInjectedKubeObjectMenu<TKubeObject extends KubeObject> extends React.Co
   }
 }
 
-const InjectedKubeObjectMenu = withInjectables<Dependencies, KubeObjectMenuProps<KubeObject>>(
-  NonInjectedKubeObjectMenu,
-  {
-    getProps: (di, props) => ({
-      clusterName: di.inject(clusterNameInjectable),
-      apiManager: di.inject(apiManagerInjectable),
-      createEditResourceTab: di.inject(createEditResourceTabInjectable),
-      hideDetails: di.inject(hideDetailsInjectable),
-
-      kubeObjectMenuItems: di.inject(kubeObjectMenuItemsInjectable, {
-        kubeObject: props.object,
-      }),
-      ...props,
+const InjectedKubeObjectMenu = withInjectables<Dependencies, KubeObjectMenuProps<KubeObject>>(NonInjectedKubeObjectMenu, {
+  getProps: (di, props) => ({
+    ...props,
+    cluster: di.inject(hostedClusterInjectable),
+    apiManager: di.inject(apiManagerInjectable),
+    createEditResourceTab: di.inject(createEditResourceTabInjectable),
+    hideDetails: di.inject(hideDetailsInjectable),
+    kubeObjectMenuItems: di.inject(kubeObjectMenuItemsInjectable, {
+      kubeObject: props.object,
     }),
-  },
-);
+  }),
+});
 
-export function KubeObjectMenu<T extends KubeObject>(
-  props: KubeObjectMenuProps<T>,
-) {
+export function KubeObjectMenu<T extends KubeObject>(props: KubeObjectMenuProps<T>) {
   return <InjectedKubeObjectMenu {...props} />;
 }

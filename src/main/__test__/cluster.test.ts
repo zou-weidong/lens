@@ -34,13 +34,13 @@ jest.mock("request-promise-native");
 
 import { Console } from "console";
 import mockFs from "mock-fs";
-import type { Cluster } from "../../common/cluster/cluster";
+import type { Cluster } from "../../common/clusters/cluster";
 import { Kubectl } from "../kubectl/kubectl";
 import { getDiForUnitTesting } from "../getDiForUnitTesting";
-import type { ClusterModel } from "../../common/cluster-types";
-import { createClusterInjectionToken } from "../../common/cluster/create-cluster-injection-token";
-import authorizationReviewInjectable from "../../common/cluster/authorization-review.injectable";
-import listNamespacesInjectable from "../../common/cluster/list-namespaces.injectable";
+import type { ClusterModel } from "../../common/clusters/cluster-types";
+import { createClusterInjectionToken } from "../../common/clusters/create-cluster-injection-token";
+import authorizationReviewInjectable from "../../common/clusters/authorization-review.injectable";
+import listNamespacesInjectable from "../../common/clusters/list-namespaces.injectable";
 
 console = new Console(process.stdout, process.stderr); // fix mockFS
 

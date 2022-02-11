@@ -4,22 +4,29 @@
  */
 
 import React, { useContext } from "react";
-import type { IClusterMetrics, Node } from "../../../common/k8s-api/endpoints";
-import { BarChart, cpuOptions, memoryOptions } from "../chart";
-import { isMetricsEmpty, normalizeMetrics } from "../../../common/k8s-api/endpoints/metrics.api";
+import type { ChartDataSets } from "../chart";
+import { BarChart } from "../chart";
+import { isMetricsEmpty, normalizeMetrics } from "../../../common/k8s-api/endpoints";
 import { NoMetrics } from "../resource-metrics/no-metrics";
-import { IResourceMetricsValue, ResourceMetricsContext } from "../resource-metrics";
+import { ResourceMetricsContext } from "../resource-metrics";
 import { observer } from "mobx-react";
-import type { ChartOptions, ChartPoint } from "chart.js";
-import { ThemeStore } from "../../theme.store";
 import { mapValues } from "lodash";
+import { withInjectables } from "@ogre-tools/injectable-react";
+import type { ActiveTheme } from "../../themes/active.injectable";
+import activeThemeInjectable from "../../themes/active.injectable";
+import type { MetricsTabs } from "../chart/options";
+import { metricTabOptions } from "../chart/options";
 
-type IContext = IResourceMetricsValue<Node, { metrics: IClusterMetrics }>;
+export interface NodeChartsProps {}
 
-export const NodeCharts = observer(() => {
-  const { params: { metrics }, tabId, object } = useContext<IContext>(ResourceMetricsContext);
+interface Dependencies {
+  activeTheme: ActiveTheme;
+}
+
+const NonInjectedNodeCharts = observer(({ activeTheme }: Dependencies & NodeChartsProps) => {
+  const { metrics, tab, object } = useContext(ResourceMetricsContext);
   const id = object.getId();
-  const { chartCapacityColor } = ThemeStore.getInstance().activeTheme.colors;
+  const { chartCapacityColor } = activeTheme.value.colors;
 
   if (!metrics) {
     return null;
@@ -45,9 +52,8 @@ export const NodeCharts = observer(() => {
     fsUsage,
   } = mapValues(metrics, metric => normalizeMetrics(metric).data.result[0].values);
 
-  const datasets = [
-    // CPU
-    [
+  const datasets: Partial<Record<MetricsTabs, ChartDataSets[]>> = {
+    CPU: [
       {
         id: `${id}-cpuUsage`,
         label: `Usage`,
@@ -77,8 +83,7 @@ export const NodeCharts = observer(() => {
         data: cpuCapacity.map(([x, y]) => ({ x, y })),
       },
     ],
-    // Memory
-    [
+    Memory: [
       {
         id: `${id}-memoryUsage`,
         label: `Usage`,
@@ -115,8 +120,7 @@ export const NodeCharts = observer(() => {
         data: memoryCapacity.map(([x, y]) => ({ x, y })),
       },
     ],
-    // Disk
-    [
+    Disk: [
       {
         id: `${id}-fsUsage`,
         label: `Usage`,
@@ -132,8 +136,7 @@ export const NodeCharts = observer(() => {
         data: fsSize.map(([x, y]) => ({ x, y })),
       },
     ],
-    // Pods
-    [
+    Pods: [
       {
         id: `${id}-podUsage`,
         label: `Usage`,
@@ -149,35 +152,20 @@ export const NodeCharts = observer(() => {
         data: podCapacity.map(([x, y]) => ({ x, y })),
       },
     ],
-  ];
-
-  const podOptions: ChartOptions = {
-    scales: {
-      yAxes: [{
-        ticks: {
-          callback: value => value,
-        },
-      }],
-    },
-    tooltips: {
-      callbacks: {
-        label: ({ datasetIndex, index }, { datasets }) => {
-          const { label, data } = datasets[datasetIndex];
-          const value = data[index] as ChartPoint;
-
-          return `${label}: ${value.y}`;
-        },
-      },
-    },
   };
-
-  const options = [cpuOptions, memoryOptions, memoryOptions, podOptions];
 
   return (
     <BarChart
-      name={`${object.getName()}-metric-${tabId}`}
-      options={options[tabId]}
-      data={{ datasets: datasets[tabId] }}
+      name={`${object.getName()}-metric-${tab}`}
+      options={metricTabOptions[tab]}
+      data={{ datasets: datasets[tab] }}
     />
   );
+});
+
+export const NodeCharts = withInjectables<Dependencies, NodeChartsProps>(NonInjectedNodeCharts, {
+  getProps: (di, props) => ({
+    ...props,
+    activeTheme: di.inject(activeThemeInjectable),
+  }),
 });

@@ -8,7 +8,8 @@ import "./namespace-select.scss";
 import React from "react";
 import { computed, makeObservable } from "mobx";
 import { observer } from "mobx-react";
-import { Select, SelectOption, SelectProps } from "../select";
+import type { SelectOption, SelectProps } from "../select";
+import { Select } from "../select";
 import { cssNames } from "../../utils";
 import { Icon } from "../icon";
 import type { NamespaceStore } from "./namespace-store/namespace.store";
@@ -88,13 +89,9 @@ class NonInjectedNamespaceSelect extends React.Component<NamespaceSelectProps & 
   }
 }
 
-export const NamespaceSelect = withInjectables<Dependencies, NamespaceSelectProps>(
-  NonInjectedNamespaceSelect,
-
-  {
-    getProps: (di, props) => ({
-      namespaceStore: di.inject(namespaceStoreInjectable),
-      ...props,
-    }),
-  },
-);
+export const NamespaceSelect = withInjectables<Dependencies, NamespaceSelectProps>(NonInjectedNamespaceSelect, {
+  getProps: (di, props) => ({
+    ...props,
+    namespaceStore: di.inject(namespaceStoreInjectable),
+  }),
+});

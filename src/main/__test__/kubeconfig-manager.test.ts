@@ -32,14 +32,14 @@ jest.mock("winston", () => ({
 import { getDiForUnitTesting } from "../getDiForUnitTesting";
 import { KubeconfigManager } from "../kubeconfig-manager/kubeconfig-manager";
 import mockFs from "mock-fs";
-import type { Cluster } from "../../common/cluster/cluster";
+import type { Cluster } from "../../common/clusters/cluster";
 import fse from "fs-extra";
 import { loadYaml } from "@kubernetes/client-node";
 import { Console } from "console";
 import * as path from "path";
 import createKubeconfigManagerInjectable from "../kubeconfig-manager/create-kubeconfig-manager.injectable";
-import { createClusterInjectionToken } from "../../common/cluster/create-cluster-injection-token";
-import directoryForTempInjectable from "../../common/app-paths/directory-for-temp/directory-for-temp.injectable";
+import { createClusterInjectionToken } from "../../common/clusters/create-cluster-injection-token";
+import directoryForTempInjectable from "../../common/paths/tempory-files.injectable";
 
 console = new Console(process.stdout, process.stderr); // fix mockFS
 

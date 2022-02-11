@@ -9,6 +9,7 @@ import * as yaml from "js-yaml";
 import { toCamelCase } from "../../common/utils/camelCase";
 import { execFile } from "child_process";
 import { execHelm } from "./exec";
+import type { JsonObject } from "type-fest";
 
 export async function listReleases(pathToKubeconfig: string, namespace?: string): Promise<Record<string, any>[]> {
   const args = [
@@ -35,7 +36,7 @@ export async function listReleases(pathToKubeconfig: string, namespace?: string)
 }
 
 
-export async function installChart(chart: string, values: any, name: string | undefined = "", namespace: string, version: string, kubeconfigPath: string) {
+export async function installChart(chart: string, values: JsonObject, name: string | undefined = "", namespace: string, version: string, kubeconfigPath: string) {
   const valuesFilePath = tempy.file({ name: "values.yaml" });
 
   await fse.writeFile(valuesFilePath, yaml.dump(values));

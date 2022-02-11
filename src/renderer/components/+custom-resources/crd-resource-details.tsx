@@ -8,15 +8,16 @@ import "./crd-resource-details.scss";
 import React from "react";
 import jsonPath from "jsonpath";
 import { observer } from "mobx-react";
-import { cssNames } from "../../utils";
+import { cssNames, parseJsonPath } from "../../utils";
 import { Badge } from "../badge";
 import { DrawerItem } from "../drawer";
 import type { KubeObjectDetailsProps } from "../kube-object-details";
 import { KubeObjectMeta } from "../kube-object-meta";
 import { Input } from "../input";
-import { AdditionalPrinterColumnsV1, CustomResourceDefinition } from "../../../common/k8s-api/endpoints/crd.api";
-import { parseJsonPath } from "../../utils/jsonPath";
-import { KubeObject, KubeObjectMetadata, KubeObjectStatus } from "../../../common/k8s-api/kube-object";
+import type { AdditionalPrinterColumnsV1 } from "../../../common/k8s-api/endpoints";
+import { CustomResourceDefinition } from "../../../common/k8s-api/endpoints";
+import type { KubeObjectMetadata, KubeObjectStatus } from "../../../common/k8s-api/kube-object";
+import { KubeObject } from "../../../common/k8s-api/kube-object";
 import logger from "../../../common/logger";
 
 export interface CustomResourceDetailsProps extends KubeObjectDetailsProps<KubeObject> {

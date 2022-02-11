@@ -4,7 +4,7 @@
  */
 
 import type { RouteProps } from "react-router";
-import type { URLParams } from "../utils/buildUrl";
+import type { URLParams } from "../utils";
 import { endpointRoute } from "./endpoints";
 import { ingressRoute } from "./ingresses";
 import { networkPoliciesRoute } from "./network-policies";

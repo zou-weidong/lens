@@ -3,29 +3,13 @@
  * Licensed under MIT License. See LICENSE in root directory for more information.
  */
 
-import { UserStore } from "../../common/user-store";
 import type { ContextHandler } from "../context-handler/context-handler";
-import { PrometheusProvider, PrometheusProviderRegistry, PrometheusService } from "../prometheus";
+import type { PrometheusService } from "../prometheus";
+import { PrometheusProvider, PrometheusProviderRegistry } from "../prometheus";
 import mockFs from "mock-fs";
 import { getDiForUnitTesting } from "../getDiForUnitTesting";
 import createContextHandlerInjectable from "../context-handler/create-context-handler.injectable";
-import type { Cluster } from "../../common/cluster/cluster";
-
-jest.mock("electron", () => ({
-  app: {
-    getVersion: () => "99.99.99",
-    getName: () => "lens",
-    setName: jest.fn(),
-    setPath: jest.fn(),
-    getPath: () => "tmp",
-    getLocale: () => "en",
-    setLoginItemSettings: jest.fn(),
-  },
-  ipcMain: {
-    on: jest.fn(),
-    handle: jest.fn(),
-  },
-}));
+import type { Cluster } from "../../common/clusters/cluster";
 
 enum ServiceResult {
   Success,
@@ -89,7 +73,6 @@ describe("ContextHandler", () => {
 
   afterEach(() => {
     PrometheusProviderRegistry.resetInstance();
-    UserStore.resetInstance();
     mockFs.restore();
   });
 

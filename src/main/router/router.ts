@@ -5,15 +5,11 @@
 
 import Call from "@hapi/call";
 import type http from "http";
-import type httpProxy from "http-proxy";
 import { toPairs } from "lodash/fp";
-import path from "path";
-import type { Cluster } from "../../common/cluster/cluster";
+import type { RequireAtLeastOne } from "type-fest";
+import type { Cluster } from "../../common/clusters/cluster";
 import type { LensApiResultContentType } from "./router-content-types";
 import { contentTypes } from "./router-content-types";
-
-// TODO: Import causes side effect, sets value for __static
-import "../../common/vars";
 
 export interface RouterRequestOpts {
   req: http.IncomingMessage;
@@ -33,9 +29,9 @@ export interface RouteParams extends Record<string, string> {
   chart?: string;
 }
 
-export interface LensApiRequest<P = any> {
+export interface LensApiRequest {
   path: string;
-  payload: P;
+  payload: unknown;
   params: RouteParams;
   cluster: Cluster;
   query: URLSearchParams;
@@ -51,12 +47,11 @@ interface Dependencies {
 
 export class Router {
   protected router = new Call.Router();
-  protected static rootPath = path.resolve(__static);
 
   constructor(routes: Route<unknown>[], private dependencies: Dependencies) {
-    routes.forEach(route => {
+    for (const route of routes) {
       this.router.add({ method: route.method, path: route.path }, handleRoute(route));
-    });
+    }
   }
 
   public async route(cluster: Cluster, req: http.IncomingMessage, res: http.ServerResponse): Promise<boolean> {
@@ -98,22 +93,19 @@ export class Router {
   }
 }
 
-export interface LensApiResult<TResult> {
+export type LensApiResult<TResult> = RequireAtLeastOne<{
   statusCode?: number;
+  proxy?: boolean;
   response?: TResult;
   error?: any;
+}> & {
   contentType?: LensApiResultContentType;
-  headers?: { [name: string]: string };
-  proxy?: httpProxy;
-}
+  headers?: Partial<Record<string, string>>;
+};
 
-export type RouteHandler<TResponse> = (
-  request: LensApiRequest
-) =>
-  | Promise<LensApiResult<TResponse>>
-  | Promise<void>
-  | LensApiResult<TResponse>
-  | void;
+type MaybeAsync<Fn extends (...args: any[]) => any> = Fn | ((...args: Parameters<Fn>) => Promise<ReturnType<Fn>>);
+
+export type RouteHandler<TResponse> = MaybeAsync<(request: LensApiRequest) => void | LensApiResult<TResponse>>;
 
 export interface Route<TResponse> {
   path: string;
@@ -161,36 +153,40 @@ const handleRoute = (route: Route<unknown>) => async (request: LensApiRequest, r
   writeServerResponse(mappedResult);
 };
 
-const writeServerResponseFor =
-  (serverResponse: http.ServerResponse) =>
-    ({
-      statusCode,
-      content,
-      headers,
-    }: {
-    statusCode: number;
-    content: any;
-    headers: { [name: string]: string };
-  }) => {
-      serverResponse.statusCode = statusCode;
+interface ResponseDetails {
+  statusCode: number;
+  content: any;
+  headers: {
+    [name: string]: string;
+  };
+}
 
-      const headerPairs = toPairs<string>(headers);
+const writeServerResponseFor = (serverResponse: http.ServerResponse) => (
+  ({
+    statusCode,
+    content,
+    headers,
+  }: ResponseDetails) => {
+    serverResponse.statusCode = statusCode;
 
-      headerPairs.forEach(([name, value]) => {
-        serverResponse.setHeader(name, value);
-      });
+    const headerPairs = toPairs<string>(headers);
 
-      if (content instanceof Buffer) {
-        serverResponse.write(content);
+    headerPairs.forEach(([name, value]) => {
+      serverResponse.setHeader(name, value);
+    });
 
-        serverResponse.end();
+    if (content instanceof Buffer) {
+      serverResponse.write(content);
 
-        return;
-      }
+      serverResponse.end();
 
-      if (content) {
-        serverResponse.end(content);
-      } else {
-        serverResponse.end();
-      }
-    };
+      return;
+    }
+
+    if (content) {
+      serverResponse.end(content);
+    } else {
+      serverResponse.end();
+    }
+  }
+);

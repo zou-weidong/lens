@@ -3,166 +3,95 @@
  * Licensed under MIT License. See LICENSE in root directory for more information.
  */
 
-import path from "path";
-import Config from "conf";
-import type { Options as ConfOptions } from "conf/dist/source/types";
-import { ipcMain, ipcRenderer } from "electron";
-import { IEqualsComparer, makeObservable, reaction, runInAction } from "mobx";
-import { getAppVersion, Singleton, toJS, Disposer } from "./utils";
-import logger from "../main/logger";
-import { broadcastMessage, ipcMainOn, ipcRendererOn } from "./ipc";
-import isEqual from "lodash/isEqual";
-import { isTestEnv } from "./vars";
-import { kebabCase } from "lodash";
-import { getLegacyGlobalDiForExtensionApi } from "../extensions/as-legacy-globals-for-extension-api/legacy-global-di-for-extension-api";
-import directoryForUserDataInjectable
-  from "./app-paths/directory-for-user-data/directory-for-user-data.injectable";
+import ElectronStore from "electron-store";
+import type { IEqualsComparer } from "mobx";
+import { comparer, reaction } from "mobx";
+import type { Disposer } from "./utils";
+import { toJS } from "./utils";
+import type { LensLogger } from "./logger";
 
-export interface BaseStoreParams<T> extends ConfOptions<T> {
-  syncOptions?: {
-    fireImmediately?: boolean;
-    equals?: IEqualsComparer<T>;
-  };
+export interface StoreSyncOptions<T> {
+  fireImmediately?: boolean;
+  equals?: IEqualsComparer<T>;
+}
+
+export interface BaseStoreParams<T> extends Omit<ElectronStore.Options<T>, "accessPropertiesByDotNotation" | "watch"> {
+  syncOptions?: StoreSyncOptions<T>;
+}
+
+export interface BaseStoreDependencies {
+  readonly userDataPath: string;
+  readonly logger: LensLogger;
 }
 
 /**
- * Note: T should only contain base JSON serializable types.
+ * `T` MUST be JSON serializable
  */
-export abstract class BaseStore<T> extends Singleton {
-  protected storeConfig?: Config<T>;
+export abstract class BaseStore<T> {
+  protected storeConfig?: ElectronStore<T>;
   protected syncDisposers: Disposer[] = [];
+  protected readonly syncOptions: StoreSyncOptions<T>;
+  protected readonly params: ElectronStore.Options<T>;
+  protected readonly logger: LensLogger;
 
-  readonly displayName: string = this.constructor.name;
+  constructor({ logger, userDataPath }: BaseStoreDependencies, baseStoreParams: BaseStoreParams<T>) {
+    const {
+      syncOptions = {
+        equals: comparer.structural,
+      },
+      cwd = userDataPath,
+      ...params
+    } = baseStoreParams;
 
-  protected constructor(protected params: BaseStoreParams<T>) {
-    super();
-    makeObservable(this);
-
-    if (ipcRenderer) {
-      params.migrations = undefined; // don't run migrations on renderer
-    }
+    this.syncOptions = syncOptions;
+    this.logger = logger;
+    this.params = {
+      ...params,
+      cwd,
+      accessPropertiesByDotNotation: false,
+      watch: true,
+    };
   }
 
   /**
    * This must be called after the last child's constructor is finished (or just before it finishes)
    */
   load() {
-    if (!isTestEnv) {
-      logger.info(`[${kebabCase(this.displayName).toUpperCase()}]: LOADING from ${this.path} ...`);
+    if (this.storeConfig) {
+      throw new Error(`Cannot load store for ${this.params.name} more than once`);
     }
 
-    this.storeConfig = new Config({
-      ...this.params,
-      projectName: "lens",
-      projectVersion: getAppVersion(),
-      cwd: this.cwd(),
-    });
+    this.logger.info(`LOADING ...`);
 
+    this.storeConfig = new ElectronStore(this.params);
     const res: any = this.fromStore(this.storeConfig.store);
 
     if (res instanceof Promise || (typeof res === "object" && res && typeof res.then === "function")) {
-      console.error(`${this.displayName} extends BaseStore<T>'s fromStore method returns a Promise or promise-like object. This is an error and must be fixed.`);
+      this.logger.error(`This class's fromStore implementation returns a Promise or promise-like object. This is an error and MUST be fixed.`);
     }
 
-    this.enableSync();
+    // Setup sync from file
+    this.storeConfig.onDidAnyChange(model => {
+      this.logger.debug("fromStore", model);
+      this.fromStore(model);
+    });
 
-    if (!isTestEnv) {
-      logger.info(`[${kebabCase(this.displayName).toUpperCase()}]: LOADED from ${this.path}`);
-    }
-  }
+    // Setup sync to file
+    reaction(
+      () => toJS(this.toJSON()),
+      model => this.saveToFile(model),
+      this.syncOptions,
+    );
 
-  get name() {
-    return path.basename(this.path);
-  }
-
-  protected get syncRendererChannel() {
-    return `store-sync-renderer:${this.path}`;
-  }
-
-  protected get syncMainChannel() {
-    return `store-sync-main:${this.path}`;
-  }
-
-  get path() {
-    return this.storeConfig?.path || "";
-  }
-
-  protected cwd() {
-    const di = getLegacyGlobalDiForExtensionApi();
-
-    return di.inject(directoryForUserDataInjectable);
+    this.logger.info(`LOADED`);
   }
 
   protected saveToFile(model: T) {
-    logger.info(`[STORE]: SAVING ${this.path}`);
+    this.logger.info(`SAVING...`);
 
     // todo: update when fixed https://github.com/sindresorhus/conf/issues/114
-    if (this.storeConfig) {
-      for (const [key, value] of Object.entries(model)) {
-        this.storeConfig.set(key, value);
-      }
-    }
-  }
-
-  enableSync() {
-    this.syncDisposers.push(
-      reaction(
-        () => toJS(this.toJSON()), // unwrap possible observables and react to everything
-        model => this.onModelChange(model),
-        this.params.syncOptions,
-      ),
-    );
-
-    if (ipcMain) {
-      this.syncDisposers.push(ipcMainOn(this.syncMainChannel, (event, model: T) => {
-        logger.silly(`[STORE]: SYNC ${this.name} from renderer`, { model });
-        this.onSync(model);
-      }));
-    }
-
-    if (ipcRenderer) {
-      this.syncDisposers.push(ipcRendererOn(this.syncRendererChannel, (event, model: T) => {
-        logger.silly(`[STORE]: SYNC ${this.name} from main`, { model });
-        this.onSyncFromMain(model);
-      }));
-    }
-  }
-
-  protected onSyncFromMain(model: T) {
-    this.applyWithoutSync(() => {
-      this.onSync(model);
-    });
-  }
-
-  unregisterIpcListener() {
-    ipcRenderer?.removeAllListeners(this.syncMainChannel);
-    ipcRenderer?.removeAllListeners(this.syncRendererChannel);
-  }
-
-  disableSync() {
-    this.syncDisposers.forEach(dispose => dispose());
-    this.syncDisposers.length = 0;
-  }
-
-  protected applyWithoutSync(callback: () => void) {
-    this.disableSync();
-    runInAction(callback);
-    this.enableSync();
-  }
-
-  protected onSync(model: T) {
-    // todo: use "resourceVersion" if merge required (to avoid equality checks => better performance)
-    if (!isEqual(this.toJSON(), model)) {
-      this.fromStore(model);
-    }
-  }
-
-  protected onModelChange(model: T) {
-    if (ipcMain) {
-      this.saveToFile(model); // save config file
-      broadcastMessage(this.syncRendererChannel, model);
-    } else {
-      broadcastMessage(this.syncMainChannel, model);
+    for (const [key, value] of Object.entries(model)) {
+      this.storeConfig.set(key, value);
     }
   }
 

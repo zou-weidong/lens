@@ -5,16 +5,18 @@
 
 import "./item-list-layout.scss";
 
-import React, { ReactNode } from "react";
+import type { ReactNode } from "react";
+import React from "react";
 import { computed, makeObservable, untracked } from "mobx";
-import type { ConfirmDialogParams } from "../confirm-dialog";
+import type { ConfirmDialogParams } from "../confirm-dialog/view";
 import type { TableCellProps, TableProps, TableRowProps, TableSortCallbacks } from "../table";
-import { boundMethod, cssNames, IClassName, noop, StorageHelper } from "../../utils";
+import type { IClassName } from "../../utils";
+import { boundMethod, cssNames, noop } from "../../utils";
 import type { AddRemoveButtonsProps } from "../add-remove-buttons";
 import type { ItemObject, ItemStore } from "../../../common/item.store";
 import type { SearchInputUrlProps } from "../input";
-import { FilterType, pageFilters } from "./page-filters.store";
-import { PageFiltersList } from "./page-filters-list";
+import { FilterType, type PageFiltersStore } from "./page-filters/store";
+import { PageFiltersList } from "./page-filters/list";
 import type { NamespaceStore } from "../+namespaces/namespace-store/namespace.store";
 import namespaceStoreInjectable from "../+namespaces/namespace-store/namespace-store.injectable";
 import { withInjectables } from "@ogre-tools/injectable-react";
@@ -24,6 +26,8 @@ import { ItemListLayoutHeader } from "./header";
 import groupBy from "lodash/groupBy";
 import { ItemListLayoutFilters } from "./filters";
 import { observer } from "mobx-react";
+import type { StorageLayer } from "../../utils/storage/create.injectable";
+import pageFiltersStoreInjectable from "./page-filters/store.injectable";
 
 export type SearchFilter<I extends ItemObject> = (item: I) => string | number | (string | number)[];
 export type SearchFilters<I extends ItemObject> = Record<string, SearchFilter<I>>;
@@ -106,9 +110,14 @@ const defaultProps: Partial<ItemListLayoutProps<ItemObject>> = {
   failedToLoadMessage: "Failed to load items",
 };
 
+export interface ItemListLayoutStorageState {
+  showFilters: boolean;
+}
+
 interface Dependencies {
   namespaceStore: NamespaceStore;
-  itemListLayoutStorage: StorageHelper<{ showFilters: boolean }>;
+  itemListLayoutStorage: StorageLayer<ItemListLayoutStorageState>;
+  pageFiltersStore: PageFiltersStore;
 }
 
 @observer
@@ -148,8 +157,8 @@ class NonInjectedItemListLayout<I extends ItemObject> extends React.Component<It
   }
 
   @computed get filters() {
-    let { activeFilters } = pageFilters;
-    const { searchFilters } = this.props;
+    const { searchFilters, pageFiltersStore } = this.props;
+    let { activeFilters } = pageFiltersStore;
 
     if (searchFilters.length === 0) {
       activeFilters = activeFilters.filter(({ type }) => type !== FilterType.SEARCH);
@@ -180,8 +189,8 @@ class NonInjectedItemListLayout<I extends ItemObject> extends React.Component<It
 
   private filterCallbacks: ItemsFilters<I> = {
     [FilterType.SEARCH]: items => {
-      const { searchFilters } = this.props;
-      const search = pageFilters.getValues(FilterType.SEARCH)[0] || "";
+      const { searchFilters, pageFiltersStore } = this.props;
+      const search = pageFiltersStore.getValues(FilterType.SEARCH)[0] || "";
 
       if (search && searchFilters.length) {
         const normalizeText = (text: string) => String(text).toLowerCase();
@@ -274,9 +283,10 @@ class NonInjectedItemListLayout<I extends ItemObject> extends React.Component<It
 
 const InjectedItemListLayout = withInjectables<Dependencies, ItemListLayoutProps<ItemObject>>(NonInjectedItemListLayout, {
   getProps: (di, props) => ({
+    ...props,
     namespaceStore: di.inject(namespaceStoreInjectable),
     itemListLayoutStorage: di.inject(itemListLayoutStorageInjectable),
-    ...props,
+    pageFiltersStore: di.inject(pageFiltersStoreInjectable),
   }),
 });
 

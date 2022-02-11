@@ -11,21 +11,31 @@ import React from "react";
 import type { RoleBinding, RoleBindingSubject } from "../../../../common/k8s-api/endpoints";
 import { prevDefault, boundMethod } from "../../../utils";
 import { AddRemoveButtons } from "../../add-remove-buttons";
-import { ConfirmDialog } from "../../confirm-dialog";
 import { DrawerTitle } from "../../drawer";
 import type { KubeObjectDetailsProps } from "../../kube-object-details";
 import { KubeObjectMeta } from "../../kube-object-meta";
 import { Table, TableCell, TableHead, TableRow } from "../../table";
-import { RoleBindingDialog } from "./dialog";
-import { roleBindingsStore } from "./store";
-import { ObservableHashSet } from "../../../../common/utils/hash-set";
+import type { RoleBindingStore } from "./store";
+import { ObservableHashSet } from "../../../../common/utils";
 import { hashRoleBindingSubject } from "./hashers";
+import type { OpenRoleBindingDialog } from "./dialog/open.injectable";
+import { withInjectables } from "@ogre-tools/injectable-react";
+import openRoleBindingDialogInjectable from "./dialog/open.injectable";
+import type { OpenConfirmDialog } from "../../confirm-dialog/open.injectable";
+import openConfirmDialogInjectable from "../../confirm-dialog/open.injectable";
+import roleBindingStoreInjectable from "./store.injectable";
 
 export interface RoleBindingDetailsProps extends KubeObjectDetailsProps<RoleBinding> {
 }
 
+interface Dependencies {
+  openRoleBindingDialog: OpenRoleBindingDialog;
+  openConfirmDialog: OpenConfirmDialog;
+  roleBindingStore: RoleBindingStore;
+}
+
 @observer
-export class RoleBindingDetails extends React.Component<RoleBindingDetailsProps> {
+class NonInjectedRoleBindingDetails extends React.Component<RoleBindingDetailsProps & Dependencies> {
   selectedSubjects = new ObservableHashSet<RoleBindingSubject>([], hashRoleBindingSubject);
 
   async componentDidMount() {
@@ -38,11 +48,11 @@ export class RoleBindingDetails extends React.Component<RoleBindingDetailsProps>
 
   @boundMethod
   removeSelectedSubjects() {
-    const { object: roleBinding } = this.props;
+    const { object: roleBinding, openConfirmDialog, roleBindingStore } = this.props;
     const { selectedSubjects } = this;
 
-    ConfirmDialog.open({
-      ok: () => roleBindingsStore.removeSubjects(roleBinding, selectedSubjects.toJSON()),
+    openConfirmDialog({
+      ok: () => roleBindingStore.removeSubjects(roleBinding, selectedSubjects.toJSON()),
       labelOk: `Remove`,
       message: (
         <p>Remove selected bindings for <b>{roleBinding.getName()}</b>?</p>
@@ -110,7 +120,7 @@ export class RoleBindingDetails extends React.Component<RoleBindingDetailsProps>
         )}
 
         <AddRemoveButtons
-          onAdd={() => RoleBindingDialog.open(roleBinding)}
+          onAdd={() => this.props.openRoleBindingDialog(roleBinding)}
           onRemove={selectedSubjects.size ? this.removeSelectedSubjects : null}
           addTooltip={`Edit bindings of ${roleRef.name}`}
           removeTooltip={`Remove selected bindings from ${roleRef.name}`}
@@ -119,3 +129,12 @@ export class RoleBindingDetails extends React.Component<RoleBindingDetailsProps>
     );
   }
 }
+
+export const RoleBindingDetails = withInjectables<Dependencies, RoleBindingDetailsProps>(NonInjectedRoleBindingDetails, {
+  getProps: (di, props) => ({
+    ...props,
+    openRoleBindingDialog: di.inject(openRoleBindingDialogInjectable),
+    openConfirmDialog: di.inject(openConfirmDialogInjectable),
+    roleBindingStore: di.inject(roleBindingStoreInjectable),
+  }),
+});

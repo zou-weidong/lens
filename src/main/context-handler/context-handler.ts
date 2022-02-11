@@ -5,10 +5,11 @@
 
 import type { PrometheusProvider, PrometheusService } from "../prometheus/provider-registry";
 import { PrometheusProviderRegistry } from "../prometheus/provider-registry";
-import type { ClusterPrometheusPreferences } from "../../common/cluster-types";
-import type { Cluster } from "../../common/cluster/cluster";
+import type { ClusterPrometheusPreferences } from "../../common/clusters/cluster-types";
+import type { Cluster } from "../../common/clusters/cluster";
 import type httpProxy from "http-proxy";
-import url, { UrlWithStringQuery } from "url";
+import type { UrlWithStringQuery } from "url";
+import url from "url";
 import { CoreV1Api } from "@kubernetes/client-node";
 import logger from "../logger";
 import type { KubeAuthProxy } from "../kube-auth-proxy/kube-auth-proxy";
@@ -25,7 +26,7 @@ interface PrometheusServicePreferences {
   prefix: string;
 }
 
-interface Dependencies {
+export interface ContextHandlerDependencies {
   createKubeAuthProxy: (cluster: Cluster, environmentVariables: NodeJS.ProcessEnv) => KubeAuthProxy;
 }
 
@@ -36,7 +37,7 @@ export class ContextHandler {
   protected prometheusProvider?: string;
   protected prometheus?: PrometheusServicePreferences;
 
-  constructor(private dependencies: Dependencies, protected cluster: Cluster) {
+  constructor(private dependencies: ContextHandlerDependencies, protected cluster: Cluster) {
     this.clusterUrl = url.parse(cluster.apiUrl);
     this.setupPrometheus(cluster.preferences);
   }

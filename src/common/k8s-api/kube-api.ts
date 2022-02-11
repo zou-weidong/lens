@@ -7,20 +7,25 @@
 
 import { isFunction, merge } from "lodash";
 import { stringify } from "querystring";
-import { apiKubePrefix, isDevelopment } from "../../common/vars";
 import logger from "../../main/logger";
-import { apiManager } from "./api-manager";
-import { apiBase, apiKube } from "./index";
-import { createKubeApiURL, parseKubeApi } from "./kube-api-parse";
-import { KubeObjectConstructor, KubeObject, KubeStatus } from "./kube-object";
+import { apiKube } from "./index";
+import type { KubeObjectConstructor } from "./kube-object";
+import { KubeObject, KubeStatus } from "./kube-object";
 import byline from "byline";
 import type { IKubeWatchEvent } from "./kube-watch-event";
-import { KubeJsonApi, KubeJsonApiData } from "./kube-json-api";
+import type { KubeJsonApiData } from "./kube-json-api";
+import { KubeJsonApi } from "./kube-json-api";
 import { noop, WrappedAbortController } from "../utils";
 import type { RequestInit } from "node-fetch";
 import type AbortController from "abort-controller";
-import { Agent, AgentOptions } from "https";
+import type { AgentOptions } from "https";
+import { Agent } from "https";
 import type { Patch } from "rfc6902";
+import type { JsonApiHandler } from "./json-api";
+import createKubeApiURL from "./url/create";
+import { asLegacyGlobalForExtensionApi } from "../../extensions/di-legacy-globals/for-extension-api";
+import apiManagerInjectable from "./api-manager.injectable";
+import parseKubeApiInjectable from "./url/parse.injectable";
 
 /**
  * The options used for creating a `KubeApi`
@@ -57,7 +62,7 @@ export interface IKubeApiOptions<T extends KubeObject> {
    *
    * @default apiKube
    */
-  request?: KubeJsonApi;
+  request?: JsonApiHandler<KubeJsonApiData>;
 
   /**
    * @deprecated should be specified by `objectConstructor`
@@ -132,28 +137,6 @@ export interface IRemoteKubeApiConfig {
   };
 }
 
-export function forCluster<T extends KubeObject, Y extends KubeApi<T> = KubeApi<T>>(cluster: ILocalKubeApiConfig, kubeClass: KubeObjectConstructor<T>, apiClass: new (apiOpts: IKubeApiOptions<T>) => Y = null): KubeApi<T> {
-  const url = new URL(apiBase.config.serverAddress);
-  const request = new KubeJsonApi({
-    serverAddress: apiBase.config.serverAddress,
-    apiBase: apiKubePrefix,
-    debug: isDevelopment,
-  }, {
-    headers: {
-      "Host": `${cluster.metadata.uid}.localhost:${url.port}`,
-    },
-  });
-
-  if (!apiClass) {
-    apiClass = KubeApi as new (apiOpts: IKubeApiOptions<T>) => Y;
-  }
-
-  return new apiClass({
-    objectConstructor: kubeClass,
-    request,
-  });
-}
-
 export function forRemoteCluster<T extends KubeObject, Y extends KubeApi<T> = KubeApi<T>>(config: IRemoteKubeApiConfig, kubeClass: KubeObjectConstructor<T>, apiClass: new (apiOpts: IKubeApiOptions<T>) => Y = null): Y {
   const reqInit: RequestInit = {};
   const agentOptions: AgentOptions = {};
@@ -182,7 +165,6 @@ export function forRemoteCluster<T extends KubeObject, Y extends KubeApi<T> = Ku
   const request = new KubeJsonApi({
     serverAddress: config.cluster.server,
     apiBase: "",
-    debug: isDevelopment,
     ...(token ? {
       getRequestOptions: async () => ({
         headers: {
@@ -258,6 +240,37 @@ export interface DeleteResourceDescriptor extends ResourceDescriptor {
   propagationPolicy?: PropagationPolicy;
 }
 
+export type DerivedKubeApiOptions = Omit<IKubeApiOptions<KubeObject>, "objectConstructor" | "kind" | "isNamespaces">;
+
+/**
+ * @deprecated This type is only present for backwards compatable typescript support
+ */
+export interface IgnoredKubeApiOptions {
+  /**
+   * @deprecated this option is overridden and should not be used
+   */
+  objectConstructor?: any;
+  /**
+   * @deprecated this option is overridden and should not be used
+   */
+  kind?: any;
+  /**
+   * @deprecated this option is overridden and should not be used
+   */
+  isNamespaces?: any;
+}
+
+export type KubeApiConstructor<A extends KubeApi<K>, K extends KubeObject> = new (opts: IKubeApiOptions<K>) => A;
+
+/**
+ * @deprecated
+ */
+const parseKubeApi = asLegacyGlobalForExtensionApi(parseKubeApiInjectable);
+/**
+ * @deprecated
+ */
+const apiManager = asLegacyGlobalForExtensionApi(apiManagerInjectable);
+
 export class KubeApi<T extends KubeObject> {
   readonly kind: string;
   readonly apiVersion: string;
@@ -269,7 +282,7 @@ export class KubeApi<T extends KubeObject> {
   readonly isNamespaced: boolean;
 
   public objectConstructor: KubeObjectConstructor<T>;
-  protected request: KubeJsonApi;
+  protected request: JsonApiHandler<KubeJsonApiData>;
   protected resourceVersions = new Map<string, string>();
   protected watchDisposer: () => void;
   private watchId = 1;

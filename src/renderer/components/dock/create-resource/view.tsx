@@ -4,26 +4,29 @@
  */
 
 import React from "react";
-import { GroupSelectOption, Select, SelectOption } from "../../select";
+import type { GroupSelectOption, SelectOption } from "../../select";
+import { Select } from "../../select";
 import yaml from "js-yaml";
-import { IComputedValue, makeObservable, observable } from "mobx";
+import type { IComputedValue } from "mobx";
+import { makeObservable, observable } from "mobx";
 import { observer } from "mobx-react";
 import type { CreateResourceTabStore } from "./store";
 import type { DockTab } from "../dock/store";
 import { EditorPanel } from "../editor-panel";
 import { InfoPanel } from "../info-panel";
-import * as resourceApplierApi from "../../../../common/k8s-api/endpoints/resource-applier.api";
-import { Notifications } from "../../notifications";
 import logger from "../../../../common/logger";
-import type { KubeJsonApiData } from "../../../../common/k8s-api/kube-json-api";
-import { getDetailsUrl } from "../../kube-detail-params";
-import { apiManager } from "../../../../common/k8s-api/api-manager";
 import { prevDefault } from "../../../utils";
-import { navigate } from "../../../navigation";
 import { withInjectables } from "@ogre-tools/injectable-react";
 import createResourceTabStoreInjectable from "./store.injectable";
 import createResourceTemplatesInjectable from "./create-resource-templates.injectable";
-import { Spinner } from "../../spinner";
+import type { OkNotification } from "../../notifications/ok.injectable";
+import type { ErrorNotification } from "../../notifications/error.injectable";
+import errorNotificationInjectable from "../../notifications/error.injectable";
+import okNotificationInjectable from "../../notifications/ok.injectable";
+import type { ShowDetails } from "../../kube-object/details/show.injectable";
+import showDetailsInjectable from "../../kube-object/details/show.injectable";
+import type { ResourceApplierApi } from "../../../../common/k8s-api/endpoints";
+import resourceApplierApiInjectable from "../../../../common/k8s-api/endpoints/resource-applier.api.injectable";
 
 export interface CreateResourceProps {
   tab: DockTab;
@@ -32,6 +35,10 @@ export interface CreateResourceProps {
 interface Dependencies {
   createResourceTemplates: IComputedValue<GroupSelectOption<SelectOption>[]>;
   createResourceTabStore: CreateResourceTabStore;
+  resourceApplierApi: ResourceApplierApi;
+  okNotification: OkNotification;
+  errorNotification: ErrorNotification;
+  showDetails: ShowDetails;
 }
 
 @observer
@@ -79,23 +86,21 @@ class NonInjectedCreateResource extends React.Component<CreateResourceProps & De
 
     const creatingResources = resources.map(async (resource: string) => {
       try {
-        const data = await resourceApplierApi.update(resource) as KubeJsonApiData;
+        const data = await this.props.resourceApplierApi.update(resource);
         const { kind, apiVersion, metadata: { name, namespace }} = data;
 
         const showDetails = () => {
-          const resourceLink = apiManager.lookupApiLink({ kind, apiVersion, name, namespace });
-
-          navigate(getDetailsUrl(resourceLink));
+          this.props.showDetails({ kind, apiVersion, name, namespace });
           close();
         };
 
-        const close = Notifications.ok(
+        const close = this.props.okNotification(
           <p>
             {kind} <a onClick={prevDefault(showDetails)}>{name}</a> successfully created.
           </p>,
         );
       } catch (error) {
-        Notifications.error(error?.toString() ?? "Unknown error occured");
+        this.props.errorNotification(error?.toString() ?? "Unknown error occured");
       }
     });
 
@@ -144,11 +149,13 @@ class NonInjectedCreateResource extends React.Component<CreateResourceProps & De
 }
 
 export const CreateResource = withInjectables<Dependencies, CreateResourceProps>(NonInjectedCreateResource, {
-  getPlaceholder: () => <Spinner center />,
-
-  getProps: async (di, props) => ({
-    createResourceTabStore: di.inject(createResourceTabStoreInjectable),
-    createResourceTemplates: await di.inject(createResourceTemplatesInjectable),
+  getProps: (di, props) => ({
     ...props,
+    createResourceTabStore: di.inject(createResourceTabStoreInjectable),
+    createResourceTemplates: di.inject(createResourceTemplatesInjectable),
+    okNotification: di.inject(okNotificationInjectable),
+    errorNotification: di.inject(errorNotificationInjectable),
+    showDetails: di.inject(showDetailsInjectable),
+    resourceApplierApi: di.inject(resourceApplierApiInjectable),
   }),
 });

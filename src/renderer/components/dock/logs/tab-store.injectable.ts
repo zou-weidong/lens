@@ -3,15 +3,14 @@
  * Licensed under MIT License. See LICENSE in root directory for more information.
  */
 import { getInjectable } from "@ogre-tools/injectable";
+import logTabStorageInjectable from "./storage.injectable";
 import { LogTabStore } from "./tab-store";
-import createStorageInjectable from "../../../utils/create-storage/create-storage.injectable";
 
 const logTabStoreInjectable = getInjectable({
-  id: "log-tab-store",
-
   instantiate: (di) => new LogTabStore({
-    createStorage: di.inject(createStorageInjectable),
+    storage: di.inject(logTabStorageInjectable),
   }),
+  id: "log-tab-store",
 });
 
 export default logTabStoreInjectable;

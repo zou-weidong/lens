@@ -4,7 +4,8 @@
  */
 
 import type { RouteProps } from "react-router";
-import { buildURL, URLParams } from "../utils/buildUrl";
+import type { URLParams } from "../utils";
+import { buildURL } from "../utils";
 
 // Routes
 export const serviceAccountsRoute: RouteProps = {

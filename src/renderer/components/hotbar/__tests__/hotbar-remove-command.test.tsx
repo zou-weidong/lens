@@ -10,21 +10,15 @@ import React from "react";
 import type { DiContainer } from "@ogre-tools/injectable";
 import { getDiForUnitTesting } from "../../../getDiForUnitTesting";
 import { DiRender, renderFor } from "../../test-utils/renderFor";
-import hotbarManagerInjectable from "../../../../common/hotbar-store.injectable";
-import { ThemeStore } from "../../../theme.store";
-import { ConfirmDialog } from "../../confirm-dialog";
-import type { HotbarStore } from "../../../../common/hotbar-store";
-import { UserStore } from "../../../../common/user-store";
-import mockFs from "mock-fs";
-import directoryForUserDataInjectable from "../../../../common/app-paths/directory-for-user-data/directory-for-user-data.injectable";
-
-const mockHotbars: { [id: string]: any } = {
-  "1": {
-    id: "1",
-    name: "Default",
-    items: [] as any,
-  },
-};
+import { ConfirmDialog } from "../../confirm-dialog/view";
+import directoryForUserDataInjectable from "../../../../common/paths/user-data.injectable";
+import hotbarsInjectable from "../../../../common/hotbars/hotbars.injectable";
+import { observable } from "mobx";
+import type { Hotbar } from "../../../../common/hotbars/hotbar";
+import type { CreateHotbar } from "../../../../common/hotbars/create-hotbar.injectable";
+import createHotbarInjectable from "../../../../common/hotbars/create-hotbar.injectable";
+import type { RemoveHotbar } from "../../../../common/hotbars/remove-hotbar.injectable";
+import removeHotbarInjectable from "../../../../common/hotbars/remove-hotbar.injectable";
 
 jest.mock("electron", () => ({
   ipcRenderer: {
@@ -36,66 +30,44 @@ jest.mock("electron", () => ({
 describe("<HotbarRemoveCommand />", () => {
   let di: DiContainer;
   let render: DiRender;
+  let createHotbar: CreateHotbar;
+  let removeHotbar: jest.MockedFunction<RemoveHotbar>;
+  let mockHotbar1: [string, Hotbar];
 
-  beforeEach(() => {
+  beforeEach(async () => {
     di = getDiForUnitTesting({ doGeneralOverrides: true });
 
-    mockFs();
-
     di.override(directoryForUserDataInjectable, () => "some-directory-for-user-data");
+    di.override(removeHotbarInjectable, () => removeHotbar = jest.fn());
 
     render = renderFor(di);
-
-    UserStore.createInstance();
-    ThemeStore.createInstance();
-  });
-
-  afterEach(() => {
-    mockFs.restore();
-    ThemeStore.resetInstance();
-    UserStore.resetInstance();
-  });
-
-  it("renders w/o errors", async () => {
-    di.override(hotbarManagerInjectable, () => ({
-      hotbars: [mockHotbars["1"]],
-      getById: (id: string) => mockHotbars[id],
-      remove: () => {
-      },
-      hotbarIndex: () => 0,
-      getDisplayLabel: () => "1: Default",
-    }) as any as HotbarStore);
-
+    createHotbar = di.inject(createHotbarInjectable);
+    mockHotbar1 = createHotbar({
+      name: "Default",
+    });
+    di.override(hotbarsInjectable, () => observable.map([
+      mockHotbar1,
+    ]));
     await di.runSetups();
+  });
 
+  it("renders w/o errors", () => {
     const { container } = render(<HotbarRemoveCommand />);
 
     expect(container).toBeInstanceOf(HTMLElement);
   });
 
   it("calls remove if you click on the entry", async () => {
-    const removeMock = jest.fn();
-
-    di.override(hotbarManagerInjectable, () => ({
-      hotbars: [mockHotbars["1"]],
-      getById: (id: string) => mockHotbars[id],
-      remove: removeMock,
-      hotbarIndex: () => 0,
-      getDisplayLabel: () => "1: Default",
-    }) as any as HotbarStore);
-
-    await di.runSetups();
-
-    const { getByText } = render(
+    const res = render(
       <>
         <HotbarRemoveCommand />
         <ConfirmDialog />
       </>,
     );
 
-    fireEvent.click(getByText("1: Default"));
-    fireEvent.click(getByText("Remove Hotbar"));
+    fireEvent.click(await res.findByText("1: Default"));
+    fireEvent.click(await res.findByText("Remove Hotbar"));
 
-    expect(removeMock).toHaveBeenCalled();
+    expect(removeHotbar).toHaveBeenCalled();
   });
 });

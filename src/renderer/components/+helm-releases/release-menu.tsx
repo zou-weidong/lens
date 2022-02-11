@@ -4,15 +4,16 @@
  */
 
 import React from "react";
-import type { HelmRelease } from "../../../common/k8s-api/endpoints/helm-releases.api";
+import type { HelmRelease } from "../../../common/k8s-api/endpoints";
 import { cssNames } from "../../utils";
-import { MenuActions, MenuActionsProps } from "../menu/menu-actions";
+import type { MenuActionsProps } from "../menu/menu-actions";
+import { MenuActions } from "../menu/menu-actions";
 import { MenuItem } from "../menu";
 import { Icon } from "../icon";
 import { withInjectables } from "@ogre-tools/injectable-react";
 import createUpgradeChartTabInjectable from "../dock/upgrade-chart/create-upgrade-chart-tab.injectable";
-import releaseRollbackDialogModelInjectable from "./release-rollback-dialog-model/release-rollback-dialog-model.injectable";
 import deleteReleaseInjectable from "./delete-release/delete-release.injectable";
+import openHelmReleaseRollbackDialogInjectable from "./dialogs/rollback/open.injectable";
 
 export interface HelmReleaseMenuProps extends MenuActionsProps {
   release: HelmRelease;
@@ -79,16 +80,11 @@ class NonInjectedHelmReleaseMenu extends React.Component<HelmReleaseMenuProps & 
   }
 }
 
-export const HelmReleaseMenu = withInjectables<Dependencies, HelmReleaseMenuProps>(
-  NonInjectedHelmReleaseMenu,
-
-  {
-    getProps: (di, props) => ({
-      deleteRelease: di.inject(deleteReleaseInjectable),
-      createUpgradeChartTab: di.inject(createUpgradeChartTabInjectable),
-      openRollbackDialog: di.inject(releaseRollbackDialogModelInjectable).open,
-
-      ...props,
-    }),
-  },
-);
+export const HelmReleaseMenu = withInjectables<Dependencies, HelmReleaseMenuProps>(NonInjectedHelmReleaseMenu, {
+  getProps: (di, props) => ({
+    ...props,
+    deleteRelease: di.inject(deleteReleaseInjectable),
+    createUpgradeChartTab: di.inject(createUpgradeChartTabInjectable),
+    openRollbackDialog: di.inject(openHelmReleaseRollbackDialogInjectable),
+  }),
+});

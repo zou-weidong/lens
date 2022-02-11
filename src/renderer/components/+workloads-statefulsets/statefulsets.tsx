@@ -8,13 +8,16 @@ import "./statefulsets.scss";
 import React from "react";
 import { observer } from "mobx-react";
 import type { RouteComponentProps } from "react-router";
-import type { StatefulSet } from "../../../common/k8s-api/endpoints";
-import { podsStore } from "../+workloads-pods/pods.store";
-import { statefulSetStore } from "./statefulset.store";
-import { eventStore } from "../+events/event.store";
 import { KubeObjectListLayout } from "../kube-object-list-layout";
 import { KubeObjectStatusIcon } from "../kube-object-status-icon";
 import type { StatefulSetsRouteParams } from "../../../common/routes";
+import { withInjectables } from "@ogre-tools/injectable-react";
+import type { KubeEventStore } from "../+events/store";
+import kubeEventStoreInjectable from "../+events/store.injectable";
+import type { PodStore } from "../+workloads-pods/store";
+import podStoreInjectable from "../+workloads-pods/store.injectable";
+import type { StatefulSetStore } from "./store";
+import statefulSetStoreInjectable from "./store.injectable";
 
 enum columnId {
   name = "name",
@@ -27,48 +30,58 @@ enum columnId {
 export interface StatefulSetsProps extends RouteComponentProps<StatefulSetsRouteParams> {
 }
 
-@observer
-export class StatefulSets extends React.Component<StatefulSetsProps> {
-  renderPods(statefulSet: StatefulSet) {
-    const { readyReplicas, currentReplicas } = statefulSet.status;
-
-    return `${readyReplicas || 0}/${currentReplicas || 0}`;
-  }
-
-  render() {
-    return (
-      <KubeObjectListLayout
-        isConfigurable
-        tableId="workload_statefulsets"
-        className="StatefulSets" store={statefulSetStore}
-        dependentStores={[podsStore, eventStore]} // status icon component uses event store, details component uses podStore
-        sortingCallbacks={{
-          [columnId.name]: statefulSet => statefulSet.getName(),
-          [columnId.namespace]: statefulSet => statefulSet.getNs(),
-          [columnId.age]: statefulSet => statefulSet.getTimeDiffFromNow(),
-          [columnId.replicas]: statefulSet => statefulSet.getReplicas(),
-        }}
-        searchFilters={[
-          statefulSet => statefulSet.getSearchFields(),
-        ]}
-        renderHeaderTitle="Stateful Sets"
-        renderTableHeader={[
-          { title: "Name", className: "name", sortBy: columnId.name, id: columnId.name },
-          { title: "Namespace", className: "namespace", sortBy: columnId.namespace, id: columnId.namespace },
-          { title: "Pods", className: "pods", id: columnId.pods },
-          { title: "Replicas", className: "replicas", sortBy: columnId.replicas, id: columnId.replicas },
-          { className: "warning", showWithColumn: columnId.replicas },
-          { title: "Age", className: "age", sortBy: columnId.age, id: columnId.age },
-        ]}
-        renderTableContents={statefulSet => [
-          statefulSet.getName(),
-          statefulSet.getNs(),
-          this.renderPods(statefulSet),
-          statefulSet.getReplicas(),
-          <KubeObjectStatusIcon key="icon" object={statefulSet}/>,
-          statefulSet.getAge(),
-        ]}
-      />
-    );
-  }
+interface Dependencies {
+  statefulSetStore: StatefulSetStore;
+  podStore: PodStore;
+  kubeEventStore: KubeEventStore;
 }
+
+const NonInjectedStatefulSets = observer(({
+  statefulSetStore,
+  podStore,
+  kubeEventStore,
+}: Dependencies & StatefulSetsProps) => (
+  <KubeObjectListLayout
+    isConfigurable
+    tableId="workload_statefulsets"
+    className="StatefulSets"
+    store={statefulSetStore}
+    dependentStores={[podStore, kubeEventStore]} // status icon component uses event store, details component uses podStore
+    sortingCallbacks={{
+      [columnId.name]: statefulSet => statefulSet.getName(),
+      [columnId.namespace]: statefulSet => statefulSet.getNs(),
+      [columnId.age]: statefulSet => statefulSet.getTimeDiffFromNow(),
+      [columnId.replicas]: statefulSet => statefulSet.getReplicas(),
+    }}
+    searchFilters={[
+      statefulSet => statefulSet.getSearchFields(),
+    ]}
+    renderHeaderTitle="Stateful Sets"
+    renderTableHeader={[
+      { title: "Name", className: "name", sortBy: columnId.name, id: columnId.name },
+      { title: "Namespace", className: "namespace", sortBy: columnId.namespace, id: columnId.namespace },
+      { title: "Pods", className: "pods", id: columnId.pods },
+      { title: "Replicas", className: "replicas", sortBy: columnId.replicas, id: columnId.replicas },
+      { className: "warning", showWithColumn: columnId.replicas },
+      { title: "Age", className: "age", sortBy: columnId.age, id: columnId.age },
+    ]}
+    renderTableContents={statefulSet => [
+      statefulSet.getName(),
+      statefulSet.getNs(),
+      `${statefulSet.status.readyReplicas || 0}/${statefulSet.status.currentReplicas || 0}`,
+      statefulSet.getReplicas(),
+      <KubeObjectStatusIcon key="icon" object={statefulSet}/>,
+      statefulSet.getAge(),
+    ]}
+  />
+));
+
+export const StatefulSets = withInjectables<Dependencies, StatefulSetsProps>(NonInjectedStatefulSets, {
+  getProps: (di, props) => ({
+    ...props,
+    statefulSetStore: di.inject(statefulSetStoreInjectable),
+    podStore: di.inject(podStoreInjectable),
+    kubeEventStore: di.inject(kubeEventStoreInjectable),
+  }),
+});
+

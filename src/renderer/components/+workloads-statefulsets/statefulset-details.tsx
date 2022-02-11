@@ -13,29 +13,35 @@ import { DrawerItem } from "../drawer";
 import { PodDetailsStatuses } from "../+workloads-pods/pod-details-statuses";
 import { PodDetailsTolerations } from "../+workloads-pods/pod-details-tolerations";
 import { PodDetailsAffinities } from "../+workloads-pods/pod-details-affinities";
-import { podsStore } from "../+workloads-pods/pods.store";
-import { statefulSetStore } from "./statefulset.store";
 import type { KubeObjectDetailsProps } from "../kube-object-details";
 import { getMetricsForStatefulSets, type IPodMetrics, StatefulSet } from "../../../common/k8s-api/endpoints";
 import { ResourceMetrics, ResourceMetricsText } from "../resource-metrics";
 import { PodCharts, podMetricTabs } from "../+workloads-pods/pod-charts";
 import { PodDetailsList } from "../+workloads-pods/pod-details-list";
 import { KubeObjectMeta } from "../kube-object-meta";
-import { getActiveClusterEntity } from "../../api/catalog-entity-registry";
-import { ClusterMetricsResourceType } from "../../../common/cluster-types";
-import { boundMethod, Disposer } from "../../utils";
+import { ClusterMetricsResourceType } from "../../../common/clusters/cluster-types";
+import type { Disposer } from "../../utils";
+import { boundMethod } from "../../utils";
 import logger from "../../../common/logger";
 import type { KubeObjectStore } from "../../../common/k8s-api/kube-object.store";
 import type { KubeObject } from "../../../common/k8s-api/kube-object";
 import { withInjectables } from "@ogre-tools/injectable-react";
-import kubeWatchApiInjectable
-  from "../../kube-watch-api/kube-watch-api.injectable";
+import type { ShouldDisplayMetric } from "../../clusters/should-display-metric.injectable";
+import shouldDisplayMetricInjectable from "../../clusters/should-display-metric.injectable";
+import type { StatefulSetStore } from "./store";
+import statefulSetStoreInjectable from "./store.injectable";
+import podStoreInjectable from "../+workloads-pods/store.injectable";
+import type { PodStore } from "../+workloads-pods/store";
+import subscribeStoresInjectable from "../../kube-watch-api/subscribe-stores.injectable";
 
 export interface StatefulSetDetailsProps extends KubeObjectDetailsProps<StatefulSet> {
 }
 
 interface Dependencies {
   subscribeStores: (stores: KubeObjectStore<KubeObject>[]) => Disposer;
+  shouldDisplayMetric: ShouldDisplayMetric;
+  statefulSetStore: StatefulSetStore;
+  podStore: PodStore;
 }
 
 @observer
@@ -48,13 +54,18 @@ class NonInjectedStatefulSetDetails extends React.Component<StatefulSetDetailsPr
   }
 
   componentDidMount() {
+    const {
+      podStore,
+      subscribeStores,
+    } = this.props;
+
     disposeOnUnmount(this, [
       reaction(() => this.props.object, () => {
         this.metrics = null;
       }),
 
-      this.props.subscribeStores([
-        podsStore,
+      subscribeStores([
+        podStore,
       ]),
     ]);
   }
@@ -67,7 +78,7 @@ class NonInjectedStatefulSetDetails extends React.Component<StatefulSetDetailsPr
   }
 
   render() {
-    const { object: statefulSet } = this.props;
+    const { object: statefulSet, shouldDisplayMetric, statefulSetStore, podStore } = this.props;
 
     if (!statefulSet) {
       return null;
@@ -83,14 +94,15 @@ class NonInjectedStatefulSetDetails extends React.Component<StatefulSetDetailsPr
     const selectors = statefulSet.getSelectors();
     const nodeSelector = statefulSet.getNodeSelectors();
     const childPods = statefulSetStore.getChildPods(statefulSet);
-    const isMetricHidden = getActiveClusterEntity()?.isMetricHidden(ClusterMetricsResourceType.StatefulSet);
 
     return (
       <div className="StatefulSetDetails">
-        {!isMetricHidden && podsStore.isLoaded && (
+        {shouldDisplayMetric(ClusterMetricsResourceType.StatefulSet) && podStore.isLoaded && (
           <ResourceMetrics
             loader={this.loadMetrics}
-            tabs={podMetricTabs} object={statefulSet} params={{ metrics: this.metrics }}
+            tabs={podMetricTabs}
+            object={statefulSet}
+            metrics={this.metrics}
           >
             <PodCharts/>
           </ResourceMetrics>
@@ -131,14 +143,13 @@ class NonInjectedStatefulSetDetails extends React.Component<StatefulSetDetailsPr
   }
 }
 
-export const StatefulSetDetails = withInjectables<Dependencies, StatefulSetDetailsProps>(
-  NonInjectedStatefulSetDetails,
-
-  {
-    getProps: (di, props) => ({
-      subscribeStores: di.inject(kubeWatchApiInjectable).subscribeStores,
-      ...props,
-    }),
-  },
-);
+export const StatefulSetDetails = withInjectables<Dependencies, StatefulSetDetailsProps>(NonInjectedStatefulSetDetails, {
+  getProps: (di, props) => ({
+    ...props,
+    subscribeStores: di.inject(subscribeStoresInjectable),
+    shouldDisplayMetric: di.inject(shouldDisplayMetricInjectable),
+    statefulSetStore: di.inject(statefulSetStoreInjectable),
+    podStore: di.inject(podStoreInjectable),
+  }),
+});
 

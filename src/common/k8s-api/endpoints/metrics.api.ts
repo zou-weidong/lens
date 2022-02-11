@@ -7,7 +7,6 @@
 
 import moment from "moment";
 import { apiBase } from "../index";
-import type { IMetricsQuery } from "../../../main/routes/metrics/metrics-query";
 
 export interface IMetrics {
   status: string;
@@ -55,8 +54,15 @@ export interface IResourceMetrics<T extends IMetrics> {
   networkTransmit: T;
 }
 
-export const metricsApi = {
-  async getMetrics<T = IMetricsQuery>(query: T, reqParams: IMetricsReqParams = {}): Promise<T extends object ? { [K in keyof T]: IMetrics } : IMetrics> {
+export interface MetricsApi {
+  getMetrics(query: string, reqParams?: IMetricsReqParams): Promise<IMetrics>;
+  getMetrics(query: string[], reqParams?: IMetricsReqParams): Promise<IMetrics[]>;
+  getMetrics<T extends string>(query: Record<T, Record<string, string>>, reqParams?: IMetricsReqParams): Promise<Record<T, IMetrics>>;
+  getMetricProviders(): Promise<MetricProviderInfo[]>;
+}
+
+export const metricsApi: MetricsApi = {
+  async getMetrics(query: string | string[] | object, reqParams: IMetricsReqParams = {}) {
     const { range = 3600, step = 60, namespace } = reqParams;
     let { start, end } = reqParams;
 
@@ -68,7 +74,7 @@ export const metricsApi = {
       end = now;
     }
 
-    return apiBase.post("/metrics", {
+    return apiBase.post<any>("/metrics", {
       data: query,
       query: {
         start, end, step,

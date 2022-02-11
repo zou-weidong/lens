@@ -5,10 +5,10 @@
 
 import { action, makeObservable, when } from "mobx";
 import type { TabId } from "../dock/store";
-import { DockTabStorageState, DockTabStore } from "../dock-tab-store/dock-tab.store";
-import { getChartDetails, getChartValues } from "../../../../common/k8s-api/endpoints/helm-charts.api";
-import type { IReleaseUpdateDetails } from "../../../../common/k8s-api/endpoints/helm-releases.api";
-import type { StorageHelper } from "../../../utils";
+import type { DockTabStoreOptions } from "../dock-tab.store";
+import { DockTabStore } from "../dock-tab.store";
+import { getChartDetails, getChartValues } from "../../../../common/k8s-api/endpoints";
+import type { IReleaseUpdateDetails } from "../../../../common/k8s-api/endpoints";
 
 export interface IChartInstallData {
   name: string;
@@ -22,17 +22,13 @@ export interface IChartInstallData {
 }
 
 interface Dependencies {
-  createStorage: <T>(storageKey: string, options: DockTabStorageState<T>) => StorageHelper<DockTabStorageState<T>>;
-  versionsStore: DockTabStore<string[]>;
-  detailsStore: DockTabStore<IReleaseUpdateDetails>;
+  readonly versionsStore: DockTabStore<string[]>;
+  readonly detailsStore: DockTabStore<IReleaseUpdateDetails>;
 }
 
 export class InstallChartTabStore extends DockTabStore<IChartInstallData> {
-  constructor(protected dependencies: Dependencies) {
-    super(
-      dependencies,
-      { storageKey: "install_charts" },
-    );
+  constructor(protected readonly dependencies: Dependencies, opts: DockTabStoreOptions<IChartInstallData>) {
+    super(opts);
     makeObservable(this);
   }
 

@@ -9,20 +9,24 @@ import { observer } from "mobx-react";
 import type { RouteComponentProps } from "react-router";
 import { cssNames, interval } from "../../utils";
 import { TabLayout } from "../layout/tab-layout";
-import { nodesStore } from "./nodes.store";
+import type { NodeStore } from "./store";
 import { KubeObjectListLayout } from "../kube-object-list-layout";
-import { formatNodeTaint, getMetricsForAllNodes, INodeMetrics, Node } from "../../../common/k8s-api/endpoints/nodes.api";
+import type { INodeMetrics, Node } from "../../../common/k8s-api/endpoints";
+import { formatNodeTaint, getMetricsForAllNodes } from "../../../common/k8s-api/endpoints";
 import { LineProgress } from "../line-progress";
-import { bytesToUnits } from "../../../common/utils/convertMemory";
+import { bytesToUnits } from "../../../common/utils";
 import { Tooltip, TooltipPosition } from "../tooltip";
 import kebabCase from "lodash/kebabCase";
 import upperFirst from "lodash/upperFirst";
 import { KubeObjectStatusIcon } from "../kube-object-status-icon";
 import { Badge } from "../badge/badge";
-import { eventStore } from "../+events/event.store";
 import type { NodesRouteParams } from "../../../common/routes";
 import { makeObservable, observable } from "mobx";
 import isEmpty from "lodash/isEmpty";
+import type { KubeEventStore } from "../+events/store";
+import { withInjectables } from "@ogre-tools/injectable-react";
+import kubeEventStoreInjectable from "../+events/store.injectable";
+import nodeStoreInjectable from "./store.injectable";
 
 enum columnId {
   name = "name",
@@ -49,12 +53,17 @@ interface UsageArgs {
   formatters: MetricsTooltipFormatter[];
 }
 
+interface Dependencies {
+  kubeEventStore: KubeEventStore;
+  nodeStore: NodeStore;
+}
+
 @observer
-export class NodesRoute extends React.Component<NodesRouteProps> {
+class NonInjectedNodesRoute extends React.Component<NodesRouteProps & Dependencies> {
   @observable.ref metrics: Partial<INodeMetrics> = {};
   private metricsWatcher = interval(30, async () => this.metrics = await getMetricsForAllNodes());
 
-  constructor(props: NodesRouteProps) {
+  constructor(props: NodesRouteProps & Dependencies) {
     super(props);
     makeObservable(this);
   }
@@ -173,15 +182,16 @@ export class NodesRoute extends React.Component<NodesRouteProps> {
   }
 
   render() {
+    const { nodeStore, kubeEventStore } = this.props;
+
     return (
       <TabLayout>
         <KubeObjectListLayout
           isConfigurable
           tableId="nodes"
           className="Nodes"
-          store={nodesStore}
-          isReady={nodesStore.isLoaded}
-          dependentStores={[eventStore]}
+          store={nodeStore}
+          dependentStores={[kubeEventStore]}
           isSelectable={false}
           sortingCallbacks={{
             [columnId.name]: node => node.getName(),
@@ -240,3 +250,11 @@ export class NodesRoute extends React.Component<NodesRouteProps> {
     );
   }
 }
+
+export const NodesRoute = withInjectables<Dependencies, NodesRouteProps>(NonInjectedNodesRoute, {
+  getProps: (di, props) => ({
+    ...props,
+    kubeEventStore: di.inject(kubeEventStoreInjectable),
+    nodeStore: di.inject(nodeStoreInjectable),
+  }),
+});

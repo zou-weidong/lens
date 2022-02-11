@@ -6,7 +6,7 @@
 import routerInjectable, { routeInjectionToken } from "./router.injectable";
 import { getDiForUnitTesting } from "../getDiForUnitTesting";
 import type { Router, RouteHandler, Route } from "./router";
-import type { Cluster } from "../../common/cluster/cluster";
+import type { Cluster } from "../../common/clusters/cluster";
 import { Request } from "mock-http";
 import { getInjectable } from "@ogre-tools/injectable";
 import type { AsyncFnMock } from "@async-fn/jest";

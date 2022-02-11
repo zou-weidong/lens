@@ -13,9 +13,10 @@ import { computed, IObservableArray, observable } from "mobx";
 import type { DiContainer } from "@ogre-tools/injectable";
 import statusBarItemsInjectable from "./status-bar-items.injectable";
 import type { StatusBarRegistration } from "./status-bar-registration";
+import directoryForUserDataInjectable  from "../../../common/paths/user-data.injectable";
 import { LensRendererExtension } from "../../../extensions/lens-renderer-extension";
-import directoryForUserDataInjectable from "../../../common/app-paths/directory-for-user-data/directory-for-user-data.injectable";
 import rendererExtensionsInjectable from "../../../extensions/renderer-extensions.injectable";
+import { SemVer } from "semver";
 
 class SomeTestExtension extends LensRendererExtension {
   constructor(statusBarItems: IObservableArray<any>) {
@@ -24,8 +25,14 @@ class SomeTestExtension extends LensRendererExtension {
       absolutePath: "irrelevant",
       isBundled: false,
       isCompatible: false,
-      isEnabled: false,
-      manifest: { name: "some-id", version: "some-version" },
+      manifest: {
+        name: "some-id",
+        version: new SemVer("1.0.0"),
+        description: "foo",
+        engines: {
+          lens: ">=1.0.0",
+        },
+      },
       manifestPath: "irrelevant",
     });
 

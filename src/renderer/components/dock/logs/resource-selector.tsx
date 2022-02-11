@@ -9,15 +9,16 @@ import React from "react";
 import { observer } from "mobx-react";
 
 import { Badge } from "../../badge";
-import { Select, SelectOption } from "../../select";
+import type { SelectOption } from "../../select";
+import { Select } from "../../select";
 import type { LogTabViewModel } from "./logs-view-model";
-import type { IPodContainer, Pod } from "../../../../common/k8s-api/endpoints";
+import type { PodContainer, Pod } from "../../../../common/k8s-api/endpoints";
 
 export interface LogResourceSelectorProps {
   model: LogTabViewModel;
 }
 
-function getSelectOptions(containers: IPodContainer[]): SelectOption<string>[] {
+function getSelectOptions(containers: PodContainer[]): SelectOption<string>[] {
   return containers.map(container => ({
     value: container.name,
     label: container.name,

@@ -4,8 +4,9 @@
  */
 
 import type { RouteProps } from "react-router";
-import { buildURL, URLParams } from "../utils/buildUrl";
-import type { KubeResource } from "../rbac";
+import type { URLParams } from "../utils";
+import { buildURL } from "../utils";
+import type { KubeResource } from "../k8s/resources";
 
 // Routes
 export const overviewRoute: RouteProps = {

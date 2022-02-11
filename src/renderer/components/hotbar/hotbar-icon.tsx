@@ -7,14 +7,15 @@ import styles from "./hotbar-icon.module.scss";
 
 import React, { useState } from "react";
 
-import type { CatalogEntityContextMenu } from "../../../common/catalog";
+import type { CatalogEntityContextMenu } from "../../../common/catalog/entity";
 import { cssNames } from "../../utils";
-import { ConfirmDialog } from "../confirm-dialog";
-import { Menu, MenuItem } from "../menu";
+import { Menu } from "../menu";
 import { observer } from "mobx-react";
-import { Avatar, AvatarProps } from "../avatar";
+import type { AvatarProps } from "../avatar";
+import { Avatar } from "../avatar";
 import { Icon } from "../icon";
 import { Tooltip } from "../tooltip";
+import { ContextMenu } from "../menu/context";
 
 export interface HotbarIconProps extends AvatarProps {
   uid: string;
@@ -22,30 +23,28 @@ export interface HotbarIconProps extends AvatarProps {
   material?: string;
   onMenuOpen?: () => void;
   active?: boolean;
-  menuItems?: CatalogEntityContextMenu[];
+  menuItems: CatalogEntityContextMenu[];
   disabled?: boolean;
   tooltip?: string;
 }
 
-function onMenuItemClick(menuItem: CatalogEntityContextMenu) {
-  if (menuItem.confirm) {
-    ConfirmDialog.open({
-      okButtonProps: {
-        primary: false,
-        accent: true,
-      },
-      ok: () => {
-        menuItem.onClick();
-      },
-      message: menuItem.confirm.message,
-    });
-  } else {
-    menuItem.onClick();
-  }
-}
-
-export const HotbarIcon = observer(({ menuItems = [], size = 40, tooltip, ...props }: HotbarIconProps) => {
-  const { uid, title, src, material, active, className, source, disabled, onMenuOpen, onClick, children, ...rest } = props;
+export const HotbarIcon = observer(({
+  menuItems,
+  size = 40,
+  tooltip,
+  uid,
+  title,
+  src,
+  material,
+  active,
+  className,
+  source,
+  disabled,
+  onMenuOpen,
+  onClick,
+  children,
+  ...rest
+}: HotbarIconProps) => {
   const id = `hotbarIcon-${uid}`;
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -80,14 +79,9 @@ export const HotbarIcon = observer(({ menuItems = [], size = 40, tooltip, ...pro
           onMenuOpen?.();
           toggleMenu();
         }}
-        close={() => toggleMenu()}>
-        {
-          menuItems.map((menuItem) => (
-            <MenuItem key={menuItem.title} onClick={() => onMenuItemClick(menuItem)}>
-              {menuItem.title}
-            </MenuItem>
-          ))
-        }
+        close={toggleMenu}
+      >
+        <ContextMenu menuItems={menuItems} />
       </Menu>
     </div>
   );

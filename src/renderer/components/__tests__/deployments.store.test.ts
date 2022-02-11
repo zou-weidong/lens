@@ -3,12 +3,15 @@
  * Licensed under MIT License. See LICENSE in root directory for more information.
  */
 
-import { observable } from "mobx";
-import { deploymentStore } from "../+workloads-deployments/deployments.store";
-import { podsStore } from "../+workloads-pods/pods.store";
+import type { DeploymentStore } from "../+workloads-deployments/store";
+import deploymentStoreInjectable from "../+workloads-deployments/store.injectable";
+import type { PodStore } from "../+workloads-pods/store";
+import podStoreInjectable from "../+workloads-pods/store.injectable";
+import type { PodSpec } from "../../../common/k8s-api/endpoints";
 import { Deployment, Pod } from "../../../common/k8s-api/endpoints";
+import { getDiForUnitTesting } from "../../getDiForUnitTesting";
 
-const spec = {
+const spec: PodSpec = {
   containers: [{
     name: "some",
     image: "someimage",
@@ -40,27 +43,26 @@ const runningDeployment = new Deployment({
     uid: "foobar",
     namespace: "default",
   },
-});
-
-runningDeployment.spec = {
-  replicas: 1,
-  selector: { matchLabels: {}},
-  strategy: {
-    type: "test",
-    rollingUpdate: {
-      maxSurge: 1,
-      maxUnavailable: 1,
-    },
-  },
-  template: {
-    metadata: {
-      labels: {
-        "name": "kube-state-metrics",
+  spec: {
+    replicas: 1,
+    selector: { matchLabels: {}},
+    strategy: {
+      type: "test",
+      rollingUpdate: {
+        maxSurge: 1,
+        maxUnavailable: 1,
       },
     },
-    spec,
+    template: {
+      metadata: {
+        labels: {
+          "name": "kube-state-metrics",
+        },
+      },
+      spec,
+    },
   },
-};
+});
 
 const failedDeployment = new Deployment({
   apiVersion: "foo",
@@ -71,27 +73,26 @@ const failedDeployment = new Deployment({
     uid: "failedDeployment",
     namespace: "default",
   },
-});
-
-failedDeployment.spec = {
-  replicas: 1,
-  selector: { matchLabels: {}},
-  strategy: {
-    type: "test",
-    rollingUpdate: {
-      maxSurge: 1,
-      maxUnavailable: 1,
-    },
-  },
-  template: {
-    metadata: {
-      labels: {
-        "name": "failedpods",
+  spec: {
+    replicas: 1,
+    selector: { matchLabels: {}},
+    strategy: {
+      type: "test",
+      rollingUpdate: {
+        maxSurge: 1,
+        maxUnavailable: 1,
       },
     },
-    spec,
+    template: {
+      metadata: {
+        labels: {
+          "name": "failedpods",
+        },
+      },
+      spec,
+    },
   },
-};
+});
 
 const pendingDeployment = new Deployment({
   apiVersion: "foo",
@@ -102,27 +103,26 @@ const pendingDeployment = new Deployment({
     uid: "pendingDeployment",
     namespace: "default",
   },
-});
-
-pendingDeployment.spec = {
-  replicas: 1,
-  selector: { matchLabels: {}},
-  strategy: {
-    type: "test",
-    rollingUpdate: {
-      maxSurge: 1,
-      maxUnavailable: 1,
-    },
-  },
-  template: {
-    metadata: {
-      labels: {
-        "mydeployment": "true",
+  spec: {
+    replicas: 1,
+    selector: { matchLabels: {}},
+    strategy: {
+      type: "test",
+      rollingUpdate: {
+        maxSurge: 1,
+        maxUnavailable: 1,
       },
     },
-    spec,
+    template: {
+      metadata: {
+        labels: {
+          "mydeployment": "true",
+        },
+      },
+      spec,
+    },
   },
-};
+});
 
 const runningPod = new Pod({
   apiVersion: "foo",
@@ -136,30 +136,29 @@ const runningPod = new Pod({
     },
     namespace: "default",
   },
+  status: {
+    phase: "Running",
+    conditions: [
+      {
+        type: "Initialized",
+        status: "True",
+        lastProbeTime: 1,
+        lastTransitionTime: "1",
+      },
+      {
+        type: "Ready",
+        status: "True",
+        lastProbeTime: 1,
+        lastTransitionTime: "1",
+      },
+    ],
+    hostIP: "10.0.0.1",
+    podIP: "10.0.0.1",
+    startTime: "now",
+    containerStatuses: [],
+    initContainerStatuses: [],
+  },
 });
-
-runningPod.status = {
-  phase: "Running",
-  conditions: [
-    {
-      type: "Initialized",
-      status: "True",
-      lastProbeTime: 1,
-      lastTransitionTime: "1",
-    },
-    {
-      type: "Ready",
-      status: "True",
-      lastProbeTime: 1,
-      lastTransitionTime: "1",
-    },
-  ],
-  hostIP: "10.0.0.1",
-  podIP: "10.0.0.1",
-  startTime: "now",
-  containerStatuses: [],
-  initContainerStatuses: [],
-};
 
 const pendingPod = new Pod({
   apiVersion: "foo",
@@ -187,20 +186,26 @@ const failedPod = new Pod({
     },
     namespace: "default",
   },
+  status: {
+    phase: "Failed",
+    conditions: [],
+    hostIP: "10.0.0.1",
+    podIP: "10.0.0.1",
+    startTime: "now",
+  },
 });
 
-failedPod.status = {
-  phase: "Failed",
-  conditions: [],
-  hostIP: "10.0.0.1",
-  podIP: "10.0.0.1",
-  startTime: "now",
-};
-
 describe("Deployment Store tests", () => {
-  beforeAll(() => {
-    // Add pods to pod store
-    podsStore.items = observable.array([
+  let podStore: PodStore;
+  let deploymentStore: DeploymentStore;
+
+  beforeEach(() => {
+    const di = getDiForUnitTesting();
+
+    podStore = di.inject(podStoreInjectable);
+    deploymentStore = di.inject(deploymentStoreInjectable);
+
+    podStore.items.replace([
       runningPod,
       failedPod,
       pendingPod,

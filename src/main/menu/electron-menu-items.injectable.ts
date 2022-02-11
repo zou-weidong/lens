@@ -8,12 +8,10 @@ import mainExtensionsInjectable from "../../extensions/main-extensions.injectabl
 
 const electronMenuItemsInjectable = getInjectable({
   id: "electron-menu-items",
-
   instantiate: (di) => {
     const extensions = di.inject(mainExtensionsInjectable);
 
-    return computed(() =>
-      extensions.get().flatMap((extension) => extension.appMenus));
+    return computed(() => extensions.get().flatMap((extension) => extension.appMenus));
   },
 });
 

@@ -5,8 +5,8 @@
 import { getInjectable } from "@ogre-tools/injectable";
 import { computed } from "mobx";
 import type { TabLayoutRoute } from "../layout/tab-layout";
-import type { IsAllowedResource } from "../../../common/utils/is-allowed-resource.injectable";
-import isAllowedResourceInjectable from "../../../common/utils/is-allowed-resource.injectable";
+import type { AllowedResources } from "../../clusters/allowed-resources.injectable";
+import allowedResourcesInjectable from "../../clusters/allowed-resources.injectable";
 import * as routes from "../../../common/routes";
 import { PodSecurityPolicies } from "../+pod-security-policies";
 import { ClusterRoleBindings } from "./+cluster-role-bindings";
@@ -16,14 +16,14 @@ import { Roles } from "./+roles";
 import { ServiceAccounts } from "./+service-accounts";
 
 interface Dependencies {
-  isAllowedResource: IsAllowedResource;
+  allowedResources: AllowedResources;
 }
 
-function getRouteTabs({ isAllowedResource }: Dependencies) {
+function getRouteTabs({ allowedResources }: Dependencies) {
   return computed(() => {
     const tabs: TabLayoutRoute[] = [];
 
-    if (isAllowedResource("serviceaccounts")) {
+    if (allowedResources.has("serviceaccounts")) {
       tabs.push({
         title: "Service Accounts",
         component: ServiceAccounts,
@@ -32,7 +32,7 @@ function getRouteTabs({ isAllowedResource }: Dependencies) {
       });
     }
 
-    if (isAllowedResource("clusterroles")) {
+    if (allowedResources.has("clusterroles")) {
       tabs.push({
         title: "Cluster Roles",
         component: ClusterRoles,
@@ -41,7 +41,7 @@ function getRouteTabs({ isAllowedResource }: Dependencies) {
       });
     }
 
-    if (isAllowedResource("roles")) {
+    if (allowedResources.has("roles")) {
       tabs.push({
         title: "Roles",
         component: Roles,
@@ -50,7 +50,7 @@ function getRouteTabs({ isAllowedResource }: Dependencies) {
       });
     }
 
-    if (isAllowedResource("clusterrolebindings")) {
+    if (allowedResources.has("clusterrolebindings")) {
       tabs.push({
         title: "Cluster Role Bindings",
         component: ClusterRoleBindings,
@@ -59,7 +59,7 @@ function getRouteTabs({ isAllowedResource }: Dependencies) {
       });
     }
 
-    if (isAllowedResource("rolebindings")) {
+    if (allowedResources.has("rolebindings")) {
       tabs.push({
         title: "Role Bindings",
         component: RoleBindings,
@@ -68,7 +68,7 @@ function getRouteTabs({ isAllowedResource }: Dependencies) {
       });
     }
 
-    if (isAllowedResource("podsecuritypolicies")) {
+    if (allowedResources.has("podsecuritypolicies")) {
       tabs.push({
         title: "Pod Security Policies",
         component: PodSecurityPolicies,
@@ -82,11 +82,10 @@ function getRouteTabs({ isAllowedResource }: Dependencies) {
 }
 
 const userManagementRouteTabsInjectable = getInjectable({
-  id: "user-management-route-tabs",
-
   instantiate: (di) => getRouteTabs({
-    isAllowedResource: di.inject(isAllowedResourceInjectable),
+    allowedResources: di.inject(allowedResourcesInjectable),
   }),
+  id: "user-management-route-tabs",
 });
 
 export default userManagementRouteTabsInjectable;

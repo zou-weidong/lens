@@ -6,19 +6,30 @@
 import React from "react";
 import { observer } from "mobx-react";
 import { SubTitle } from "../layout/sub-title";
-import { Select, SelectOption } from "../select";
-import { ThemeStore } from "../../theme.store";
-import { UserStore } from "../../../common/user-store";
+import type { SelectOption } from "../select";
+import { Select } from "../select";
 import { Input } from "../input";
 import { Switch } from "../switch";
 import moment from "moment-timezone";
-import { CONSTANTS, defaultExtensionRegistryUrl, ExtensionRegistryLocation } from "../../../common/user-store/preferences-helpers";
-import { action, IComputedValue } from "mobx";
+import { CONSTANTS, defaultExtensionRegistryUrl, ExtensionRegistryLocation } from "../../../common/user-preferences/preferences-helpers";
+import type { IComputedValue } from "mobx";
 import { isUrl } from "../input/input_validators";
 import { ExtensionSettings } from "./extension-settings";
-import type { RegisteredAppPreference } from "./app-preferences/app-preference-registration";
+import type { RegisteredAppPreference } from "./app-preferences.injectable";
 import { withInjectables } from "@ogre-tools/injectable-react";
-import appPreferencesInjectable from "./app-preferences/app-preferences.injectable";
+import appPreferencesInjectable from "./app-preferences.injectable";
+import type { ExtensionRegistryUrl } from "../../../common/user-preferences/extension-registry.injectable";
+import extensionRegistryUrlInjectable from "../../../common/user-preferences/extension-registry.injectable";
+import type { OpenAtLogin } from "../../../common/user-preferences/open-at-login.injectable";
+import type { ActiveThemeId } from "../../../common/user-preferences/active-theme-id.injectable";
+import type { UpdateChannel } from "../../../common/user-preferences/update-channel.injectable";
+import activeThemeIdInjectable from "../../../common/user-preferences/active-theme-id.injectable";
+import openAtLoginInjectable from "../../../common/user-preferences/open-at-login.injectable";
+import themeOptionsInjectable from "./theme-options.injectable";
+import updateChannelInjectable from "../../../common/user-preferences/update-channel.injectable";
+import type { LocaleTimezone } from "../../../common/user-preferences/locale-timezone.injectable";
+import localeTimezoneInjectable from "../../../common/user-preferences/locale-timezone.injectable";
+import { systemThemeMatchId } from "../../themes/theme";
 
 const timezoneOptions: SelectOption<string>[] = moment.tz.names().map(zone => ({
   label: zone,
@@ -31,13 +42,25 @@ const updateChannelOptions: SelectOption<string>[] = Array.from(
 
 interface Dependencies {
   appPreferenceItems: IComputedValue<RegisteredAppPreference[]>;
+  extensionRegistryUrl: ExtensionRegistryUrl;
+  themeOptions: IComputedValue<SelectOption<string>[]>;
+  activeThemeId: ActiveThemeId;
+  openAtLogin: OpenAtLogin;
+  updateChannel: UpdateChannel;
+  localeTimezone: LocaleTimezone;
 }
 
-const NonInjectedApplication: React.FC<Dependencies> = ({ appPreferenceItems }) => {
-  const userStore = UserStore.getInstance();
-  const [customUrl, setCustomUrl] = React.useState(userStore.extensionRegistryUrl.customUrl || "");
+const NonInjectedApplication = observer(({
+  appPreferenceItems,
+  extensionRegistryUrl,
+  themeOptions,
+  activeThemeId,
+  openAtLogin,
+  updateChannel,
+  localeTimezone,
+}: Dependencies) => {
+  const [customUrl, setCustomUrl] = React.useState(extensionRegistryUrl.value.customUrl || "");
   const extensionSettings = appPreferenceItems.get().filter((preference) => preference.showInPreferencesTab === "application");
-  const themeStore = ThemeStore.getInstance();
 
   return (
     <section id="application">
@@ -46,11 +69,11 @@ const NonInjectedApplication: React.FC<Dependencies> = ({ appPreferenceItems }) 
         <SubTitle title="Theme" />
         <Select
           options={[
-            { label: "Sync with computer", value: "system" },
-            ...themeStore.themeOptions,
+            { label: "Sync with computer", value: systemThemeMatchId },
+            ...themeOptions.get(),
           ]}
-          value={userStore.colorTheme}
-          onChange={({ value }) => userStore.colorTheme = value}
+          value={activeThemeId.value}
+          onChange={({ value }) => activeThemeId.set(value)}
           themeName="lens"
         />
       </section>
@@ -61,14 +84,8 @@ const NonInjectedApplication: React.FC<Dependencies> = ({ appPreferenceItems }) 
         <SubTitle title="Extension Install Registry" />
         <Select
           options={Object.values(ExtensionRegistryLocation)}
-          value={userStore.extensionRegistryUrl.location}
-          onChange={action(({ value }) => {
-            userStore.extensionRegistryUrl.location = value;
-
-            if (userStore.extensionRegistryUrl.location === ExtensionRegistryLocation.CUSTOM) {
-              userStore.extensionRegistryUrl.customUrl = "";
-            }
-          })}
+          value={extensionRegistryUrl.value.location}
+          onChange={({ value }) => extensionRegistryUrl.setLocation(value)}
           themeName="lens"
         />
         <p className="mt-4 mb-5 leading-relaxed">
@@ -82,9 +99,9 @@ const NonInjectedApplication: React.FC<Dependencies> = ({ appPreferenceItems }) 
           validators={isUrl}
           value={customUrl}
           onChange={setCustomUrl}
-          onBlur={() => userStore.extensionRegistryUrl.customUrl = customUrl}
+          onBlur={() => extensionRegistryUrl.setUrl(customUrl)}
           placeholder="Custom Extension Registry URL..."
-          disabled={userStore.extensionRegistryUrl.location !== ExtensionRegistryLocation.CUSTOM}
+          disabled={extensionRegistryUrl.value.location !== ExtensionRegistryLocation.CUSTOM}
         />
       </section>
 
@@ -92,7 +109,10 @@ const NonInjectedApplication: React.FC<Dependencies> = ({ appPreferenceItems }) 
 
       <section id="other">
         <SubTitle title="Start-up" />
-        <Switch checked={userStore.openAtLogin} onChange={() => userStore.openAtLogin = !userStore.openAtLogin}>
+        <Switch
+          checked={openAtLogin.value}
+          onChange={openAtLogin.toggle}
+        >
           Automatically start Lens on login
         </Switch>
       </section>
@@ -107,8 +127,8 @@ const NonInjectedApplication: React.FC<Dependencies> = ({ appPreferenceItems }) 
         <SubTitle title="Update Channel" />
         <Select
           options={updateChannelOptions}
-          value={userStore.updateChannel}
-          onChange={({ value }) => userStore.updateChannel = value}
+          value={updateChannel.value}
+          onChange={({ value }) => updateChannel.set(value)}
           themeName="lens"
         />
       </section>
@@ -119,21 +139,23 @@ const NonInjectedApplication: React.FC<Dependencies> = ({ appPreferenceItems }) 
         <SubTitle title="Locale Timezone" />
         <Select
           options={timezoneOptions}
-          value={userStore.localeTimezone}
-          onChange={({ value }) => userStore.setLocaleTimezone(value)}
+          value={localeTimezone.value}
+          onChange={({ value }) => localeTimezone.set(value)}
           themeName="lens"
         />
       </section>
     </section>
   );
-};
+});
 
-export const Application = withInjectables<Dependencies>(
-  observer(NonInjectedApplication),
-
-  {
-    getProps: (di) => ({
-      appPreferenceItems: di.inject(appPreferencesInjectable),
-    }),
-  },
-);
+export const Application = withInjectables<Dependencies>(NonInjectedApplication, {
+  getProps: (di) => ({
+    appPreferenceItems: di.inject(appPreferencesInjectable),
+    extensionRegistryUrl: di.inject(extensionRegistryUrlInjectable),
+    activeThemeId: di.inject(activeThemeIdInjectable),
+    openAtLogin: di.inject(openAtLoginInjectable),
+    themeOptions: di.inject(themeOptionsInjectable),
+    updateChannel: di.inject(updateChannelInjectable),
+    localeTimezone: di.inject(localeTimezoneInjectable),
+  }),
+});

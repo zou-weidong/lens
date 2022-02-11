@@ -5,10 +5,10 @@
 
 import { autoBind } from "../../utils";
 import { KubeObject } from "../kube-object";
+import type { DerivedKubeApiOptions } from "../kube-api";
 import { KubeApi } from "../kube-api";
 import type { KubeJsonApiData } from "../kube-json-api";
 import { get } from "lodash";
-import { isClusterPageContext } from "../../utils/cluster-id-url-parsing";
 
 export interface IEndpointPort {
   name?: string;
@@ -104,14 +104,12 @@ export class EndpointSubset implements IEndpointSubset {
   }
 }
 
-export interface Endpoint {
-  subsets: IEndpointSubset[];
-}
-
 export class Endpoint extends KubeObject {
   static kind = "Endpoints";
   static namespaced = true;
   static apiBase = "/api/v1/endpoints";
+
+  declare subsets: IEndpointSubset[];
 
   constructor(data: KubeJsonApiData) {
     super(data);
@@ -119,9 +117,7 @@ export class Endpoint extends KubeObject {
   }
 
   getEndpointSubsets(): EndpointSubset[] {
-    const subsets = this.subsets || [];
-
-    return subsets.map(s => new EndpointSubset(s));
+    return this.subsets?.map(s => new EndpointSubset(s)) ?? [];
   }
 
   toString(): string {
@@ -134,14 +130,11 @@ export class Endpoint extends KubeObject {
 
 }
 
-let endpointApi: KubeApi<Endpoint>;
-
-if (isClusterPageContext()) {
-  endpointApi = new KubeApi<Endpoint>({
-    objectConstructor: Endpoint,
-  });
+export class EndpointApi extends KubeApi<Endpoint> {
+  constructor(opts: DerivedKubeApiOptions = {}) {
+    super({
+      objectConstructor: Endpoint,
+      ...opts,
+    });
+  }
 }
-
-export {
-  endpointApi,
-};

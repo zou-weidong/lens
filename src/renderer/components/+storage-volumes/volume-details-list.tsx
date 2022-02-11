@@ -7,18 +7,21 @@ import "./volume-details-list.scss";
 
 import React from "react";
 import { observer } from "mobx-react";
-import type { PersistentVolume } from "../../../common/k8s-api/endpoints/persistent-volume.api";
-import { boundMethod } from "../../../common/utils/autobind";
+import type { PersistentVolume } from "../../../common/k8s-api/endpoints";
+import { boundMethod } from "../../../common/utils";
 import { TableRow } from "../table/table-row";
 import { cssNames, prevDefault } from "../../utils";
-import { showDetails } from "../kube-detail-params";
 import { TableCell } from "../table/table-cell";
 import { Spinner } from "../spinner/spinner";
 import { DrawerTitle } from "../drawer/drawer-title";
 import { Table } from "../table/table";
 import { TableHead } from "../table/table-head";
-import { volumesStore } from "./volumes.store";
+import type { PersistentVolumeStore } from "./store";
 import kebabCase from "lodash/kebabCase";
+import type { ShowDetails } from "../kube-object/details/show.injectable";
+import { withInjectables } from "@ogre-tools/injectable-react";
+import showDetailsInjectable from "../kube-object/details/show.injectable";
+import persistentVolumeStoreInjectable from "./store.injectable";
 
 export interface VolumeDetailsListProps {
   persistentVolumes: PersistentVolume[];
@@ -30,17 +33,16 @@ enum sortBy {
   capacity = "capacity",
 }
 
-@observer
-export class VolumeDetailsList extends React.Component<VolumeDetailsListProps> {
-  private sortingCallbacks = {
-    [sortBy.name]: (volume: PersistentVolume) => volume.getName(),
-    [sortBy.capacity]: (volume: PersistentVolume) => volume.getCapacity(),
-    [sortBy.status]: (volume: PersistentVolume) => volume.getStatus(),
-  };
+interface Dependencies {
+  showDetails: ShowDetails;
+  persistentVolumeStore: PersistentVolumeStore;
+}
 
+@observer
+class NonInjectedVolumeDetailsList extends React.Component<VolumeDetailsListProps & Dependencies> {
   @boundMethod
   getTableRow(uid: string) {
-    const { persistentVolumes } = this.props;
+    const { persistentVolumes, showDetails } = this.props;
     const volume = persistentVolumes.find(volume => volume.getId() === uid);
 
     return (
@@ -48,7 +50,7 @@ export class VolumeDetailsList extends React.Component<VolumeDetailsListProps> {
         key={volume.getId()}
         sortItem={volume}
         nowrap
-        onClick={prevDefault(() => showDetails(volume.selfLink, false))}
+        onClick={prevDefault(() => showDetails(volume, { resetSelected: false }))}
       >
         <TableCell className="name">{volume.getName()}</TableCell>
         <TableCell className="capacity">{volume.getCapacity()}</TableCell>
@@ -58,11 +60,11 @@ export class VolumeDetailsList extends React.Component<VolumeDetailsListProps> {
   }
 
   render() {
-    const { persistentVolumes } = this.props;
+    const { persistentVolumes, persistentVolumeStore } = this.props;
     const virtual = persistentVolumes.length > 100;
 
     if (!persistentVolumes.length) {
-      return !volumesStore.isLoaded && <Spinner center/>;
+      return !persistentVolumeStore.isLoaded && <Spinner center/>;
     }
 
     return (
@@ -73,7 +75,11 @@ export class VolumeDetailsList extends React.Component<VolumeDetailsListProps> {
           items={persistentVolumes}
           selectable
           virtual={virtual}
-          sortable={this.sortingCallbacks}
+          sortable={{
+            [sortBy.name]: (volume) => volume.getName(),
+            [sortBy.capacity]: (volume) => volume.getCapacity(),
+            [sortBy.status]: (volume) => volume.getStatus(),
+          }}
           sortByDefault={{ sortBy: sortBy.name, orderBy: "desc" }}
           sortSyncWithUrl={false}
           getTableRow={this.getTableRow}
@@ -92,3 +98,11 @@ export class VolumeDetailsList extends React.Component<VolumeDetailsListProps> {
     );
   }
 }
+
+export const VolumeDetailsList = withInjectables<Dependencies, VolumeDetailsListProps>(NonInjectedVolumeDetailsList, {
+  getProps: (di, props) => ({
+    ...props,
+    showDetails: di.inject(showDetailsInjectable),
+    persistentVolumeStore: di.inject(persistentVolumeStoreInjectable),
+  }),
+});

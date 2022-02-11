@@ -6,14 +6,14 @@
 // Base class for all kubernetes objects
 
 import moment from "moment";
-import type { KubeJsonApiData, KubeJsonApiDataList, KubeJsonApiListMetadata, KubeJsonApiMetadata } from "./kube-json-api";
-import { autoBind, formatDuration } from "../utils";
+import type { KubeJsonApiData, KubeJsonApiDataList, KubeJsonApiListMetadata } from "./kube-json-api";
+import { autoBind, formatDuration, hasOptionalProperty, hasTypedProperty, isObject, isString, bindPredicate, isTypedArray, isRecord } from "../utils";
 import type { ItemObject } from "../item.store";
 import { apiKube } from "./index";
 import type { JsonApiParams } from "./json-api";
-import * as resourceApplierApi from "./endpoints/resource-applier.api";
-import { hasOptionalProperty, hasTypedProperty, isObject, isString, bindPredicate, isTypedArray, isRecord } from "../../common/utils/type-narrowing";
 import type { Patch } from "rfc6902";
+import { asLegacyGlobalForExtensionApi } from "../../extensions/di-legacy-globals/for-extension-api";
+import resourceApplierApiInjectable from "./endpoints/resource-applier.api.injectable";
 
 export type KubeObjectConstructor<K extends KubeObject> = (new (data: KubeJsonApiData | any) => K) & {
   kind?: string;
@@ -21,30 +21,35 @@ export type KubeObjectConstructor<K extends KubeObject> = (new (data: KubeJsonAp
   apiBase?: string;
 };
 
-export interface KubeObjectMetadata {
-  uid: string;
+export interface KubeObjectOwnerReference {
+  apiVersion: string;
+  kind: string;
   name: string;
-  namespace?: string;
-  creationTimestamp: string;
-  resourceVersion: string;
-  selfLink: string;
+  uid: string;
+  /**
+   * @default false
+   */
+  controller?: boolean;
+  /**
+   * @default false
+   */
+  blockOwnerDeletion?: boolean;
+}
+
+export interface KubeObjectMetadata {
+  readonly uid?: string;
+  readonly name?: string;
+  readonly namespace?: string;
+  readonly creationTimestamp?: string;
+  resourceVersion?: string;
+  selfLink?: string;
   deletionTimestamp?: string;
   finalizers?: string[];
   continue?: string; // provided when used "?limit=" query param to fetch objects list
-  labels?: {
-    [label: string]: string;
-  };
-  annotations?: {
-    [annotation: string]: string;
-  };
-  ownerReferences?: {
-    apiVersion: string;
-    kind: string;
-    name: string;
-    uid: string;
-    controller: boolean;
-    blockOwnerDeletion: boolean;
-  }[];
+  labels?: Partial<Record<string, string>>;
+  annotations?: Partial<Record<string, string>>;
+  ownerReferences?: KubeObjectOwnerReference[];
+  [key: string]: unknown;
 }
 
 export interface KubeStatusData {
@@ -116,16 +121,18 @@ export interface LabelSelector {
   matchExpressions?: LabelMatchExpression[];
 }
 
-export class KubeObject<Metadata extends KubeObjectMetadata = KubeObjectMetadata, Status = any, Spec = any> implements ItemObject {
+const resourceApplierApi = asLegacyGlobalForExtensionApi(resourceApplierApiInjectable);
+
+export class KubeObject<Metadata extends KubeObjectMetadata = KubeObjectMetadata, Status = unknown, Spec = unknown> implements ItemObject {
   static readonly kind?: string;
   static readonly namespaced?: boolean;
   static readonly apiBase?: string;
 
   apiVersion: string;
-  kind: string;
-  metadata: Metadata;
-  status?: Status;
-  spec?: Spec;
+  readonly kind: string;
+  readonly metadata: Metadata;
+  status: Status;
+  spec: Spec;
   managedFields?: any;
 
   static create(data: KubeJsonApiData) {
@@ -153,7 +160,7 @@ export class KubeObject<Metadata extends KubeObjectMetadata = KubeObjectMetadata
     );
   }
 
-  static isKubeJsonApiMetadata(object: unknown): object is KubeJsonApiMetadata {
+  static isKubeJsonApiMetadata(object: unknown): object is KubeObjectMetadata {
     return (
       isObject(object)
       && hasTypedProperty(object, "uid", isString)
@@ -169,7 +176,7 @@ export class KubeObject<Metadata extends KubeObjectMetadata = KubeObjectMetadata
     );
   }
 
-  static isPartialJsonApiMetadata(object: unknown): object is Partial<KubeJsonApiMetadata> {
+  static isPartialJsonApiMetadata(object: unknown): object is Partial<KubeObjectMetadata> {
     return (
       isObject(object)
       && hasOptionalProperty(object, "uid", isString)
@@ -204,10 +211,9 @@ export class KubeObject<Metadata extends KubeObjectMetadata = KubeObjectMetadata
     );
   }
 
-  static stringifyLabels(labels?: { [name: string]: string }): string[] {
-    if (!labels) return [];
-
-    return Object.entries(labels).map(([name, value]) => `${name}=${value}`);
+  static stringifyLabels(labels?: Partial<Record<string, string>>): string[] {
+    return Object.entries(labels ?? {})
+      .map(([name, value]) => `${name}=${value}`);
   }
 
   /**

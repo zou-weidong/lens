@@ -4,38 +4,42 @@
  */
 
 // Kubernetes apis
-// Docs: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.10/
+// Docs: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.23/
 
-export * from "./cluster.api";
-export * from "./cluster-role.api";
 export * from "./cluster-role-binding.api";
-export * from "./configmap.api";
-export * from "./crd.api";
+export * from "./cluster-role.api";
+export * from "./cluster.api";
+export * from "./config-map.api";
 export * from "./cron-job.api";
+export * from "./custom-resource-definition.api";
 export * from "./daemon-set.api";
 export * from "./deployment.api";
 export * from "./endpoint.api";
-export * from "./events.api";
-export * from "./hpa.api";
+export * from "./helm-chart.api";
+export * from "./helm-release.api";
+export * from "./horizontal-pod-autoscaler.api";
 export * from "./ingress.api";
 export * from "./job.api";
+export * from "./kube-event.api";
 export * from "./limit-range.api";
-export * from "./namespaces.api";
+export * from "./metrics.api";
+export * from "./namespace.api";
 export * from "./network-policy.api";
-export * from "./nodes.api";
+export * from "./node.api";
+export * from "./persistent-volume-claim.api";
 export * from "./persistent-volume.api";
-export * from "./persistent-volume-claims.api";
-export * from "./pods.api";
-export * from "./poddisruptionbudget.api";
+export * from "./pod-disruption-budget.api";
 export * from "./pod-metrics.api";
-export * from "./podsecuritypolicy.api";
+export * from "./pod-security-policy.api";
+export * from "./pod.api";
 export * from "./replica-set.api";
+export * from "./resource-applier.api";
 export * from "./resource-quota.api";
-export * from "./role.api";
 export * from "./role-binding.api";
+export * from "./role.api";
 export * from "./secret.api";
-export * from "./selfsubjectrulesreviews.api";
+export * from "./self-subject-rules-review.api";
+export * from "./service-account.api";
 export * from "./service.api";
-export * from "./service-accounts.api";
 export * from "./stateful-set.api";
 export * from "./storage-class.api";

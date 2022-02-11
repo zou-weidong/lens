@@ -6,54 +6,83 @@
 import glob from "glob";
 import { memoize } from "lodash/fp";
 import { createContainer } from "@ogre-tools/injectable";
-import { setLegacyGlobalDiForExtensionApi } from "../extensions/as-legacy-globals-for-extension-api/legacy-global-di-for-extension-api";
-import getValueFromRegisteredChannelInjectable from "./app-paths/get-value-from-registered-channel/get-value-from-registered-channel.injectable";
-import writeJsonFileInjectable from "../common/fs/write-json-file.injectable";
-import readJsonFileInjectable from "../common/fs/read-json-file.injectable";
-import readDirInjectable from "../common/fs/read-dir.injectable";
-import readFileInjectable from "../common/fs/read-file.injectable";
+import { setLegacyGlobalDiForExtensionApi } from "../extensions/di-legacy-globals/setup";
+import ipcRendererInjectable from "./ipc/ipc-renderer.injectable";
+import type { GetDiForUnitTestingArgs } from "../test-utils/common-types";
+import { overrideFs } from "../test-utils/override-fs";
+import { registerInjectables } from "../test-utils/register-injectables";
+import historyInjectable from "./navigation/history.injectable";
+import { createMemoryHistory } from "history";
+import { overrideStores } from "../test-utils/override-stores/renderer";
+import baseLoggerInjectable from "./logger/base-logger.injectable";
+import createStoresAndApisInjectable from "./vars/is-cluster-page-context.injectable";
 
-export const getDiForUnitTesting = ({ doGeneralOverrides } = { doGeneralOverrides: false }) => {
+const getInjectableFilePaths = memoize(() => [
+  ...glob.sync(`${__dirname}/**/*.injectable.{ts,tsx}`),
+  ...glob.sync(`${__dirname}/../common/**/*.injectable.{ts,tsx}`),
+  ...glob.sync(`${__dirname}/../extensions/**/*.injectable.{ts,tsx}`),
+]);
+
+export function getDiForUnitTesting({
+  doGeneralOverrides = true,
+  doFileSystemOverrides = true,
+  doStoresOverrides = true,
+  doLoggingOverrides = true,
+}: GetDiForUnitTestingArgs = {}) {
   const di = createContainer();
 
   setLegacyGlobalDiForExtensionApi(di);
-
-  for (const filePath of getInjectableFilePaths()) {
-    const injectableInstance = require(filePath).default;
-
-    di.register({
-      ...injectableInstance,
-      aliases: [injectableInstance, ...(injectableInstance.aliases || [])],
-    });
-  }
-
+  registerInjectables(di, getInjectableFilePaths);
   di.preventSideEffects();
 
+  if (doFileSystemOverrides) {
+    overrideFs(di);
+  }
+
+  if (doLoggingOverrides) {
+    di.override(baseLoggerInjectable, () => ({
+      debug: jest.fn(),
+      info: jest.fn(),
+      error: jest.fn(),
+      warn: jest.fn(),
+    }));
+  }
+
   if (doGeneralOverrides) {
-    di.override(getValueFromRegisteredChannelInjectable, () => () => undefined);
+    di.override(createStoresAndApisInjectable, () => true);
+    di.override(ipcRendererInjectable, () => ({
+      on: jest.fn(),
+      off: jest.fn(),
+      invoke: jest.fn(),
+      once: jest.fn(),
+      postMessage: jest.fn(),
+      removeAllListeners: jest.fn(),
+      removeListener: jest.fn(),
+      addListener: jest.fn(),
+      send: jest.fn(),
+      sendSync: jest.fn(),
+      sendTo: jest.fn(),
+      sendToHost: jest.fn(),
+      setMaxListeners: jest.fn(),
+      getMaxListeners: jest.fn(),
+      emit: jest.fn(),
+      eventNames: jest.fn(),
+      listenerCount: jest.fn(),
+      listeners: jest.fn(),
+      prependListener: jest.fn(),
+      prependOnceListener: jest.fn(),
+      rawListeners: jest.fn(),
+    }));
+    di.override(historyInjectable, () => createMemoryHistory());
+  }
 
-    di.override(readDirInjectable, () => () => {
-      throw new Error("Tried to read contents of a directory from file system without specifying explicit override.");
-    });
+  if (doStoresOverrides) {
+    const storesToSkip = Array.isArray(doStoresOverrides)
+      ? doStoresOverrides
+      : undefined;
 
-    di.override(readFileInjectable, () => () => {
-      throw new Error("Tried to read a file from file system without specifying explicit override.");
-    });
-
-    di.override(writeJsonFileInjectable, () => () => {
-      throw new Error("Tried to write JSON file to file system without specifying explicit override.");
-    });
-
-    di.override(readJsonFileInjectable, () => () => {
-      throw new Error("Tried to read JSON file from file system without specifying explicit override.");
-    });
+    overrideStores(di, storesToSkip);
   }
 
   return di;
-};
-
-const getInjectableFilePaths = memoize(() => [
-  ...glob.sync("./**/*.injectable.{ts,tsx}", { cwd: __dirname }),
-  ...glob.sync("../common/**/*.injectable.{ts,tsx}", { cwd: __dirname }),
-  ...glob.sync("../extensions/**/*.injectable.{ts,tsx}", { cwd: __dirname }),
-]);
+}

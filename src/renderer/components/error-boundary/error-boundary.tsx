@@ -5,13 +5,16 @@
 
 import "./error-boundary.scss";
 
-import React, { ErrorInfo } from "react";
+import type { ErrorInfo } from "react";
+import React from "react";
 import { observer } from "mobx-react";
 import { Button } from "../button";
-import { navigation } from "../../navigation";
 import { issuesTrackerUrl, slackUrl } from "../../../common/vars";
-
-export interface ErrorBoundaryProps {
+import type { ObservableHistory } from "mobx-observable-history";
+import { withInjectables } from "@ogre-tools/injectable-react";
+import observableHistoryInjectable from "../../navigation/observable-history.injectable";
+interface Dependencies {
+  history: ObservableHistory;
 }
 
 interface State {
@@ -20,7 +23,7 @@ interface State {
 }
 
 @observer
-export class ErrorBoundary extends React.Component<ErrorBoundaryProps, State> {
+class NonInjectedErrorBoundary extends React.Component<Dependencies, State> {
   public state: State = {};
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
@@ -29,7 +32,7 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, State> {
 
   back = () => {
     this.setState({ error: null, errorInfo: null });
-    navigation.goBack();
+    this.props.history.goBack();
   };
 
   render() {
@@ -70,3 +73,10 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, State> {
     return this.props.children;
   }
 }
+
+export const ErrorBoundary = withInjectables<Dependencies>(NonInjectedErrorBoundary, {
+  getProps: (di, props) => ({
+    ...props,
+    history: di.inject(observableHistoryInjectable),
+  }),
+});

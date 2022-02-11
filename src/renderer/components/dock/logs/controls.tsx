@@ -88,7 +88,7 @@ const NonInjectedLogControls = observer(({ openSaveFileDialog, model }: Dependen
 
 export const LogControls = withInjectables<Dependencies, LogControlsProps>(NonInjectedLogControls, {
   getProps: (di, props) => ({
-    openSaveFileDialog: di.inject(openSaveFileDialogInjectable),
     ...props,
+    openSaveFileDialog: di.inject(openSaveFileDialogInjectable),
   }),
 });

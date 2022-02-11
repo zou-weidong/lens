@@ -9,12 +9,15 @@ import React, { Component } from "react";
 import type { RouteComponentProps } from "react-router";
 import { observer } from "mobx-react";
 import { helmChartStore } from "./helm-chart.store";
-import type { HelmChart } from "../../../common/k8s-api/endpoints/helm-charts.api";
+import type { HelmChart } from "../../../common/k8s-api/endpoints";
 import { HelmChartDetails } from "./helm-chart-details";
-import { navigation } from "../../navigation";
 import { ItemListLayout } from "../item-object-list/list-layout";
 import { helmChartsURL } from "../../../common/routes";
 import type { HelmChartsRouteParams } from "../../../common/routes";
+import HelmPlaceholder from "./helm-placeholder.svg";
+import { withInjectables } from "@ogre-tools/injectable-react";
+import type { Navigate } from "../../navigation/navigate.injectable";
+import navigateInjectable from "../../navigation/navigate.injectable";
 
 enum columnId {
   name = "name",
@@ -27,8 +30,12 @@ enum columnId {
 export interface HelmChartsProps extends RouteComponentProps<HelmChartsRouteParams> {
 }
 
+interface Dependencies {
+  navigate: Navigate;
+}
+
 @observer
-export class HelmCharts extends Component<HelmChartsProps> {
+class NonInjectedHelmCharts extends Component<HelmChartsProps & Dependencies> {
   componentDidMount() {
     helmChartStore.loadAll();
   }
@@ -48,21 +55,16 @@ export class HelmCharts extends Component<HelmChartsProps> {
   };
 
   showDetails = (chart: HelmChart) => {
-    if (!chart) {
-      navigation.push(helmChartsURL());
-    }
-    else {
-      navigation.push(helmChartsURL({
-        params: {
-          chartName: chart.getName(),
-          repo: chart.getRepository(),
-        },
-      }));
-    }
+    this.props.navigate(helmChartsURL({
+      params: {
+        chartName: chart.getName(),
+        repo: chart.getRepository(),
+      },
+    }));
   };
 
   hideDetails = () => {
-    this.showDetails(null);
+    this.props.navigate(helmChartsURL());
   };
 
   render() {
@@ -102,7 +104,7 @@ export class HelmCharts extends Component<HelmChartsProps> {
           renderTableContents={chart => [
             <figure key="image">
               <img
-                src={chart.getIcon() || require("./helm-placeholder.svg")}
+                src={chart.getIcon() || HelmPlaceholder}
                 onLoad={evt => evt.currentTarget.classList.add("visible")}
               />
             </figure>,
@@ -126,3 +128,10 @@ export class HelmCharts extends Component<HelmChartsProps> {
     );
   }
 }
+
+export const HelmCharts = withInjectables<Dependencies, HelmChartsProps>(NonInjectedHelmCharts, {
+  getProps: (di, props) => ({
+    ...props,
+    navigate: di.inject(navigateInjectable),
+  }),
+});

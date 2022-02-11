@@ -3,7 +3,7 @@
  * Licensed under MIT License. See LICENSE in root directory for more information.
  */
 
-import type { CatalogEntity } from "../../../../common/catalog";
+import type { CatalogEntity, ContextActionNavigate } from "../../../../common/catalog/entity";
 
 /**
  * The context given to commands when executed
@@ -12,17 +12,7 @@ export interface CommandContext {
   entity?: CatalogEntity;
 }
 
-export interface CommandActionNavigateOptions {
-  /**
-   * If `true` then the navigate will only navigate on the root frame and not
-   * within a cluster
-   * @default false
-   */
-  forceRootFrame?: boolean;
-}
-
-export interface CommandActionContext extends CommandContext {
-  navigate: (url: string, opts?: CommandActionNavigateOptions) => void;
+export interface CommandActionContext extends CommandContext, ContextActionNavigate {
 }
 
 export interface CommandRegistration {

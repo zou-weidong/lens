@@ -4,83 +4,110 @@
  */
 
 import get from "lodash/get";
-import { IAffinity, WorkloadKubeObject } from "../workload-kube-object";
+import type { Affinity, Toleration } from "../common-types";
 import { autoBind } from "../../utils";
+import type { DerivedKubeApiOptions } from "../kube-api";
 import { KubeApi } from "../kube-api";
 import { metricsApi } from "./metrics.api";
 import type { KubeJsonApiData } from "../kube-json-api";
-import type { IPodContainer, IPodMetrics } from "./pods.api";
-import { isClusterPageContext } from "../../utils/cluster-id-url-parsing";
-import type { LabelSelector } from "../kube-object";
+import type { PodContainer, IPodMetrics } from "./pod.api";
+import type { KubeObjectMetadata, LabelSelector } from "../kube-object";
+import { KubeObject } from "../kube-object";
 
-export class DaemonSet extends WorkloadKubeObject {
+export interface DaemonSetSpec {
+  selector: LabelSelector;
+  template: {
+    metadata: {
+      creationTimestamp?: string;
+      labels: {
+        name: string;
+      };
+    };
+    spec: {
+      containers: PodContainer[];
+      initContainers?: PodContainer[];
+      restartPolicy: string;
+      terminationGracePeriodSeconds: number;
+      dnsPolicy: string;
+      hostPID: boolean;
+      affinity?: Affinity;
+      nodeSelector?: {
+        [selector: string]: string;
+      };
+      securityContext: {};
+      schedulerName: string;
+      tolerations: Toleration[];
+    };
+  };
+  updateStrategy: {
+    type: string;
+    rollingUpdate: {
+      maxUnavailable: number;
+    };
+  };
+  revisionHistoryLimit: number;
+}
+
+export interface DaemonSetStatus {
+  currentNumberScheduled: number;
+  numberMisscheduled: number;
+  desiredNumberScheduled: number;
+  numberReady: number;
+  observedGeneration: number;
+  updatedNumberScheduled: number;
+  numberAvailable: number;
+  numberUnavailable: number;
+}
+
+export class DaemonSet extends KubeObject<KubeObjectMetadata, DaemonSetStatus, DaemonSetSpec> {
   static kind = "DaemonSet";
   static namespaced = true;
   static apiBase = "/apis/apps/v1/daemonsets";
 
-  constructor(data: KubeJsonApiData) {
+  constructor(data: KubeJsonApiData<KubeObjectMetadata, DaemonSetStatus, DaemonSetSpec>) {
     super(data);
     autoBind(this);
   }
 
-  declare spec: {
-    selector: LabelSelector;
-    template: {
-      metadata: {
-        creationTimestamp?: string;
-        labels: {
-          name: string;
-        };
-      };
-      spec: {
-        containers: IPodContainer[];
-        initContainers?: IPodContainer[];
-        restartPolicy: string;
-        terminationGracePeriodSeconds: number;
-        dnsPolicy: string;
-        hostPID: boolean;
-        affinity?: IAffinity;
-        nodeSelector?: {
-          [selector: string]: string;
-        };
-        securityContext: {};
-        schedulerName: string;
-        tolerations: {
-          key: string;
-          operator: string;
-          effect: string;
-          tolerationSeconds: number;
-        }[];
-      };
-    };
-    updateStrategy: {
-      type: string;
-      rollingUpdate: {
-        maxUnavailable: number;
-      };
-    };
-    revisionHistoryLimit: number;
-  };
-  declare status: {
-    currentNumberScheduled: number;
-    numberMisscheduled: number;
-    desiredNumberScheduled: number;
-    numberReady: number;
-    observedGeneration: number;
-    updatedNumberScheduled: number;
-    numberAvailable: number;
-    numberUnavailable: number;
-  };
+  getSelectors(): string[] {
+    return KubeObject.stringifyLabels(this.spec?.selector?.matchLabels);
+  }
+
+  getNodeSelectors(): string[] {
+    return KubeObject.stringifyLabels(this.spec?.template?.spec?.nodeSelector);
+  }
+
+  getTemplateLabels(): string[] {
+    return KubeObject.stringifyLabels(this.spec?.template?.metadata?.labels);
+  }
+
+  getTolerations(): Toleration[] {
+    return this.spec?.template?.spec?.tolerations ?? [];
+  }
+
+  getAffinity(): Affinity {
+    return this.spec?.template?.spec?.affinity ?? {};
+  }
+
+  getAffinityNumber() {
+    return Object.keys(this.getAffinity()).length;
+  }
 
   getImages() {
-    const containers: IPodContainer[] = get(this, "spec.template.spec.containers", []);
-    const initContainers: IPodContainer[] = get(this, "spec.template.spec.initContainers", []);
+    const containers: PodContainer[] = get(this, "spec.template.spec.containers", []);
+    const initContainers: PodContainer[] = get(this, "spec.template.spec.initContainers", []);
 
     return [...containers, ...initContainers].map(container => container.image);
   }
 }
 
 export class DaemonSetApi extends KubeApi<DaemonSet> {
+  constructor(opts: DerivedKubeApiOptions = {}) {
+    super({
+      objectConstructor: DaemonSet,
+      ...opts,
+    });
+  }
 }
 
 export function getMetricsForDaemonSets(daemonsets: DaemonSet[], namespace: string, selector = ""): Promise<IPodMetrics> {
@@ -99,18 +126,3 @@ export function getMetricsForDaemonSets(daemonsets: DaemonSet[], namespace: stri
     namespace,
   });
 }
-
-/**
- * Only available within kubernetes cluster pages
- */
-let daemonSetApi: DaemonSetApi;
-
-if (isClusterPageContext()) {
-  daemonSetApi = new DaemonSetApi({
-    objectConstructor: DaemonSet,
-  });
-}
-
-export {
-  daemonSetApi,
-};

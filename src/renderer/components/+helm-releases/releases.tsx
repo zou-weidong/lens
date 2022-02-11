@@ -8,8 +8,7 @@ import "./releases.scss";
 
 import React, { Component } from "react";
 import type { RouteComponentProps } from "react-router";
-import type { HelmRelease } from "../../../common/k8s-api/endpoints/helm-releases.api";
-import { navigation } from "../../navigation";
+import type { HelmRelease } from "../../../common/k8s-api/endpoints";
 import type { ReleaseRouteParams } from "../../../common/routes";
 import { releaseURL } from "../../../common/routes";
 import { withInjectables } from "@ogre-tools/injectable-react";
@@ -19,12 +18,14 @@ import { NamespaceSelectFilter } from "../+namespaces/namespace-select-filter";
 import { kebabCase } from "lodash/fp";
 import { HelmReleaseMenu } from "./release-menu";
 import type { ItemStore } from "../../../common/item.store";
-import { ReleaseRollbackDialog } from "./release-rollback-dialog";
+import { ReleaseRollbackDialog } from "./dialogs/rollback/view";
 import { ReleaseDetails } from "./release-details/release-details";
 import removableReleasesInjectable from "./removable-releases.injectable";
 import type { RemovableHelmRelease } from "./removable-releases";
 import type { IComputedValue } from "mobx";
 import releasesInjectable from "./releases.injectable";
+import type { Navigate } from "../../navigation/navigate.injectable";
+import navigateInjectable from "../../navigation/navigate.injectable";
 
 enum columnId {
   name = "name",
@@ -44,6 +45,7 @@ interface Dependencies {
   releases: IComputedValue<RemovableHelmRelease[]>;
   releasesArePending: IComputedValue<boolean>;
   selectNamespace: (namespace: string) => void;
+  navigate: Navigate;
 }
 
 class NonInjectedHelmReleases extends Component<Dependencies & HelmReleasesProps> {
@@ -60,7 +62,7 @@ class NonInjectedHelmReleases extends Component<Dependencies & HelmReleasesProps
   };
 
   showDetails = (item: HelmRelease) => {
-    navigation.push(releaseURL({
+    this.props.navigate(releaseURL({
       params: {
         name: item.getName(),
         namespace: item.getNs(),
@@ -69,7 +71,7 @@ class NonInjectedHelmReleases extends Component<Dependencies & HelmReleasesProps
   };
 
   hideDetails = () => {
-    navigation.push(releaseURL());
+    this.props.navigate(releaseURL());
   };
 
   renderRemoveDialogMessage(selectedItems: HelmRelease[]) {
@@ -223,15 +225,12 @@ class NonInjectedHelmReleases extends Component<Dependencies & HelmReleasesProps
   }
 }
 
-export const HelmReleases = withInjectables<Dependencies, HelmReleasesProps>(
-  NonInjectedHelmReleases,
-
-  {
-    getProps: (di, props) => ({
-      releases: di.inject(removableReleasesInjectable),
-      releasesArePending: di.inject(releasesInjectable).pending,
-      selectNamespace: di.inject(namespaceStoreInjectable).selectNamespaces,
-      ...props,
-    }),
-  },
-);
+export const HelmReleases = withInjectables<Dependencies, HelmReleasesProps>(NonInjectedHelmReleases, {
+  getProps: (di, props) => ({
+    ...props,
+    releases: di.inject(removableReleasesInjectable),
+    releasesArePending: di.inject(releasesInjectable).pending,
+    selectNamespace: di.inject(namespaceStoreInjectable).selectNamespaces,
+    navigate: di.inject(navigateInjectable),
+  }),
+});

@@ -7,89 +7,60 @@ import "@testing-library/jest-dom/extend-expect";
 import { fireEvent, waitFor } from "@testing-library/react";
 import fse from "fs-extra";
 import React from "react";
-import { UserStore } from "../../../../common/user-store";
-import type { ExtensionDiscovery } from "../../../../extensions/extension-discovery/extension-discovery";
-import type { ExtensionLoader } from "../../../../extensions/extension-loader";
-import { ConfirmDialog } from "../../confirm-dialog";
+import { ConfirmDialog } from "../../confirm-dialog/view";
 import { Extensions } from "../extensions";
-import mockFs from "mock-fs";
 import { mockWindow } from "../../../../../__mocks__/windowMock";
 import { getDiForUnitTesting } from "../../../getDiForUnitTesting";
-import extensionLoaderInjectable from "../../../../extensions/extension-loader/extension-loader.injectable";
 import { DiRender, renderFor } from "../../test-utils/renderFor";
-import extensionDiscoveryInjectable from "../../../../extensions/extension-discovery/extension-discovery.injectable";
-import directoryForUserDataInjectable from "../../../../common/app-paths/directory-for-user-data/directory-for-user-data.injectable";
-import directoryForDownloadsInjectable from "../../../../common/app-paths/directory-for-downloads/directory-for-downloads.injectable";
+import directoryForUserDataInjectable from "../../../../common/paths/user-data.injectable";
+import directoryForDownloadsInjectable from "../../../../common/paths/downloads.injectable";
+import type { CheckedUninstallExtension } from "../checked-uninstall-extension.injectable";
+import checkedUninstallExtensionInjectable from "../checked-uninstall-extension.injectable";
+import installedExtensionsInjectable from "../../../../common/extensions/installed.injectable";
+import { observable } from "mobx";
+import { SemVer } from "semver";
+import type { DiContainer } from "@ogre-tools/injectable";
+import isExtensionsInitiallyLoadedStateInjectable from "../../../extensions/discovery-is-loaded.injectable";
 
 mockWindow();
 
-jest.setTimeout(30000);
-jest.mock("fs-extra");
-jest.mock("../../notifications");
-
-jest.mock("../../../../common/utils/downloadFile", () => ({
-  downloadFile: jest.fn(({ url }) => ({
-    promise: Promise.resolve(),
-    url,
-    cancel: () => {},
-  })),
-  downloadJson: jest.fn(({ url }) => ({
-    promise: Promise.resolve({}),
-    url,
-    cancel: () => { },
-  })),
-}));
-
-jest.mock("../../../../common/utils/tar");
-
 describe("Extensions", () => {
-  let extensionLoader: ExtensionLoader;
-  let extensionDiscovery: ExtensionDiscovery;
   let render: DiRender;
+  let di: DiContainer;
+  let checkedUninstallExtension: jest.MockedFunction<CheckedUninstallExtension>;
 
   beforeEach(async () => {
-    const di = getDiForUnitTesting({ doGeneralOverrides: true });
+    di = getDiForUnitTesting({ doGeneralOverrides: true });
 
     di.override(directoryForUserDataInjectable, () => "some-directory-for-user-data");
     di.override(directoryForDownloadsInjectable, () => "some-directory-for-downloads");
-
-    mockFs({
-      "some-directory-for-user-data": {},
-    });
 
     await di.runSetups();
 
     render = renderFor(di);
 
-    extensionLoader = di.inject(extensionLoaderInjectable);
-    extensionDiscovery = di.inject(extensionDiscoveryInjectable);
-
-    extensionLoader.addExtension({
-      id: "extensionId",
-      manifest: {
-        name: "test",
-        version: "1.2.3",
-      },
-      absolutePath: "/absolute/path",
-      manifestPath: "/symlinked/path/package.json",
-      isBundled: false,
-      isEnabled: true,
-      isCompatible: true,
-    });
-
-    extensionDiscovery.uninstallExtension = jest.fn(() => Promise.resolve());
-
-    UserStore.createInstance();
-  });
-
-  afterEach(() => {
-    mockFs.restore();
-    UserStore.resetInstance();
+    di.override(checkedUninstallExtensionInjectable, () => checkedUninstallExtension = jest.fn());
+    di.override(installedExtensionsInjectable, () => observable.map([
+      ["extensionId", {
+        id: "extensionId",
+        manifest: {
+          name: "test",
+          version: new SemVer("1.2.3"),
+          description: "foobar",
+          engines: {
+            lens: ">5.0.0",
+          },
+        },
+        absolutePath: "/absolute/path",
+        manifestPath: "/symlinked/path/package.json",
+        isBundled: false,
+        isEnabled: true,
+        isCompatible: true,
+      }],
+    ]));
   });
 
   it("disables uninstall and disable buttons while uninstalling", async () => {
-    extensionDiscovery.isLoaded = true;
-
     const res = render(<><Extensions /><ConfirmDialog /></>);
     const table = res.getByTestId("extensions-table");
     const menuTrigger = table.querySelector("div[role=row]:first-of-type .actions .Icon");
@@ -105,7 +76,7 @@ describe("Extensions", () => {
     fireEvent.click(res.getByText("Yes"));
 
     await waitFor(() => {
-      expect(extensionDiscovery.uninstallExtension).toHaveBeenCalled();
+      expect(checkedUninstallExtension).toHaveBeenCalled();
       fireEvent.click(menuTrigger);
       expect(res.getByText("Disable")).toHaveAttribute("aria-disabled", "true");
       expect(res.getByText("Uninstall")).toHaveAttribute("aria-disabled", "true");
@@ -132,14 +103,13 @@ describe("Extensions", () => {
   });
 
   it("displays spinner while extensions are loading", () => {
-    extensionDiscovery.isLoaded = false;
     const { container } = render(<Extensions />);
 
     expect(container.querySelector(".Spinner")).toBeInTheDocument();
   });
 
   it("does not display the spinner while extensions are not loading", async () => {
-    extensionDiscovery.isLoaded = true;
+    di.inject(isExtensionsInitiallyLoadedStateInjectable).set(true);
     const { container } = render(<Extensions />);
 
     expect(container.querySelector(".Spinner")).not.toBeInTheDocument();

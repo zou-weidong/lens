@@ -8,17 +8,17 @@ import styles from "./cluster-metrics.module.scss";
 import React from "react";
 import { observer } from "mobx-react";
 import type { ChartOptions, ChartPoint } from "chart.js";
-import { ClusterOverviewStore, MetricType } from "./cluster-overview-store/cluster-overview-store";
+import type { ClusterOverviewStore } from "./cluster-overview/store";
+import { MetricType } from "./cluster-overview/store";
 import { BarChart } from "../chart";
 import { bytesToUnits, cssNames } from "../../utils";
 import { Spinner } from "../spinner";
 import { ZebraStripes } from "../chart/zebra-stripes.plugin";
 import { ClusterNoMetrics } from "./cluster-no-metrics";
 import { ClusterMetricSwitchers } from "./cluster-metric-switchers";
-import { getMetricLastPoints } from "../../../common/k8s-api/endpoints/metrics.api";
+import { getMetricLastPoints } from "../../../common/k8s-api/endpoints";
 import { withInjectables } from "@ogre-tools/injectable-react";
-import clusterOverviewStoreInjectable
-  from "./cluster-overview-store/cluster-overview-store.injectable";
+import clusterOverviewStoreInjectable from "./cluster-overview/store.injectable";
 
 interface Dependencies {
   clusterOverviewStore: ClusterOverviewStore;

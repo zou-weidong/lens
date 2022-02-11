@@ -75,7 +75,11 @@ interface Dependencies {
 
 export type SubscribeStores = (stores: KubeObjectStore<KubeObject>[], opts?: KubeWatchSubscribeStoreOptions) => Disposer;
 
-export class KubeWatchApi {
+export interface KubeStoreWatcher {
+  subscribeStores: SubscribeStores;
+}
+
+export class KubeWatchApi implements KubeStoreWatcher {
   #watch = new WatchCount();
 
   constructor(private dependencies: Dependencies) {}
@@ -145,7 +149,7 @@ export class KubeWatchApi {
     };
   }
 
-  subscribeStores: SubscribeStores = (stores, { namespaces, onLoadFailure } = {}) => {
+  subscribeStores(stores: KubeObjectStore<KubeObject>[], { namespaces, onLoadFailure }: KubeWatchSubscribeStoreOptions = {}) {
     const parent = new AbortController();
     const unsubscribe = disposer(
       ...stores.map(store => this.subscribeStore({
@@ -161,7 +165,7 @@ export class KubeWatchApi {
       parent.abort();
       unsubscribe();
     });
-  };
+  }
 
   protected log(message: any, meta: any) {
     const log = message instanceof Error

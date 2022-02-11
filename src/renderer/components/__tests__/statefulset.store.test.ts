@@ -3,10 +3,12 @@
  * Licensed under MIT License. See LICENSE in root directory for more information.
  */
 
-import { observable } from "mobx";
-import { podsStore } from "../+workloads-pods/pods.store";
-import { statefulSetStore } from "../+workloads-statefulsets/statefulset.store";
+import type { PodStore } from "../+workloads-pods/store";
+import podStoreInjectable from "../+workloads-pods/store.injectable";
+import type { StatefulSetStore } from "../+workloads-statefulsets/store";
+import statefulSetStoreInjectable from "../+workloads-statefulsets/store.injectable";
 import { StatefulSet, Pod } from "../../../common/k8s-api/endpoints";
+import { getDiForUnitTesting } from "../../getDiForUnitTesting";
 
 const runningStatefulSet = new StatefulSet({
   apiVersion: "foo",
@@ -49,34 +51,36 @@ const runningPod = new Pod({
     resourceVersion: "foobar",
     uid: "foobar",
     ownerReferences: [{
+      apiVersion: "foo",
+      kind: "StatefulSet",
       uid: "runningStatefulSet",
+      name: "runningStatefulSet",
     }],
     namespace: "default",
   },
+  status: {
+    phase: "Running",
+    conditions: [
+      {
+        type: "Initialized",
+        status: "True",
+        lastProbeTime: 1,
+        lastTransitionTime: "1",
+      },
+      {
+        type: "Ready",
+        status: "True",
+        lastProbeTime: 1,
+        lastTransitionTime: "1",
+      },
+    ],
+    hostIP: "10.0.0.1",
+    podIP: "10.0.0.1",
+    startTime: "now",
+    containerStatuses: [],
+    initContainerStatuses: [],
+  },
 });
-
-runningPod.status = {
-  phase: "Running",
-  conditions: [
-    {
-      type: "Initialized",
-      status: "True",
-      lastProbeTime: 1,
-      lastTransitionTime: "1",
-    },
-    {
-      type: "Ready",
-      status: "True",
-      lastProbeTime: 1,
-      lastTransitionTime: "1",
-    },
-  ],
-  hostIP: "10.0.0.1",
-  podIP: "10.0.0.1",
-  startTime: "now",
-  containerStatuses: [],
-  initContainerStatuses: [],
-};
 
 const pendingPod = new Pod({
   apiVersion: "foo",
@@ -86,7 +90,10 @@ const pendingPod = new Pod({
     resourceVersion: "foobar",
     uid: "foobar-pending",
     ownerReferences: [{
+      apiVersion: "foo",
+      kind: "StatefulSet",
       uid: "pendingStatefulSet",
+      name: "pendingStatefulSet",
     }],
     namespace: "default",
   },
@@ -100,24 +107,34 @@ const failedPod = new Pod({
     resourceVersion: "foobar",
     uid: "foobar-failed",
     ownerReferences: [{
+      apiVersion: "foo",
+      kind: "StatefulSet",
       uid: "failedStatefulSet",
+      name: "failedStatefulSet",
     }],
     namespace: "default",
   },
+  status: {
+    phase: "Failed",
+    conditions: [],
+    hostIP: "10.0.0.1",
+    podIP: "10.0.0.1",
+    startTime: "now",
+  },
 });
 
-failedPod.status = {
-  phase: "Failed",
-  conditions: [],
-  hostIP: "10.0.0.1",
-  podIP: "10.0.0.1",
-  startTime: "now",
-};
-
 describe("StatefulSet Store tests", () => {
+  let podStore: PodStore;
+  let statefulSetStore: StatefulSetStore;
+
   beforeAll(() => {
+    const di = getDiForUnitTesting();
+
+    podStore = di.inject(podStoreInjectable);
+    statefulSetStore = di.inject(statefulSetStoreInjectable);
+
     // Add pods to pod store
-    podsStore.items = observable.array([
+    podStore.items.replace([
       runningPod,
       failedPod,
       pendingPod,

@@ -9,31 +9,38 @@ import React from "react";
 import { computed, makeObservable, observable, reaction } from "mobx";
 import { disposeOnUnmount, observer } from "mobx-react";
 import { DrawerItem } from "../drawer";
-import { boundMethod, cssNames, Disposer } from "../../utils";
+import type { Disposer } from "../../utils";
+import { cssNames, prevDefault } from "../../utils";
 import { getMetricsForNamespace, type IPodMetrics, Namespace } from "../../../common/k8s-api/endpoints";
 import type { KubeObjectDetailsProps } from "../kube-object-details";
-import { Link } from "react-router-dom";
 import { Spinner } from "../spinner";
-import { resourceQuotaStore } from "../+config-resource-quotas/resource-quotas.store";
+import type { ResourceQuotaStore } from "../+config-resource-quotas/store";
 import { KubeObjectMeta } from "../kube-object-meta";
-import { limitRangeStore } from "../+config-limit-ranges/limit-ranges.store";
 import { ResourceMetrics } from "../resource-metrics";
 import { PodCharts, podMetricTabs } from "../+workloads-pods/pod-charts";
-import { ClusterMetricsResourceType } from "../../../common/cluster-types";
-import { getActiveClusterEntity } from "../../api/catalog-entity-registry";
-import { getDetailsUrl } from "../kube-detail-params";
+import { ClusterMetricsResourceType } from "../../../common/clusters/cluster-types";
 import logger from "../../../common/logger";
 import type { KubeObjectStore } from "../../../common/k8s-api/kube-object.store";
 import type { KubeObject } from "../../../common/k8s-api/kube-object";
 import { withInjectables } from "@ogre-tools/injectable-react";
-import kubeWatchApiInjectable
-  from "../../kube-watch-api/kube-watch-api.injectable";
+import type { ShouldDisplayMetric } from "../../clusters/should-display-metric.injectable";
+import shouldDisplayMetricInjectable from "../../clusters/should-display-metric.injectable";
+import type { ShowDetails } from "../kube-object/details/show.injectable";
+import showDetailsInjectable from "../kube-object/details/show.injectable";
+import subscribeStoresInjectable from "../../kube-watch-api/subscribe-stores.injectable";
+import type { LimitRangeStore } from "../+config-limit-ranges/store";
+import resourceQuotaStoreInjectable from "../+config-resource-quotas/store.injectable";
+import limitRangeStoreInjectable from "../+config-limit-ranges/store.injectable";
 
 export interface NamespaceDetailsProps extends KubeObjectDetailsProps<Namespace> {
 }
 
 interface Dependencies {
   subscribeStores: (stores: KubeObjectStore<KubeObject>[]) => Disposer;
+  shouldDisplayMetric: ShouldDisplayMetric;
+  showDetails: ShowDetails;
+  limitRangeStore: LimitRangeStore;
+  resourceQuotaStore: ResourceQuotaStore;
 }
 
 @observer
@@ -46,12 +53,18 @@ class NonInjectedNamespaceDetails extends React.Component<NamespaceDetailsProps 
   }
 
   componentDidMount() {
+    const {
+      resourceQuotaStore,
+      limitRangeStore,
+      subscribeStores,
+    } = this.props;
+
     disposeOnUnmount(this, [
       reaction(() => this.props.object, () => {
         this.metrics = null;
       }),
 
-      this.props.subscribeStores([
+      subscribeStores([
         resourceQuotaStore,
         limitRangeStore,
       ]),
@@ -59,24 +72,25 @@ class NonInjectedNamespaceDetails extends React.Component<NamespaceDetailsProps 
   }
 
   @computed get quotas() {
-    const namespace = this.props.object.getName();
+    const {
+      object: namespace,
+      resourceQuotaStore,
+    } = this.props;
 
-    return resourceQuotaStore.getAllByNs(namespace);
+    return resourceQuotaStore.getAllByNs(namespace.getName());
   }
 
   @computed get limitranges() {
-    const namespace = this.props.object.getName();
+    const {
+      object: namespace,
+      limitRangeStore,
+    } = this.props;
 
-    return limitRangeStore.getAllByNs(namespace);
-  }
-
-  @boundMethod
-  async loadMetrics() {
-    this.metrics = await getMetricsForNamespace(this.props.object.getName(), "");
+    return limitRangeStore.getAllByNs(namespace.getName());
   }
 
   render() {
-    const { object: namespace } = this.props;
+    const { object: namespace, shouldDisplayMetric, showDetails, limitRangeStore, resourceQuotaStore } = this.props;
 
     if (!namespace) {
       return null;
@@ -89,14 +103,17 @@ class NonInjectedNamespaceDetails extends React.Component<NamespaceDetailsProps 
     }
 
     const status = namespace.getStatus();
-    const isMetricHidden = getActiveClusterEntity()?.isMetricHidden(ClusterMetricsResourceType.Namespace);
 
     return (
       <div className="NamespaceDetails">
-        {!isMetricHidden && (
+        {shouldDisplayMetric(ClusterMetricsResourceType.Namespace) && (
           <ResourceMetrics
-            loader={this.loadMetrics}
-            tabs={podMetricTabs} object={namespace} params={{ metrics: this.metrics }}
+            loader={async () => {
+              this.metrics = await getMetricsForNamespace(namespace.getName(), "");
+            }}
+            tabs={podMetricTabs}
+            object={namespace}
+            metrics={this.metrics}
           >
             <PodCharts />
           </ResourceMetrics>
@@ -109,37 +126,33 @@ class NonInjectedNamespaceDetails extends React.Component<NamespaceDetailsProps 
 
         <DrawerItem name="Resource Quotas" className="quotas flex align-center">
           {!this.quotas && resourceQuotaStore.isLoading && <Spinner/>}
-          {this.quotas.map(quota => {
-            return (
-              <Link key={quota.getId()} to={getDetailsUrl(quota.selfLink)}>
-                {quota.getName()}
-              </Link>
-            );
-          })}
+          {this.quotas.map(quota => (
+            <a key={quota.getId()} onClick={prevDefault(() => showDetails(quota))}>
+              {quota.getName()}
+            </a>
+          ))}
         </DrawerItem>
         <DrawerItem name="Limit Ranges">
           {!this.limitranges && limitRangeStore.isLoading && <Spinner/>}
-          {this.limitranges.map(limitrange => {
-            return (
-              <Link key={limitrange.getId()} to={getDetailsUrl(limitrange.selfLink)}>
-                {limitrange.getName()}
-              </Link>
-            );
-          })}
+          {this.limitranges.map(limitrange => (
+            <a key={limitrange.getId()} onClick={prevDefault(() => showDetails(limitrange))}>
+              {limitrange.getName()}
+            </a>
+          ))}
         </DrawerItem>
       </div>
     );
   }
 }
 
-export const NamespaceDetails = withInjectables<Dependencies, NamespaceDetailsProps>(
-  NonInjectedNamespaceDetails,
-
-  {
-    getProps: (di, props) => ({
-      subscribeStores: di.inject(kubeWatchApiInjectable).subscribeStores,
-      ...props,
-    }),
-  },
-);
+export const NamespaceDetails = withInjectables<Dependencies, NamespaceDetailsProps>(NonInjectedNamespaceDetails, {
+  getProps: (di, props) => ({
+    ...props,
+    subscribeStores: di.inject(subscribeStoresInjectable),
+    shouldDisplayMetric: di.inject(shouldDisplayMetricInjectable),
+    showDetails: di.inject(showDetailsInjectable),
+    resourceQuotaStore: di.inject(resourceQuotaStoreInjectable),
+    limitRangeStore: di.inject(limitRangeStoreInjectable),
+  }),
+});
 

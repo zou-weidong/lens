@@ -10,14 +10,11 @@ import fse from "fs-extra";
 import { DockTabs } from "../dock-tabs";
 import { DockStore, DockTab, TabKind } from "../dock/store";
 import { noop } from "../../../utils";
-import { ThemeStore } from "../../../theme.store";
-import { UserStore } from "../../../../common/user-store";
 import { getDiForUnitTesting } from "../../../getDiForUnitTesting";
 import dockStoreInjectable from "../dock/store.injectable";
 import type { DiRender } from "../../test-utils/renderFor";
 import { renderFor } from "../../test-utils/renderFor";
-import directoryForUserDataInjectable
-  from "../../../../common/app-paths/directory-for-user-data/directory-for-user-data.injectable";
+import directoryForUserDataInjectable from "../../../../common/paths/user-data.injectable";
 
 jest.mock("electron", () => ({
   app: {
@@ -65,7 +62,6 @@ describe("<DockTabs />", () => {
   beforeEach(async () => {
     const di = getDiForUnitTesting({ doGeneralOverrides: true });
 
-
     render = renderFor(di);
 
     di.override(
@@ -76,17 +72,10 @@ describe("<DockTabs />", () => {
     await di.runSetups();
 
     dockStore = di.inject(dockStoreInjectable);
-
-    UserStore.createInstance();
-    ThemeStore.createInstance();
-    await dockStore.whenReady;
     dockStore.tabs = initialTabs;
   });
 
   afterEach(() => {
-    ThemeStore.resetInstance();
-    UserStore.resetInstance();
-
     // TODO: A unit test may not cause side effects. Here accessing file system is a side effect.
     fse.remove("some-test-suite-specific-directory-for-user-data");
   });

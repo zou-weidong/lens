@@ -7,7 +7,8 @@ import { observable, makeObservable } from "mobx";
 import EventEmitter from "events";
 import type TypedEventEmitter from "typed-emitter";
 import type { Arguments } from "typed-emitter";
-import { isDevelopment } from "../../common/vars";
+import { getLegacyGlobalDiForExtensionApi } from "../../extensions/di-legacy-globals/setup";
+import isDevelopmentInjectable from "../../common/vars/is-development.injectable";
 
 interface WebsocketApiParams {
   /**
@@ -73,17 +74,22 @@ export class WebSocketApi<Events extends WebSocketEvents> extends (EventEmitter 
 
   @observable readyState = WebSocketApiState.PENDING;
 
-  private static defaultParams = {
-    logging: isDevelopment,
+  private static readonly defaultParams = {
+    get logging() {
+      return getLegacyGlobalDiForExtensionApi().inject(isDevelopmentInjectable);
+    },
     reconnectDelay: 10,
     flushOnOpen: true,
     pingMessage: "PING",
   };
 
-  constructor(params: WebsocketApiParams) {
+  constructor(params: WebsocketApiParams = {}) {
     super();
     makeObservable(this);
-    this.params = Object.assign({}, WebSocketApi.defaultParams, params);
+    this.params = {
+      ...WebSocketApi.defaultParams,
+      ...params,
+    };
     const { pingInterval } = this.params;
 
     if (pingInterval) {

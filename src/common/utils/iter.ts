@@ -186,3 +186,42 @@ export function every<T>(src: Iterable<T>, fn: (val: T) => any): boolean {
 
   return true;
 }
+
+/**
+ * Get the first item of an iterable if there is one
+ * @param src The type to be iterated over
+ */
+export function first<T>(src: Iterable<T>): T | undefined {
+  for (const res of src) {
+    return res;
+  }
+
+  return undefined;
+}
+
+/**
+ * Iterate over `src` n times and then return the next item.
+ *
+ * For example, with `n=0`, the first entry will be returned
+ * @param src The type to be iterated over
+ * @param n The 0-base count of the item desired
+ */
+export function nth<T>(src: Iterable<T>, n: number): T | undefined {
+  if (n < 0) {
+    throw new TypeError("n cannot be a negative number");
+  }
+
+  if (!Number.isInteger(n)) {
+    throw new TypeError("n must be an integer");
+  }
+
+  for (const item of src) {
+    if (n === 0) {
+      return item;
+    }
+
+    n -= 1;
+  }
+
+  return undefined;
+}

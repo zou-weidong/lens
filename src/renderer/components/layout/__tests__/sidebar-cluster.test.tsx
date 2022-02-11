@@ -5,17 +5,14 @@
 
 import React from "react";
 import "@testing-library/jest-dom/extend-expect";
-import { render, fireEvent } from "@testing-library/react";
-import { SidebarCluster } from "../sidebar-cluster";
-import { KubernetesCluster } from "../../../../common/catalog-entities";
-
-jest.mock("../../../../common/hotbar-store", () => ({
-  HotbarStore: {
-    getInstance: () => ({
-      isAddedToActive: jest.fn(),
-    }),
-  },
-}));
+import { fireEvent } from "@testing-library/react";
+import { SidebarCluster } from "../sidebar/cluster";
+import { KubernetesCluster } from "../../../../common/catalog/entity/declarations";
+import type { DiContainer } from "@ogre-tools/injectable";
+import { getDiForUnitTesting } from "../../../getDiForUnitTesting";
+import { DiRender, renderFor } from "../../test-utils/renderFor";
+import activeEntityInjectable from "../../../catalog/entity/active-entity.injectable";
+import { computed } from "mobx";
 
 const clusterEntity = new KubernetesCluster({
   metadata: {
@@ -34,18 +31,28 @@ const clusterEntity = new KubernetesCluster({
 });
 
 describe("<SidebarCluster/>", () => {
+  let di: DiContainer;
+  let render: DiRender;
+
+  beforeEach(() => {
+    di = getDiForUnitTesting();
+    render = renderFor(di);
+
+    di.override(activeEntityInjectable, () => computed(() => clusterEntity));
+  });
+
   it("renders w/o errors", () => {
-    const { container } = render(<SidebarCluster clusterEntity={clusterEntity}/>);
+    const { container } = render(<SidebarCluster />);
 
     expect(container).toBeInstanceOf(HTMLElement);
   });
 
-  it("renders cluster avatar and name", () => {
-    const { getByText, getAllByText } = render(<SidebarCluster clusterEntity={clusterEntity}/>);
+  it("renders cluster avatar and name", async () => {
+    const res = render(<SidebarCluster />);
 
-    expect(getByText("tc")).toBeInTheDocument();
+    expect(await res.findByText("tc")).toBeInTheDocument();
 
-    const v = getAllByText("test-cluster");
+    const v = await res.findAllByText("test-cluster");
 
     expect(v.length).toBeGreaterThan(0);
 
@@ -54,12 +61,12 @@ describe("<SidebarCluster/>", () => {
     }
   });
 
-  it("renders cluster menu", () => {
-    const { getByTestId, getByText } = render(<SidebarCluster clusterEntity={clusterEntity}/>);
-    const link = getByTestId("sidebar-cluster-dropdown");
+  it("renders cluster menu", async () => {
+    const res = render(<SidebarCluster />);
+    const link = await res.findByTestId("sidebar-cluster-dropdown");
 
     fireEvent.click(link);
-    expect(getByText("Add to Hotbar")).toBeInTheDocument();
+    expect(await res.findByText("Add to Hotbar")).toBeInTheDocument();
   });
 });
 

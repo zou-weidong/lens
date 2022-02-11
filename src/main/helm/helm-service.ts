@@ -3,11 +3,12 @@
  * Licensed under MIT License. See LICENSE in root directory for more information.
  */
 
-import type { Cluster } from "../../common/cluster/cluster";
+import type { Cluster } from "../../common/clusters/cluster";
 import logger from "../logger";
 import { HelmRepoManager } from "./helm-repo-manager";
 import { HelmChartManager } from "./helm-chart-manager";
 import { deleteRelease, getHistory, getRelease, getValues, installChart, listReleases, rollback, upgradeRelease } from "./helm-release-manager";
+import type { JsonObject } from "type-fest";
 
 interface GetReleaseValuesArgs {
   cluster: Cluster;
@@ -15,8 +16,22 @@ interface GetReleaseValuesArgs {
   all: boolean;
 }
 
+export interface InstallChartData {
+  chart: string;
+  values: JsonObject;
+  name: string;
+  namespace: string;
+  version: string;
+}
+
+export interface UpdateReleaseData {
+  chart: string;
+  values: JsonObject;
+  version: string;
+}
+
 class HelmService {
-  public async installChart(cluster: Cluster, data: { chart: string; values: {}; name: string; namespace: string; version: string }) {
+  public async installChart(cluster: Cluster, data: InstallChartData) {
     const proxyKubeconfig = await cluster.getProxyKubeconfigPath();
 
     return installChart(data.chart, data.values, data.name, data.namespace, data.version, proxyKubeconfig);
@@ -88,7 +103,7 @@ class HelmService {
     return deleteRelease(releaseName, namespace, proxyKubeconfig);
   }
 
-  public async updateRelease(cluster: Cluster, releaseName: string, namespace: string, data: { chart: string; values: {}; version: string }) {
+  public async updateRelease(cluster: Cluster, releaseName: string, namespace: string, data: UpdateReleaseData) {
     const proxyKubeconfig = await cluster.getProxyKubeconfigPath();
     const kubectl = await cluster.ensureKubectl();
     const kubectlPath = await kubectl.getPath();

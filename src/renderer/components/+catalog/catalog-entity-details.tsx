@@ -4,36 +4,39 @@
  */
 
 import styles from "./catalog-entity-details.module.scss";
-import React, { Component } from "react";
+import React from "react";
 import { observer } from "mobx-react";
 import { Drawer, DrawerItem } from "../drawer";
-import type { CatalogCategory, CatalogEntity } from "../../../common/catalog";
 import { Icon } from "../icon";
 import { CatalogEntityDrawerMenu } from "./catalog-entity-drawer-menu";
 import { CatalogEntityDetailRegistry } from "../../../extensions/registries";
-import { isDevelopment } from "../../../common/vars";
 import { cssNames } from "../../utils";
 import { Avatar } from "../avatar";
-import { getLabelBadges } from "./helpers";
+import type { CatalogEntity } from "../../../common/catalog/entity";
+import type { GetLabelBadges } from "./get-label-badges.injectable";
+import { withInjectables } from "@ogre-tools/injectable-react";
+import getLabelBadgesInjectable from "./get-label-badges.injectable";
+import isDevelopmentInjectable from "../../../common/vars/is-development.injectable";
 
 export interface CatalogEntityDetailsProps<T extends CatalogEntity> {
-  entity: T;
-  hideDetails(): void;
+  entity: T | undefined;
+  hideDetails: () => void;
   onRun: () => void;
 }
 
-@observer
-export class CatalogEntityDetails<T extends CatalogEntity> extends Component<CatalogEntityDetailsProps<T>> {
-  categoryIcon(category: CatalogCategory) {
-    if (Icon.isSvg(category.metadata.icon)) {
-      return <Icon svg={category.metadata.icon} smallest />;
-    } else {
-      return <Icon material={category.metadata.icon} smallest />;
-    }
-  }
+interface Dependencies {
+  getLabelBadges: GetLabelBadges;
+  isDevelopment: boolean;
+}
 
-  renderContent(entity: T) {
-    const { onRun, hideDetails } = this.props;
+const NonInjectedCatalogEntityDetails = observer(({
+  getLabelBadges,
+  entity,
+  hideDetails,
+  onRun,
+  isDevelopment,
+}: Dependencies & CatalogEntityDetailsProps<CatalogEntity>) => {
+  const renderContent = (entity: CatalogEntity) => {
     const detailItems = CatalogEntityDetailRegistry.getInstance().getItemsForKind(entity.kind, entity.apiVersion);
     const details = detailItems.map(({ components }, index) => <components.Details entity={entity} key={index} />);
     const showDefaultDetails = detailItems.find((item) => item.priority > 999) === undefined;
@@ -90,22 +93,30 @@ export class CatalogEntityDetails<T extends CatalogEntity> extends Component<Cat
         </div>
       </>
     );
-  }
+  };
 
-  render() {
-    const { entity, hideDetails } = this.props;
+  return (
+    <Drawer
+      className={styles.entityDetails}
+      usePortal
+      open={Boolean(entity)}
+      title={`${entity.kind}: ${entity.getName()}`}
+      toolbar={<CatalogEntityDrawerMenu entity={entity} key={entity.getId()} />}
+      onClose={hideDetails}
+    >
+      {entity && renderContent(entity)}
+    </Drawer>
+  );
+});
 
-    return (
-      <Drawer
-        className={styles.entityDetails}
-        usePortal={true}
-        open={true}
-        title={`${entity.kind}: ${entity.getName()}`}
-        toolbar={<CatalogEntityDrawerMenu entity={entity} key={entity.getId()} />}
-        onClose={hideDetails}
-      >
-        {this.renderContent(entity)}
-      </Drawer>
-    );
-  }
+const InjectedCatalogEntityDetails = withInjectables<Dependencies, CatalogEntityDetailsProps<CatalogEntity>>(NonInjectedCatalogEntityDetails, {
+  getProps: (di, props) => ({
+    ...props,
+    getLabelBadges: di.inject(getLabelBadgesInjectable),
+    isDevelopment: di.inject(isDevelopmentInjectable),
+  }),
+});
+
+export function CatalogEntityDetails<T extends CatalogEntity>(props: CatalogEntityDetailsProps<T>) {
+  return <InjectedCatalogEntityDetails {...props} />;
 }

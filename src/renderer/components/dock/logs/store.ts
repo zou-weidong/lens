@@ -3,9 +3,11 @@
  * Licensed under MIT License. See LICENSE in root directory for more information.
  */
 
-import { observable, IComputedValue, when } from "mobx";
-import type { IPodLogsQuery, Pod } from "../../../../common/k8s-api/endpoints";
-import { getOrInsertWith, interval, IntervalFn } from "../../../utils";
+import type { IComputedValue } from "mobx";
+import { observable, when } from "mobx";
+import type { PodLogsQuery, Pod, QueryForLogs } from "../../../../common/k8s-api/endpoints";
+import type { IntervalFn } from "../../../utils";
+import { getOrInsertWith, interval } from "../../../utils";
 import type { TabId } from "../dock/store";
 import type { LogTabData } from "./tab-store";
 
@@ -14,14 +16,14 @@ type PodLogLine = string;
 const logLinesToLoad = 500;
 
 interface Dependencies {
-  callForLogs: ({ namespace, name }: { namespace: string; name: string }, query: IPodLogsQuery) => Promise<string>;
+  queryForLogs: QueryForLogs;
 }
 
 export class LogStore {
   protected podLogs = observable.map<TabId, PodLogLine[]>();
   protected refreshers = new Map<TabId, IntervalFn>();
 
-  constructor(private dependencies: Dependencies) {}
+  constructor(protected readonly dependencies: Dependencies) {}
 
   protected handlerError(tabId: TabId, error: any): void {
     if (error.error && !(error.message || error.reason || error.code)) {
@@ -105,7 +107,7 @@ export class LogStore {
    * @param params request parameters described in IPodLogsQuery interface
    * @returns A fetch request promise
    */
-  private async loadLogs(computedPod: IComputedValue<Pod | undefined>, logTabData: IComputedValue<LogTabData>, params: Partial<IPodLogsQuery>): Promise<string[]> {
+  private async loadLogs(computedPod: IComputedValue<Pod | undefined>, logTabData: IComputedValue<LogTabData>, params: Partial<PodLogsQuery>): Promise<string[]> {
     await when(() => Boolean(computedPod.get() && logTabData.get()), { timeout: 5_000 });
 
     const { selectedContainer, showPrevious } = logTabData.get();
@@ -113,7 +115,7 @@ export class LogStore {
     const namespace = pod.getNs();
     const name = pod.getName();
 
-    const result = await this.dependencies.callForLogs({ namespace, name }, {
+    const result = await this.dependencies.queryForLogs({ namespace, name }, {
       ...params,
       timestamps: true,  // Always setting timestamp to separate old logs from new ones
       container: selectedContainer,

@@ -9,21 +9,26 @@ import { observer } from "mobx-react";
 import type { IComputedValue } from "mobx";
 import Carousel from "react-material-ui-carousel";
 import { Icon } from "../icon";
-import { productName, slackUrl } from "../../../common/vars";
+import { slackUrl } from "../../../common/vars";
 import { withInjectables } from "@ogre-tools/injectable-react";
-import welcomeMenuItemsInjectable from "./welcome-menu-items/welcome-menu-items.injectable";
-import type { WelcomeMenuRegistration } from "./welcome-menu-items/welcome-menu-registration";
-import welcomeBannerItemsInjectable from "./welcome-banner-items/welcome-banner-items.injectable";
-import type { WelcomeBannerRegistration } from "./welcome-banner-items/welcome-banner-registration";
+import welcomeMenuItemsInjectable, { type WelcomeMenuRegistration } from "./menu-items.injectable";
+import welcomeBannerItemsInjectable from "./banner-items.injectable";
+import type { WelcomeBannerRegistration } from "./banner-items.injectable";
+import productNameInjectable from "../../../common/vars/product-name.injectable";
 
 export const defaultWidth = 320;
 
 interface Dependencies {
   welcomeMenuItems: IComputedValue<WelcomeMenuRegistration[]>;
   welcomeBannerItems: IComputedValue<WelcomeBannerRegistration[]>;
+  productName: string;
 }
 
-const NonInjectedWelcome: React.FC<Dependencies> = ({ welcomeMenuItems, welcomeBannerItems }) => {
+const NonInjectedWelcome = observer(({
+  welcomeMenuItems,
+  welcomeBannerItems,
+  productName,
+}: Dependencies) => {
   const welcomeBanners = welcomeBannerItems.get();
 
   // if there is banner with specified width, use it to calculate the width of the container
@@ -120,15 +125,12 @@ const NonInjectedWelcome: React.FC<Dependencies> = ({ welcomeMenuItems, welcomeB
       </div>
     </div>
   );
-};
+});
 
-export const Welcome = withInjectables<Dependencies>(
-  observer(NonInjectedWelcome),
-
-  {
-    getProps: (di) => ({
-      welcomeMenuItems: di.inject(welcomeMenuItemsInjectable),
-      welcomeBannerItems: di.inject(welcomeBannerItemsInjectable),
-    }),
-  },
-);
+export const Welcome = withInjectables<Dependencies>(NonInjectedWelcome, {
+  getProps: (di) => ({
+    welcomeMenuItems: di.inject(welcomeMenuItemsInjectable),
+    welcomeBannerItems: di.inject(welcomeBannerItemsInjectable),
+    productName: di.inject(productNameInjectable),
+  }),
+});

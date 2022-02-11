@@ -129,6 +129,7 @@ module.exports = {
         "@typescript-eslint/ban-ts-comment": "off",
         "@typescript-eslint/no-empty-function": "off",
         "@typescript-eslint/no-unused-vars": "off",
+        "@typescript-eslint/consistent-type-imports": "error",
         "@typescript-eslint/member-delimiter-style": ["error", {
           "multiline": {
             "delimiter": "semi",

@@ -5,19 +5,23 @@
 
 import "./tab-layout.scss";
 
-import React, { ReactNode } from "react";
-import { matchPath, Redirect, Route, Switch } from "react-router";
+import React from "react";
+import { Redirect, Route, Switch } from "react-router";
 import { observer } from "mobx-react";
 import { cssNames, IClassName } from "../../utils";
 import { Tab, Tabs } from "../tabs";
 import { ErrorBoundary } from "../error-boundary";
-import { navigate, navigation } from "../../navigation";
+import { withInjectables } from "@ogre-tools/injectable-react";
+import type { Navigate } from "../../navigation/navigate.injectable";
+import navigateInjectable from "../../navigation/navigate.injectable";
+import type { IsRouteActive } from "../../navigation/is-route-active.injectable";
+import isRouteActiveInjectable from "../../navigation/is-route-active.injectable";
 
 export interface TabLayoutProps {
   className?: IClassName;
   contentClass?: IClassName;
   tabs?: TabLayoutRoute[];
-  children?: ReactNode;
+  children?: React.ReactNode | React.ReactNode[];
 }
 
 export interface TabLayoutRoute {
@@ -29,35 +33,60 @@ export interface TabLayoutRoute {
   default?: boolean; // initial tab to open with provided `url, by default tabs[0] is used
 }
 
-export const TabLayout = observer(({ className, contentClass, tabs = [], children }: TabLayoutProps) => {
-  const currentLocation = navigation.location.pathname;
-  const hasTabs = tabs.length > 0;
-  const startTabUrl = hasTabs ? (tabs.find(tab => tab.default) || tabs[0])?.url : null;
+interface Dependencies {
+  navigate: Navigate;
+  isRouteActive: IsRouteActive;
+}
 
-  return (
-    <div className={cssNames("TabLayout", className)}>
-      {hasTabs && (
-        <Tabs center onChange={(url) => navigate(url)}>
-          {tabs.map(({ title, routePath, url = routePath, exact }) => {
-            const isActive = !!matchPath(currentLocation, { path: routePath, exact });
+function getDefaultOrFirst(tabs: TabLayoutRoute[]): TabLayoutRoute {
+  return tabs.find(tab => tab.default) ?? tabs[0];
+}
 
-            return <Tab key={url} label={title} value={url} active={isActive}/>;
-          })}
-        </Tabs>
-      )}
-      <main className={cssNames(contentClass)}>
-        <ErrorBoundary>
-          {hasTabs && (
-            <Switch>
-              {tabs.map(({ routePath, exact, component }) => {
-                return <Route key={routePath} exact={exact} path={routePath} component={component}/>;
-              })}
-              <Redirect to={startTabUrl}/>
-            </Switch>
-          )}
-          {children}
-        </ErrorBoundary>
-      </main>
-    </div>
-  );
+const NonInjectedTabLayout = observer(({
+  className,
+  contentClass,
+  tabs = [],
+  children,
+  navigate,
+  isRouteActive,
+}: Dependencies & TabLayoutProps) => (
+  <div className={cssNames("TabLayout", className)}>
+    {tabs.length > 0 && (
+      <Tabs center onChange={navigate}>
+        {tabs.map(({ title, routePath, url = routePath, exact }) => (
+          <Tab
+            key={url}
+            label={title}
+            value={url}
+            active={isRouteActive({ path: routePath, exact })}
+          />
+        ))}
+      </Tabs>
+    )}
+    <main className={cssNames(contentClass)}>
+      <ErrorBoundary>
+        {tabs.length > 0 && (
+          <Switch>
+            {tabs.map(({ routePath, exact, component }) => (
+              <Route
+                key={routePath}
+                exact={exact}
+                path={routePath}
+                component={component} />
+            ))}
+            <Redirect to={getDefaultOrFirst(tabs).url} />
+          </Switch>
+        )}
+        {children}
+      </ErrorBoundary>
+    </main>
+  </div>
+));
+
+export const TabLayout = withInjectables<Dependencies, TabLayoutProps>(NonInjectedTabLayout, {
+  getProps: (di, props) => ({
+    ...props,
+    navigate: di.inject(navigateInjectable),
+    isRouteActive: di.inject(isRouteActiveInjectable),
+  }),
 });

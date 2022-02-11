@@ -9,20 +9,25 @@ import { action, observable, makeObservable } from "mobx";
 import { autoBind, iter } from "../utils";
 import type { KubeApi } from "./kube-api";
 import type { KubeObject } from "./kube-object";
-import { IKubeObjectRef, parseKubeApi, createKubeApiURL } from "./kube-api-parse";
+import type { KubeObjectRef, ParseKubeApi } from "./url/parse.injectable";
+import createKubeApiURL from "./url/create";
+
+interface Dependencies {
+  parseKubeApi: ParseKubeApi;
+}
 
 export class ApiManager {
   private apis = observable.map<string, KubeApi<KubeObject>>();
   private stores = observable.map<string, KubeObjectStore<KubeObject>>();
 
-  constructor() {
+  constructor(protected readonly dependencies: Dependencies) {
     makeObservable(this);
     autoBind(this);
   }
 
   getApi(pathOrCallback: string | ((api: KubeApi<KubeObject>) => boolean)) {
     if (typeof pathOrCallback === "string") {
-      return this.apis.get(pathOrCallback) || this.apis.get(parseKubeApi(pathOrCallback).apiBase);
+      return this.apis.get(pathOrCallback) || this.apis.get(this.dependencies.parseKubeApi(pathOrCallback).apiBase);
     }
 
     return iter.find(this.apis.values(), pathOrCallback ?? (() => true));
@@ -79,7 +84,7 @@ export class ApiManager {
     return this.stores.get(this.resolveApi(api)?.apiBase) as S;
   }
 
-  lookupApiLink(ref: IKubeObjectRef, parentObject?: KubeObject): string {
+  lookupApiLink(ref: KubeObjectRef, parentObject?: KubeObject): string {
     const {
       kind, apiVersion, name,
       namespace = parentObject?.getNs(),
@@ -118,5 +123,3 @@ export class ApiManager {
     return createKubeApiURL({ apiVersion, name, namespace, resource });
   }
 }
-
-export const apiManager = new ApiManager();

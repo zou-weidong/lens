@@ -3,7 +3,7 @@
  * Licensed under MIT License. See LICENSE in root directory for more information.
  */
 
-import { EventEmitter } from "../event-emitter";
+import type { EventEmitter } from "../event-emitter";
 
 export interface AppEvent {
   name: string;
@@ -11,4 +11,4 @@ export interface AppEvent {
   params?: object;
 }
 
-export const appEventBus = new EventEmitter<[AppEvent]>();
+export type AppEventBus = EventEmitter<[AppEvent]>;

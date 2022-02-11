@@ -3,16 +3,16 @@
  * Licensed under MIT License. See LICENSE in root directory for more information.
  */
 import { getInjectable } from "@ogre-tools/injectable";
-import createStorageInjectable from "../../../utils/create-storage/create-storage.injectable";
+import createStorageInjectable, { type StorageLayer } from "../../../utils/storage/create.injectable";
 import { DockStorageState, TabKind } from "./store";
 
+let storage: StorageLayer<DockStorageState>;
+
 const dockStorageInjectable = getInjectable({
-  id: "dock-storage",
+  setup: async (di) => {
+    const createStorage = await di.inject(createStorageInjectable);
 
-  instantiate: (di) => {
-    const createStorage = di.inject(createStorageInjectable);
-
-    return createStorage<DockStorageState>("dock", {
+    storage = createStorage("dock", {
       height: 300,
       tabs: [
         {
@@ -24,6 +24,8 @@ const dockStorageInjectable = getInjectable({
       ],
     });
   },
+  instantiate: () => storage,
+  id: "dock-storage",
 });
 
 export default dockStorageInjectable;

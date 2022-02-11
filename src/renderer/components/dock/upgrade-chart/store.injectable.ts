@@ -3,21 +3,17 @@
  * Licensed under MIT License. See LICENSE in root directory for more information.
  */
 import { getInjectable } from "@ogre-tools/injectable";
+import { DockTabStore } from "../dock-tab.store";
+import upgradeChartTabStorageInjectable from "./storage.injectable";
 import { UpgradeChartTabStore } from "./store";
-import createDockTabStoreInjectable from "../dock-tab-store/create-dock-tab-store.injectable";
-import createStorageInjectable from "../../../utils/create-storage/create-storage.injectable";
 
 const upgradeChartTabStoreInjectable = getInjectable({
+  instantiate: (di) => new UpgradeChartTabStore({
+    valuesStore: new DockTabStore<string>(),
+  }, {
+    storage: di.inject(upgradeChartTabStorageInjectable),
+  }),
   id: "upgrade-chart-tab-store",
-
-  instantiate: (di) => {
-    const createDockTabStore = di.inject(createDockTabStoreInjectable);
-
-    return new UpgradeChartTabStore({
-      createStorage: di.inject(createStorageInjectable),
-      valuesStore: createDockTabStore<string>(),
-    });
-  },
 });
 
 export default upgradeChartTabStoreInjectable;

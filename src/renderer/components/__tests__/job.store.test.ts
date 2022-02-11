@@ -3,10 +3,12 @@
  * Licensed under MIT License. See LICENSE in root directory for more information.
  */
 
-import { observable } from "mobx";
-import { jobStore } from "../+workloads-jobs/job.store";
-import { podsStore } from "../+workloads-pods/pods.store";
+import type { JobStore } from "../+workloads-jobs/store";
+import jobStoreInjectable from "../+workloads-jobs/store.injectable";
+import type { PodStore } from "../+workloads-pods/store";
+import podStoreInjectable from "../+workloads-pods/store.injectable";
 import { Job, Pod } from "../../../common/k8s-api/endpoints";
+import { getDiForUnitTesting } from "../../getDiForUnitTesting";
 
 const runningJob = new Job({
   apiVersion: "foo",
@@ -60,34 +62,36 @@ const runningPod = new Pod({
     resourceVersion: "foobar",
     uid: "foobar",
     ownerReferences: [{
+      apiVersion: "foo",
+      kind: "Job",
       uid: "runningJob",
+      name: "runningJob",
     }],
     namespace: "default",
   },
+  status: {
+    phase: "Running",
+    conditions: [
+      {
+        type: "Initialized",
+        status: "True",
+        lastProbeTime: 1,
+        lastTransitionTime: "1",
+      },
+      {
+        type: "Ready",
+        status: "True",
+        lastProbeTime: 1,
+        lastTransitionTime: "1",
+      },
+    ],
+    hostIP: "10.0.0.1",
+    podIP: "10.0.0.1",
+    startTime: "now",
+    containerStatuses: [],
+    initContainerStatuses: [],
+  },
 });
-
-runningPod.status = {
-  phase: "Running",
-  conditions: [
-    {
-      type: "Initialized",
-      status: "True",
-      lastProbeTime: 1,
-      lastTransitionTime: "1",
-    },
-    {
-      type: "Ready",
-      status: "True",
-      lastProbeTime: 1,
-      lastTransitionTime: "1",
-    },
-  ],
-  hostIP: "10.0.0.1",
-  podIP: "10.0.0.1",
-  startTime: "now",
-  containerStatuses: [],
-  initContainerStatuses: [],
-};
 
 const pendingPod = new Pod({
   apiVersion: "foo",
@@ -97,7 +101,10 @@ const pendingPod = new Pod({
     resourceVersion: "foobar",
     uid: "foobar-pending",
     ownerReferences: [{
+      apiVersion: "foo",
+      kind: "Job",
       uid: "pendingJob",
+      name: "pendingJob",
     }],
     namespace: "default",
   },
@@ -111,19 +118,21 @@ const failedPod = new Pod({
     resourceVersion: "foobar",
     uid: "foobar-failed",
     ownerReferences: [{
+      apiVersion: "foo",
+      kind: "Job",
       uid: "failedJob",
+      name: "failedJob",
     }],
     namespace: "default",
   },
+  status: {
+    phase: "Failed",
+    conditions: [],
+    hostIP: "10.0.0.1",
+    podIP: "10.0.0.1",
+    startTime: "now",
+  },
 });
-
-failedPod.status = {
-  phase: "Failed",
-  conditions: [],
-  hostIP: "10.0.0.1",
-  podIP: "10.0.0.1",
-  startTime: "now",
-};
 
 const succeededPod = new Pod({
   apiVersion: "foo",
@@ -133,22 +142,32 @@ const succeededPod = new Pod({
     resourceVersion: "foobar",
     uid: "foobar-succeeded",
     ownerReferences: [{
+      apiVersion: "foo",
+      kind: "Job",
       uid: "succeededJob",
+      name: "succeededJob",
     }],
+  },
+  status: {
+    phase: "Succeeded",
+    conditions: [],
+    hostIP: "10.0.0.1",
+    podIP: "10.0.0.1",
+    startTime: "now",
   },
 });
 
-succeededPod.status = {
-  phase: "Succeeded",
-  conditions: [],
-  hostIP: "10.0.0.1",
-  podIP: "10.0.0.1",
-  startTime: "now",
-};
-
 describe("Job Store tests", () => {
-  beforeAll(() => {
-    podsStore.items = observable.array([
+  let podStore: PodStore;
+  let jobStore: JobStore;
+
+  beforeEach(() => {
+    const di = getDiForUnitTesting();
+
+    podStore = di.inject(podStoreInjectable);
+    jobStore = di.inject(jobStoreInjectable);
+
+    podStore.items.replace([
       runningPod,
       failedPod,
       pendingPod,

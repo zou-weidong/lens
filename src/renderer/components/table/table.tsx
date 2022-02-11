@@ -8,16 +8,20 @@ import "./table.scss";
 import React from "react";
 import { observer } from "mobx-react";
 import { boundMethod, cssNames } from "../../utils";
-import { TableRow, TableRowElem, TableRowProps } from "./table-row";
-import { TableHead, TableHeadElem, TableHeadProps } from "./table-head";
+import type { TableRowElem, TableRowProps } from "./table-row";
+import { TableRow } from "./table-row";
+import type { TableHeadElem, TableHeadProps } from "./table-head";
+import { TableHead } from "./table-head";
 import type { TableCellElem } from "./table-cell";
 import { VirtualList } from "../virtual-list";
-import { createPageParam } from "../../navigation";
 import { computed, makeObservable } from "mobx";
 import { getSorted } from "./sorting";
 import type { TableModel } from "./table-model/table-model";
 import { withInjectables } from "@ogre-tools/injectable-react";
 import tableModelInjectable from "./table-model/table-model.injectable";
+import type { PageParam } from "../../navigation/page-param";
+import orderByUrlParamInjectable from "./order-by-param.injectable";
+import sortByUrlParamInjectable from "./sort-by-param.injectable";
 
 export type TableSortBy = string;
 export type TableOrderBy = "asc" | "desc" | string;
@@ -71,16 +75,10 @@ export interface TableProps<Item> extends React.DOMAttributes<HTMLDivElement> {
   renderRow?: (item: Item) => React.ReactElement<TableRowProps>;
 }
 
-export const sortByUrlParam = createPageParam({
-  name: "sort",
-});
-
-export const orderByUrlParam = createPageParam({
-  name: "order",
-});
-
 interface Dependencies {
   model: TableModel;
+  sortByUrlParam: PageParam<string>;
+  orderByUrlParam: PageParam<string>;
 }
 
 @observer
@@ -161,7 +159,7 @@ class NonInjectedTable<Item> extends React.Component<TableProps<Item> & Dependen
 
   protected onSort({ sortBy, orderBy }: TableSortParams) {
     this.props.model.setSortParams(this.props.tableId, { sortBy, orderBy });
-    const { sortSyncWithUrl, onSort } = this.props;
+    const { sortSyncWithUrl, onSort, sortByUrlParam, orderByUrlParam } = this.props;
 
     if (sortSyncWithUrl) {
       sortByUrlParam.set(sortBy);
@@ -249,16 +247,14 @@ class NonInjectedTable<Item> extends React.Component<TableProps<Item> & Dependen
   }
 }
 
-const InjectedTable = withInjectables<Dependencies, TableProps<any>>(
-  NonInjectedTable,
-
-  {
-    getProps: (di, props) => ({
-      model: di.inject(tableModelInjectable),
-      ...props,
-    }),
-  },
-);
+const InjectedTable = withInjectables<Dependencies, TableProps<any>>(NonInjectedTable, {
+  getProps: (di, props) => ({
+    ...props,
+    model: di.inject(tableModelInjectable),
+    orderByUrlParam: di.inject(orderByUrlParamInjectable),
+    sortByUrlParam: di.inject(sortByUrlParamInjectable),
+  }),
+});
 
 export function Table<Item>(props: TableProps<Item>) {
   return <InjectedTable {...props} />;

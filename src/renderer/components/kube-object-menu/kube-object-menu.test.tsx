@@ -8,22 +8,22 @@ import "@testing-library/jest-dom/extend-expect";
 import { KubeObject } from "../../../common/k8s-api/kube-object";
 import userEvent from "@testing-library/user-event";
 import type { DiContainer } from "@ogre-tools/injectable";
-import { ConfirmDialog } from "../confirm-dialog";
+import { ConfirmDialog } from "../confirm-dialog/view";
 import asyncFn, { AsyncFnMock } from "@async-fn/jest";
 import { getDiForUnitTesting } from "../../getDiForUnitTesting";
-
-import clusterInjectable from "./dependencies/cluster.injectable";
-import hideDetailsInjectable from "./dependencies/hide-details.injectable";
 import { DiRender, renderFor } from "../test-utils/renderFor";
-import type { Cluster } from "../../../common/cluster/cluster";
+import type { Cluster } from "../../../common/clusters/cluster";
 import type { ApiManager } from "../../../common/k8s-api/api-manager";
-import apiManagerInjectable from "./dependencies/api-manager.injectable";
+import apiManagerInjectable from "../../../common/k8s-api/api-manager.injectable";
 import { KubeObjectMenu } from "./index";
-import type { KubeObjectMenuRegistration } from "./dependencies/kube-object-menu-items/kube-object-menu-registration";
+import type { KubeObjectMenuRegistration } from "./registration";
 import { computed } from "mobx";
 import { LensRendererExtension } from "../../../extensions/lens-renderer-extension";
 import rendererExtensionsInjectable from "../../../extensions/renderer-extensions.injectable";
 import createEditResourceTabInjectable from "../dock/edit-resource/edit-resource-tab.injectable";
+import { SemVer } from "semver";
+import activeClusterEntityInjectable from "../../catalog/entity/active-cluster.injectable";
+import hideDetailsInjectable from "../kube-object/details/hide.injectable";
 
 // TODO: Make tooltips free of side effects by making it deterministic
 jest.mock("../tooltip");
@@ -37,8 +37,14 @@ class SomeTestExtension extends LensRendererExtension {
       absolutePath: "irrelevant",
       isBundled: false,
       isCompatible: false,
-      isEnabled: false,
-      manifest: { name: "some-id", version: "some-version" },
+      manifest: {
+        name: "some-id",
+        version: new SemVer("1.0.0"),
+        description: "foo",
+        engines: {
+          lens: ">=1.0.0",
+        },
+      },
       manifestPath: "irrelevant",
     });
 
@@ -85,12 +91,10 @@ describe("kube-object-menu", () => {
 
     await di.runSetups();
 
-    di.override(
-      clusterInjectable,
-      () =>
-        ({
-          name: "Some name",
-        } as Cluster),
+    di.override(activeClusterEntityInjectable, () => computed(
+      () => ({
+        name: "Some name",
+      } as Cluster)),
     );
 
     di.override(
@@ -107,7 +111,9 @@ describe("kube-object-menu", () => {
   });
 
   it("given no cluster, does not crash", () => {
-    di.override(clusterInjectable, () => null);
+    di.override(activeClusterEntityInjectable, () => computed(
+      () => (null as Cluster)),
+    );
 
     expect(() => {
       render(<KubeObjectMenu object={null} toolbar={true} />);

@@ -16,9 +16,11 @@ import { Spinner } from "../../spinner";
 import { Badge } from "../../badge";
 import { EditorPanel } from "../editor-panel";
 import { helmChartStore, type IChartVersion } from "../../+helm-charts/helm-chart.store";
-import type { HelmRelease, IReleaseUpdateDetails, IReleaseUpdatePayload } from "../../../../common/k8s-api/endpoints/helm-releases.api";
-import { Select, SelectOption } from "../../select";
-import { IAsyncComputed, withInjectables } from "@ogre-tools/injectable-react";
+import type { HelmRelease, IReleaseUpdateDetails, IReleaseUpdatePayload } from "../../../../common/k8s-api/endpoints";
+import type { SelectOption } from "../../select";
+import { Select } from "../../select";
+import type { IAsyncComputed } from "@ogre-tools/injectable-react";
+import { withInjectables } from "@ogre-tools/injectable-react";
 import upgradeChartTabStoreInjectable from "./store.injectable";
 import updateReleaseInjectable from "../../+helm-releases/update-release/update-release.injectable";
 import releasesInjectable from "../../+helm-releases/releases.injectable";
@@ -35,7 +37,7 @@ interface Dependencies {
 }
 
 @observer
-export class NonInjectedUpgradeChart extends React.Component<UpgradeChartProps & Dependencies> {
+class NonInjectedUpgradeChart extends React.Component<UpgradeChartProps & Dependencies> {
   @observable error: string;
   @observable versions = observable.array<IChartVersion>();
   @observable version: IChartVersion;

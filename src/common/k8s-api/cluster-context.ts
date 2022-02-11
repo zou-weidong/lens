@@ -3,7 +3,7 @@
  * Licensed under MIT License. See LICENSE in root directory for more information.
  */
 
-import type { Cluster } from "../cluster/cluster";
+import type { Cluster } from "../clusters/cluster";
 
 export interface ClusterContext {
   cluster?: Cluster;

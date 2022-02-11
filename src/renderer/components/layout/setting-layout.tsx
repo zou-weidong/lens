@@ -5,12 +5,16 @@
 
 import "./setting-layout.scss";
 
-import React from "react";
+import React, { useEffect } from "react";
 import { observer } from "mobx-react";
 import { cssNames, IClassName } from "../../utils";
-import { navigation } from "../../navigation";
 import { catalogURL } from "../../../common/routes";
 import { CloseButton } from "./close-button";
+import { withInjectables } from "@ogre-tools/injectable-react";
+import type { ObservableHistory } from "mobx-observable-history";
+import type { AddWindowEventListener } from "../../window/event-listener.injectable";
+import addWindowEventListenerInjectable from "../../window/event-listener.injectable";
+import observableHistoryInjectable from "../../navigation/observable-history.injectable";
 
 export interface SettingLayoutProps extends React.DOMAttributes<any> {
   className?: IClassName;
@@ -21,81 +25,86 @@ export interface SettingLayoutProps extends React.DOMAttributes<any> {
   back?: (evt: React.MouseEvent | KeyboardEvent) => void;
 }
 
-const defaultProps: Partial<SettingLayoutProps> = {
-  provideBackButtonNavigation: true,
-  contentGaps: true,
-  back: () => {
-    if (navigation.length <= 1) {
-      navigation.push(catalogURL());
+interface Dependencies {
+  history: ObservableHistory;
+  addWindowEventListener: AddWindowEventListener;
+}
+
+const NonInjectedSettingLayout = observer(({
+  history,
+  addWindowEventListener,
+  className,
+  contentClass,
+  provideBackButtonNavigation = true,
+  contentGaps = true,
+  navigation,
+  back = () => {
+    if (history.length <= 1) {
+      history.push(catalogURL());
     } else {
-      navigation.goBack();
+      history.goBack();
     }
   },
-};
-
-/**
- * Layout for settings like pages with navigation
- */
-@observer
-export class SettingLayout extends React.Component<SettingLayoutProps> {
-  static defaultProps = defaultProps as object;
-
-  async componentDidMount() {
+  children,
+  ...elemProps
+}: Dependencies & SettingLayoutProps) => {
+  useEffect(() => {
     const { hash } = window.location;
 
     if (hash) {
       document.querySelector(hash)?.scrollIntoView();
     }
 
-    window.addEventListener("keydown", this.onEscapeKey);
-  }
+    return addWindowEventListener("keydown", (event) => {
+      if (!provideBackButtonNavigation) {
+        return;
+      }
 
-  componentWillUnmount() {
-    window.removeEventListener("keydown", this.onEscapeKey);
-  }
+      if (event.code === "Escape") {
+        event.stopPropagation();
+        back(event);
+      }
+    });
+  });
 
-  onEscapeKey = (evt: KeyboardEvent) => {
-    if (!this.props.provideBackButtonNavigation) {
-      return;
-    }
 
-    if (evt.code === "Escape") {
-      evt.stopPropagation();
-      this.props.back(evt);
-    }
-  };
-
-  render() {
-    const {
-      contentClass, provideBackButtonNavigation,
-      contentGaps, navigation, children, back, ...elemProps
-    } = this.props;
-    const className = cssNames("SettingLayout", { showNavigation: navigation }, this.props.className);
-
-    return (
-      <div {...elemProps} className={className}>
-        { navigation && (
-          <nav className="sidebarRegion">
-            <div className="sidebar">
-              {navigation}
-            </div>
-          </nav>
-        )}
-        <div className="contentRegion" id="ScrollSpyRoot">
-          <div className={cssNames("content", contentClass, contentGaps && "flex column gaps")}>
-            {children}
+  return (
+    <div
+      className={cssNames("SettingLayout", { showNavigation: navigation }, className)}
+      {...elemProps}
+    >
+      { navigation && (
+        <nav className="sidebarRegion">
+          <div className="sidebar">
+            {navigation}
           </div>
-          <div className="toolsRegion">
-            {
-              this.props.provideBackButtonNavigation && (
-                <div className="fixed top-[60px]">
-                  <CloseButton onClick={back}/>
-                </div>
-              )
-            }
-          </div>
+        </nav>
+      )}
+      <div className="contentRegion" id="ScrollSpyRoot">
+        <div className={cssNames("content", contentClass, contentGaps && "flex column gaps")}>
+          {children}
+        </div>
+        <div className="toolsRegion">
+          {
+            provideBackButtonNavigation && (
+              <div className="fixed top-[60px]">
+                <CloseButton onClick={back}/>
+              </div>
+            )
+          }
         </div>
       </div>
-    );
-  }
-}
+    </div>
+  );
+});
+
+/**
+ * Layout for settings like pages with navigation
+ */
+export const SettingLayout = withInjectables<Dependencies, SettingLayoutProps>(NonInjectedSettingLayout, {
+  getProps: (di, props) => ({
+    ...props,
+    addWindowEventListener: di.inject(addWindowEventListenerInjectable),
+    history: di.inject(observableHistoryInjectable),
+  }),
+});

@@ -8,14 +8,15 @@ import { forRemoteCluster, KubeApi } from "../kube-api";
 import { KubeJsonApi } from "../kube-json-api";
 import { KubeObject } from "../kube-object";
 import AbortController from "abort-controller";
-import { delay } from "../../utils/delay";
+import { delay } from "../../utils";
 import { PassThrough } from "stream";
-import { ApiManager, apiManager } from "../api-manager";
+import { ApiManager } from "../api-manager";
 import { Ingress, Pod } from "../endpoints";
+import { getDiForUnitTesting } from "../../../main/getDiForUnitTesting";
+import apiManagerInjectable from "../api-manager.injectable";
+import parseKubeApiInjectable from "../url/parse.injectable";
 
 jest.mock("../api-manager");
-
-const mockApiManager = apiManager as jest.Mocked<ApiManager>;
 
 class TestKubeObject extends KubeObject {
   static kind = "Pod";
@@ -82,8 +83,15 @@ describe("forRemoteCluster", () => {
 
 describe("KubeApi", () => {
   let request: KubeJsonApi;
+  let apiManager: jest.Mocked<ApiManager>;
 
   beforeEach(() => {
+    const di = getDiForUnitTesting();
+
+    di.override(apiManagerInjectable, () => apiManager = new ApiManager({
+      parseKubeApi: di.inject(parseKubeApiInjectable),
+    }) as jest.Mocked<ApiManager>);
+
     request = new KubeJsonApi({
       serverAddress: `http://127.0.0.1:9999`,
       apiBase: "/api-kube",
@@ -219,7 +227,7 @@ describe("KubeApi", () => {
       await api.checkPreferredVersion();
 
       expect(api.apiVersionPreferred).toBe("v1beta1");
-      expect(mockApiManager.registerApi).toBeCalledWith("/apis/extensions/v1beta1/ingresses", expect.anything());
+      expect(apiManager.registerApi).toBeCalledWith("/apis/extensions/v1beta1/ingresses", expect.anything());
     });
 
     it("registers with apiManager if checkPreferredVersion changes apiVersionPreferred with non-grouped apis", async () => {
@@ -262,7 +270,7 @@ describe("KubeApi", () => {
       await api.checkPreferredVersion();
 
       expect(api.apiVersionPreferred).toBe("v1beta1");
-      expect(mockApiManager.registerApi).toBeCalledWith("/api/v1beta1/pods", expect.anything());
+      expect(apiManager.registerApi).toBeCalledWith("/api/v1beta1/pods", expect.anything());
     });
   });
 

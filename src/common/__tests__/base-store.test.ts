@@ -4,13 +4,14 @@
  */
 
 import mockFs from "mock-fs";
-import { BaseStore } from "../base-store";
-import { action, comparer, makeObservable, observable, toJS } from "mobx";
+import { BaseStore, BaseStoreDependencies } from "../base-store";
+import { action, makeObservable, observable, toJS } from "mobx";
 import { readFileSync } from "fs";
 import { getDisForUnitTesting } from "../../test-utils/get-dis-for-unit-testing";
 
 import directoryForUserDataInjectable
-  from "../app-paths/directory-for-user-data/directory-for-user-data.injectable";
+  from "../paths/user-data.injectable";
+import baseLoggerInjectable from "../../main/logger/base-logger.injectable";
 
 jest.mock("electron", () => ({
   ipcMain: {
@@ -30,47 +31,36 @@ class TestStore extends BaseStore<TestStoreModel> {
   @observable b: string;
   @observable c: string;
 
-  constructor() {
-    super({
-      configName: "test-store",
-      accessPropertiesByDotNotation: false, // To make dots safe in cluster context names
-      syncOptions: {
-        equals: comparer.structural,
-      },
-    });
-
+  constructor(deps: BaseStoreDependencies) {
+    super(deps, { name: "test-store" });
     makeObservable(this);
     this.load();
   }
 
-  @action updateAll(data: TestStoreModel) {
+  @action
+  updateAll(data: TestStoreModel) {
     this.a = data.a;
     this.b = data.b;
     this.c = data.c;
   }
 
-  @action fromStore(data: Partial<TestStoreModel> = {}) {
+  @action
+  fromStore(data: Partial<TestStoreModel> = {}) {
     this.a = data.a || "";
     this.b = data.b || "";
     this.c = data.c || "";
   }
 
-  onSync(data: TestStoreModel) {
-    super.onSync(data);
-  }
-
-  async saveToFile(model: TestStoreModel) {
-    return super.saveToFile(model);
+  saveToFile(data: TestStoreModel) {
+    super.saveToFile(data);
   }
 
   toJSON(): TestStoreModel {
-    const data: TestStoreModel = {
+    return toJS({
       a: this.a,
       b: this.b,
       c: this.c,
-    };
-
-    return toJS(data);
+    });
   }
 }
 
@@ -78,14 +68,16 @@ describe("BaseStore", () => {
   let store: TestStore;
 
   beforeEach(async () => {
-    const dis = getDisForUnitTesting({ doGeneralOverrides: true });
+    const dis = getDisForUnitTesting();
 
     dis.mainDi.override(directoryForUserDataInjectable, () => "some-user-data-directory");
 
     await dis.runSetups();
 
-    store = undefined;
-    TestStore.resetInstance();
+    store = new TestStore({
+      logger: dis.mainDi.inject(baseLoggerInjectable),
+      userDataPath: dis.mainDi.inject(directoryForUserDataInjectable),
+    });
 
     const mockOpts = {
       "some-user-data-directory": {
@@ -94,13 +86,9 @@ describe("BaseStore", () => {
     };
 
     mockFs(mockOpts);
-
-    store = TestStore.createInstance();
   });
 
   afterEach(() => {
-    store.disableSync();
-    TestStore.resetInstance();
     mockFs.restore();
   });
 
@@ -138,14 +126,14 @@ describe("BaseStore", () => {
       expect(data).toEqual({ a: "a", b: "b", c: "" });
     });
 
-    it("persists changes coming via onSync (sync from different process)", () => {
-      const fileSpy = jest.spyOn(store, "saveToFile");
+    // it("persists changes coming via onSync (sync from different process)", () => {
+    //   const fileSpy = jest.spyOn(store, "saveToFile");
 
-      store.onSync({ a: "foo", b: "", c: "bar" });
+    //   store.onSync({ a: "foo", b: "", c: "bar" });
 
-      expect(store.toJSON()).toEqual({ a: "foo", b: "", c: "bar" });
+    //   expect(store.toJSON()).toEqual({ a: "foo", b: "", c: "bar" });
 
-      expect(fileSpy).toHaveBeenCalledTimes(1);
-    });
+    //   expect(fileSpy).toHaveBeenCalledTimes(1);
+    // });
   });
 });

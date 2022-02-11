@@ -3,8 +3,11 @@
  * Licensed under MIT License. See LICENSE in root directory for more information.
  */
 
-import { ingressStore } from "../../../renderer/components/+network-ingresses/ingress.store";
-import { apiManager } from "../api-manager";
+import { getDiForUnitTesting } from "../../../main/getDiForUnitTesting";
+import type { IngressStore } from "../../../renderer/components/+network-ingresses/store";
+import ingressStoreInjectable from "../../../renderer/components/+network-ingresses/store.injectable";
+import type { ApiManager } from "../api-manager";
+import apiManagerInjectable from "../api-manager.injectable";
 import { KubeApi } from "../kube-api";
 import { KubeObject } from "../kube-object";
 
@@ -16,6 +19,16 @@ class TestApi extends KubeApi<KubeObject> {
 }
 
 describe("ApiManager", () => {
+  let apiManager: ApiManager;
+  let ingressStore: IngressStore;
+
+  beforeEach(() => {
+    const di = getDiForUnitTesting();
+
+    apiManager = di.inject(apiManagerInjectable);
+    ingressStore = di.inject(ingressStoreInjectable);
+  });
+
   describe("registerApi", () => {
     it("re-register store if apiBase changed", async () => {
       const apiBase = "apis/v1/foo";

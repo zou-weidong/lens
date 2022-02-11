@@ -3,8 +3,10 @@
  * Licensed under MIT License. See LICENSE in root directory for more information.
  */
 
+import type { PodStore } from "../+workloads-pods/store";
+import podStoreInjectable from "../+workloads-pods/store.injectable";
 import { Pod } from "../../../common/k8s-api/endpoints";
-import { podsStore } from "../+workloads-pods/pods.store";
+import { getDiForUnitTesting } from "../../getDiForUnitTesting";
 
 const runningPod = new Pod({
   apiVersion: "foo",
@@ -14,30 +16,29 @@ const runningPod = new Pod({
     resourceVersion: "foobar",
     uid: "foobar",
   },
+  status: {
+    phase: "Running",
+    conditions: [
+      {
+        type: "Initialized",
+        status: "True",
+        lastProbeTime: 1,
+        lastTransitionTime: "1",
+      },
+      {
+        type: "Ready",
+        status: "True",
+        lastProbeTime: 1,
+        lastTransitionTime: "1",
+      },
+    ],
+    hostIP: "10.0.0.1",
+    podIP: "10.0.0.1",
+    startTime: "now",
+    containerStatuses: [],
+    initContainerStatuses: [],
+  },
 });
-
-runningPod.status = {
-  phase: "Running",
-  conditions: [
-    {
-      type: "Initialized",
-      status: "True",
-      lastProbeTime: 1,
-      lastTransitionTime: "1",
-    },
-    {
-      type: "Ready",
-      status: "True",
-      lastProbeTime: 1,
-      lastTransitionTime: "1",
-    },
-  ],
-  hostIP: "10.0.0.1",
-  podIP: "10.0.0.1",
-  startTime: "now",
-  containerStatuses: [],
-  initContainerStatuses: [],
-};
 
 const pendingPod = new Pod({
   apiVersion: "foo",
@@ -57,15 +58,14 @@ const failedPod = new Pod({
     resourceVersion: "foobar",
     uid: "foobar-failed",
   },
+  status: {
+    phase: "Failed",
+    conditions: [],
+    hostIP: "10.0.0.1",
+    podIP: "10.0.0.1",
+    startTime: "now",
+  },
 });
-
-failedPod.status = {
-  phase: "Failed",
-  conditions: [],
-  hostIP: "10.0.0.1",
-  podIP: "10.0.0.1",
-  startTime: "now",
-};
 
 const evictedPod = new Pod({
   apiVersion: "foo",
@@ -75,16 +75,15 @@ const evictedPod = new Pod({
     resourceVersion: "foobar",
     uid: "foobar-evicted",
   },
+  status: {
+    phase: "Failed",
+    reason: "Evicted",
+    conditions: [],
+    hostIP: "10.0.0.1",
+    podIP: "10.0.0.1",
+    startTime: "now",
+  },
 });
-
-evictedPod.status = {
-  phase: "Failed",
-  reason: "Evicted",
-  conditions: [],
-  hostIP: "10.0.0.1",
-  podIP: "10.0.0.1",
-  startTime: "now",
-};
 
 const succeededPod = new Pod({
   apiVersion: "foo",
@@ -94,19 +93,26 @@ const succeededPod = new Pod({
     resourceVersion: "foobar",
     uid: "foobar-succeeded",
   },
+  status: {
+    phase: "Succeeded",
+    conditions: [],
+    hostIP: "10.0.0.1",
+    podIP: "10.0.0.1",
+    startTime: "now",
+  },
 });
 
-succeededPod.status = {
-  phase: "Succeeded",
-  conditions: [],
-  hostIP: "10.0.0.1",
-  podIP: "10.0.0.1",
-  startTime: "now",
-};
-
 describe("Pod Store tests", () => {
+  let podStore: PodStore;
+
+  beforeEach(() => {
+    const di = getDiForUnitTesting();
+
+    podStore = di.inject(podStoreInjectable);
+  });
+
   it("gets Pod statuses in proper sorting order", () => {
-    const statuses = Object.entries(podsStore.getStatuses([
+    const statuses = Object.entries(podStore.getStatuses([
       pendingPod,
       runningPod,
       succeededPod,
@@ -125,7 +131,7 @@ describe("Pod Store tests", () => {
   });
 
   it("counts statuses properly", () => {
-    const statuses = Object.entries(podsStore.getStatuses([
+    const statuses = Object.entries(podStore.getStatuses([
       pendingPod,
       pendingPod,
       pendingPod,

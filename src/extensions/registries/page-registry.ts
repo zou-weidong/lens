@@ -8,8 +8,9 @@
 import React from "react";
 import { observer } from "mobx-react";
 import { BaseRegistry } from "./base-registry";
-import { LensExtension, LensExtensionId, sanitizeExtensionName } from "../lens-extension";
-import { createPageParam, PageParam, PageParamInit, searchParamsOptions } from "../../renderer/navigation";
+import { LensExtension, sanitizeExtensionName } from "../lens-extension";
+import type { LensExtensionId } from "../../common/extensions/manifest";
+import { type PageParamInit, type PageParam, createPageParam } from "../renderer-api/navigation";
 
 export interface PageRegistration {
   /**
@@ -45,7 +46,7 @@ export interface RegisteredPage {
   id: string;
   extensionId: string;
   url: string; // registered extension's page URL (without page params)
-  params: PageParams<PageParam>; // normalized params
+  params: PageParams<PageParam<any>>; // normalized params
   components: PageComponents; // normalized components
 }
 
@@ -62,14 +63,16 @@ export function getExtensionPageUrl(target: PageTarget): string {
   const registeredPage = GlobalPageRegistry.getInstance().getByPageTarget(target) || ClusterPageRegistry.getInstance().getByPageTarget(target);
 
   if (registeredPage?.params) {
-    Object.entries(registeredPage.params).forEach(([name, param]) => {
+    for (const [name, param] of Object.entries(registeredPage.params)) {
       pageUrl.searchParams.delete(name); // first off, clear existing value(s)
 
-      param.stringify(targetParams[name]).forEach(value => {
-        if (searchParamsOptions.skipEmpty && !value) return;
+      const values = param.stringify(targetParams[name])
+        .filter(Boolean);
+
+      for (const value of values) {
         pageUrl.searchParams.append(name, value);
-      });
-    });
+      }
+    }
   }
 
   return pageUrl.href.replace(pageUrl.origin, "");
@@ -88,7 +91,7 @@ class PageRegistry extends BaseRegistry<PageRegistration, RegisteredPage> {
     };
   }
 
-  protected normalizeComponents(components: PageComponents, params?: PageParams<PageParam>): PageComponents {
+  protected normalizeComponents(components: PageComponents, params?: PageParams<PageParam<any>>): PageComponents {
     if (params) {
       const { Page } = components;
 
@@ -99,12 +102,12 @@ class PageRegistry extends BaseRegistry<PageRegistration, RegisteredPage> {
     return components;
   }
 
-  protected normalizeParams(extensionId: LensExtensionId, params?: PageParams<string | Partial<PageParamInit>>): PageParams<PageParam> {
+  protected normalizeParams(extensionId: LensExtensionId, params?: PageParams<string | Partial<PageParamInit<any>>>): PageParams<PageParam<any>> {
     if (!params) return undefined;
-    const normalizedParams: PageParams<PageParam> = {};
+    const normalizedParams: PageParams<PageParam<any>> = {};
 
     Object.entries(params).forEach(([paramName, paramValue]) => {
-      const paramInit: PageParamInit = {
+      const paramInit: PageParamInit<any> = {
         name: paramName,
         prefix: `${extensionId}:`,
         defaultValue: paramValue,

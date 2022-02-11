@@ -4,25 +4,25 @@
  */
 
 import { LensExtension } from "../lens-extension";
-import { Console } from "console";
-import { stdout, stderr } from "process";
-
-console = new Console(stdout, stderr);
-
-let ext: LensExtension = null;
+import { SemVer } from "semver";
 
 describe("lens extension", () => {
+  let ext: LensExtension;
+
   beforeEach(async () => {
     ext = new LensExtension({
       manifest: {
         name: "foo-bar",
-        version: "0.1.1",
+        version: new SemVer("0.1.1"),
+        description: "",
+        engines: {
+          lens: "",
+        },
       },
       id: "/this/is/fake/package.json",
       absolutePath: "/absolute/fake/",
       manifestPath: "/this/is/fake/package.json",
       isBundled: false,
-      isEnabled: true,
       isCompatible: true,
     });
   });

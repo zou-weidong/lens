@@ -4,33 +4,32 @@
  */
 
 import debounce from "lodash/debounce";
-import { reaction } from "mobx";
+import { IComputedValue, reaction } from "mobx";
 import { Terminal as XTerm } from "xterm";
 import { FitAddon } from "xterm-addon-fit";
 import type { TabId } from "../dock/store";
 import { TerminalApi, TerminalChannels } from "../../../api/terminal-api";
-import { ThemeStore } from "../../../theme.store";
 import { disposer } from "../../../utils";
-import { isMac } from "../../../../common/vars";
 import { once } from "lodash";
-import { UserStore } from "../../../../common/user-store";
 import { clipboard } from "electron";
 import logger from "../../../../common/logger";
-import type { TerminalConfig } from "../../../../common/user-store/preferences-helpers";
+import type { TerminalConfig } from "../../../../common/user-preferences/terminal-config.injectable";
+import type { TerminalThemeColors } from "../../../themes/theme";
+import type { TerminalCopyOnSelect } from "../../../../common/user-preferences/terminal-copy-on-select.injectable";
+
+export interface TerminalDependencies {
+  readonly terminalConfig: TerminalConfig;
+  readonly activeTerminalTheme: IComputedValue<TerminalThemeColors>;
+  readonly isMac: boolean;
+  readonly terminalCopyOnSelect: TerminalCopyOnSelect;
+}
 
 export class Terminal {
-  private terminalConfig: TerminalConfig = UserStore.getInstance().terminalConfig;
-
   public static get spawningPool() {
     return document.getElementById("terminal-init");
   }
 
-  private xterm: XTerm | null = new XTerm({
-    cursorBlink: true,
-    cursorStyle: "bar",
-    fontSize: this.terminalConfig.fontSize,
-    fontFamily: this.terminalConfig.fontFamily,
-  });
+  private xterm: XTerm | null = null;
   private readonly fitAddon = new FitAddon();
   private scrollPos = 0;
   private disposer = disposer();
@@ -56,7 +55,13 @@ export class Terminal {
     }
   }
 
-  constructor(public tabId: TabId, protected api: TerminalApi) {
+  constructor(protected readonly dependencies: TerminalDependencies, public tabId: TabId, protected api: TerminalApi) {
+    this.xterm = new XTerm({
+      cursorBlink: true,
+      cursorStyle: "bar",
+      fontSize: dependencies.terminalConfig.fontSize,
+      fontFamily: dependencies.terminalConfig.fontFamily,
+    });
     // enable terminal addons
     this.xterm.loadAddon(this.fitAddon);
 
@@ -77,39 +82,46 @@ export class Terminal {
     window.addEventListener("resize", this.onResize);
 
     this.disposer.push(
-      reaction(() => ThemeStore.getInstance().xtermColors, colors => {
-        this.xterm?.setOption("theme", colors);
-      }, {
-        fireImmediately: true,
-      }),
-      reaction(() => UserStore.getInstance().terminalConfig.fontSize, this.setFontSize, {
-        fireImmediately: true,
-      }),
-      reaction(() => UserStore.getInstance().terminalConfig.fontFamily, this.setFontFamily, {
-        fireImmediately: true,
-      }),
+      reaction(
+        () => dependencies.activeTerminalTheme.get(),
+        colors => this.xterm.options.theme = colors, {
+          fireImmediately: true,
+        },
+      ),
+      reaction(
+        () => dependencies.terminalConfig.fontSize,
+        fontSize => this.xterm.options.fontSize = fontSize,
+        {
+          fireImmediately: true,
+        },
+      ),
+      reaction(
+        () => dependencies.terminalConfig.fontFamily,
+        fontFamily => this.xterm.options.fontFamily = fontFamily,
+        {
+          fireImmediately: true,
+        },
+      ),
       () => onDataHandler.dispose(),
+      () => this.fitLazy.cancel(),
       () => this.fitAddon.dispose(),
       () => this.api.removeAllListeners(),
       () => window.removeEventListener("resize", this.onResize),
       () => this.elem.removeEventListener("contextmenu", this.onContextMenu),
+      () => this.xterm.dispose(),
     );
   }
 
   destroy() {
     if (this.xterm) {
       this.disposer();
-      this.xterm.dispose();
       this.xterm = null;
+    } else {
+      throw new Error("Cannot call destory multiple times on a Terminal");
     }
   }
 
   fit = () => {
-    // Since this function is debounced we need to read this value as late as possible
-    if (!this.xterm) {
-      return;
-    }
-
     try {
       this.fitAddon.fit();
       const { cols, rows } = this.xterm;
@@ -165,7 +177,7 @@ export class Terminal {
   onContextMenu = () => {
     if (
       // don't paste if user hasn't turned on the feature
-      UserStore.getInstance().terminalCopyOnSelect
+      this.dependencies.terminalCopyOnSelect.value
 
       // don't paste if the clipboard doesn't have text
       && clipboard.availableFormats().includes("text/plain")
@@ -177,17 +189,9 @@ export class Terminal {
   onSelectionChange = () => {
     const selection = this.xterm.getSelection().trim();
 
-    if (UserStore.getInstance().terminalCopyOnSelect && selection) {
+    if (this.dependencies.terminalCopyOnSelect.value && selection) {
       clipboard.writeText(selection);
     }
-  };
-
-  setFontSize = (size: number) => {
-    this.xterm.options.fontSize = size;
-  };
-
-  setFontFamily = (family: string) => {
-    this.xterm.options.fontFamily = family;
   };
 
   keyHandler = (evt: KeyboardEvent): boolean => {
@@ -209,7 +213,7 @@ export class Terminal {
     }
 
     //Ctrl+K: clear the entire buffer, making the prompt line the new first line on mac os
-    if (isMac && metaKey) {
+    if (this.dependencies.isMac && metaKey) {
       switch (code) {
         case "KeyK":
           this.onClear();

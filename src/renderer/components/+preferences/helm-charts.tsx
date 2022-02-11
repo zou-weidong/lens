@@ -8,26 +8,41 @@ import styles from "./helm-charts.module.scss";
 import React from "react";
 import { computed, observable, makeObservable } from "mobx";
 
-import { HelmRepo, HelmRepoManager } from "../../../main/helm/helm-repo-manager";
+import type { HelmRepo } from "../../../main/helm/helm-repo-manager";
+import { HelmRepoManager } from "../../../main/helm/helm-repo-manager";
 import { Button } from "../button";
 import { Icon } from "../icon";
-import { Notifications } from "../notifications";
-import { Select, SelectOption } from "../select";
-import { AddHelmRepoDialog } from "./add-helm-repo-dialog";
+import type { SelectOption } from "../select";
+import { Select } from "../select";
+import { AddHelmRepoDialog } from "./dialogs/add-helm-repo/view";
 import { observer } from "mobx-react";
 import { RemovableItem } from "./removable-item";
 import { Notice } from "../+extensions/notice";
 import { Spinner } from "../spinner";
 import { noop } from "../../utils";
+import { withInjectables } from "@ogre-tools/injectable-react";
+import type { OkNotification } from "../notifications/ok.injectable";
+import type { ErrorNotification } from "../notifications/error.injectable";
+import openAddHelmRepoDialogInjectable from "./dialogs/add-helm-repo/open.injectable";
+import okNotificationInjectable from "../notifications/ok.injectable";
+import errorNotificationInjectable from "../notifications/error.injectable";
+
+export interface HelmChartsProps {}
+
+interface Dependencies {
+  openAddHelmRepoDialog: () => void;
+  okNotification: OkNotification;
+  errorNotification: ErrorNotification;
+}
 
 @observer
-export class HelmCharts extends React.Component {
+class NonInjectedHelmCharts extends React.Component<HelmChartsProps & Dependencies> {
   @observable loadingRepos = false;
   @observable loadingAvailableRepos = false;
   @observable repos: HelmRepo[] = [];
   @observable addedRepos = observable.map<string, HelmRepo>();
 
-  constructor(props: {}) {
+  constructor(props: HelmChartsProps & Dependencies) {
     super(props);
     makeObservable(this);
   }
@@ -52,7 +67,7 @@ export class HelmCharts extends React.Component {
         this.repos = await HelmRepoManager.getInstance().loadAvailableRepos();
       }
     } catch (err) {
-      Notifications.error(String(err));
+      this.props.errorNotification(String(err));
     }
 
     this.loadingAvailableRepos = false;
@@ -66,7 +81,7 @@ export class HelmCharts extends React.Component {
 
       this.addedRepos.replace(repos.map(repo => [repo.name, repo]));
     } catch (err) {
-      Notifications.error(String(err));
+      this.props.errorNotification(String(err));
     }
 
     this.loadingRepos = false;
@@ -77,7 +92,7 @@ export class HelmCharts extends React.Component {
       await HelmRepoManager.getInstance().addRepo(repo);
       this.addedRepos.set(repo.name, repo);
     } catch (err) {
-      Notifications.error(<>Adding helm branch <b>{repo.name}</b> has failed: {String(err)}</>);
+      this.props.errorNotification(<>Adding helm branch <b>{repo.name}</b> has failed: {String(err)}</>);
     }
   }
 
@@ -86,7 +101,7 @@ export class HelmCharts extends React.Component {
       await HelmRepoManager.getInstance().removeRepo(repo);
       this.addedRepos.delete(repo.name);
     } catch (err) {
-      Notifications.error(
+      this.props.errorNotification(
         <>Removing helm branch <b>{repo.name}</b> has failed: {String(err)}</>,
       );
     }
@@ -96,7 +111,7 @@ export class HelmCharts extends React.Component {
     const isAdded = this.addedRepos.has(repo.name);
 
     if (isAdded) {
-      return void Notifications.ok(<>Helm branch <b>{repo.name}</b> already in use</>);
+      return void this.props.okNotification(<>Helm branch <b>{repo.name}</b> already in use</>);
     }
 
     await this.addRepo(repo);
@@ -158,7 +173,7 @@ export class HelmCharts extends React.Component {
           <Button
             primary
             label="Add Custom Helm Repo"
-            onClick={AddHelmRepoDialog.open}
+            onClick={this.props.openAddHelmRepoDialog}
           />
         </div>
         <AddHelmRepoDialog onAddRepo={() => this.loadRepos()}/>
@@ -169,3 +184,12 @@ export class HelmCharts extends React.Component {
     );
   }
 }
+
+export const HelmCharts = withInjectables<Dependencies, HelmChartsProps>(NonInjectedHelmCharts, {
+  getProps: (di, props) => ({
+    ...props,
+    openAddHelmRepoDialog: di.inject(openAddHelmRepoDialogInjectable),
+    okNotification: di.inject(okNotificationInjectable),
+    errorNotification: di.inject(errorNotificationInjectable),
+  }),
+});

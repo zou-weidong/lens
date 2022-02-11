@@ -7,52 +7,45 @@ import fs from "fs";
 import mockFs from "mock-fs";
 import path from "path";
 import fse from "fs-extra";
-import type { Cluster } from "../cluster/cluster";
-import { ClusterStore } from "../cluster-store/cluster-store";
+import type { Cluster } from "../clusters/cluster";
+import type { ClusterStore } from "../clusters/store";
 import { Console } from "console";
 import { stdout, stderr } from "process";
-import getCustomKubeConfigDirectoryInjectable from "../app-paths/get-custom-kube-config-directory/get-custom-kube-config-directory.injectable";
-import clusterStoreInjectable from "../cluster-store/cluster-store.injectable";
-import type { ClusterModel } from "../cluster-types";
-import type {
-  DiContainer,
-} from "@ogre-tools/injectable";
-
-
+import getCustomKubeConfigDirectoryInjectable from "../paths/get-custom-kube-config-directory.injectable";
+import { clusterStoreInjectionToken } from "../clusters/store-injection-token";
+import type { ClusterModel } from "../clusters/cluster-types";
+import type { DiContainer } from "@ogre-tools/injectable";
 import { getDisForUnitTesting } from "../../test-utils/get-dis-for-unit-testing";
-import { createClusterInjectionToken } from "../cluster/create-cluster-injection-token";
-
-import directoryForUserDataInjectable
-  from "../app-paths/directory-for-user-data/directory-for-user-data.injectable";
+import { createClusterInjectionToken } from "../clusters/create-cluster-injection-token";
+import directoryForUserDataInjectable from "../paths/user-data.injectable";
 
 console = new Console(stdout, stderr);
 
-const testDataIcon = fs.readFileSync(
-  "test-data/cluster-store-migration-icon.png",
-);
-const kubeconfig = `
-apiVersion: v1
-clusters:
-- cluster:
-    server: https://localhost
-  name: test
-contexts:
-- context:
-    cluster: test
-    user: test
-  name: foo
-- context:
-    cluster: test
-    user: test
-  name: foo2
-current-context: test
-kind: Config
-preferences: {}
-users:
-- name: test
-  user:
-    token: kubeconfig-user-q4lm4:xxxyyyy
-`;
+const testDataIcon = fs.readFileSync("test-data/cluster-store-migration-icon.png");
+const kubeconfig = [
+  "apiVersion: v1",
+  "clusters:",
+  "- cluster:",
+  "    server: https://localhost",
+  "  name: test",
+  "contexts:",
+  "- context:",
+  "    cluster: test",
+  "    user: test",
+  "  name: foo",
+  "- context:",
+  "    cluster: test",
+  "    user: test",
+  "  name: foo2",
+  "current-context: test",
+  "kind: Config",
+  "preferences: {}",
+  "users:",
+  "- name: test",
+  "  user:",
+  "    token: kubeconfig-user-q4lm4:xxxyyyy",
+  "",
+].join("\n");
 
 const embed = (directoryName: string, contents: any): string => {
   fse.ensureDirSync(path.dirname(directoryName));
@@ -64,23 +57,17 @@ const embed = (directoryName: string, contents: any): string => {
   return directoryName;
 };
 
-jest.mock("electron", () => ({
-  ipcMain: {
-    handle: jest.fn(),
-    on: jest.fn(),
-    removeAllListeners: jest.fn(),
-    off: jest.fn(),
-    send: jest.fn(),
-  },
-}));
-
 describe("cluster-store", () => {
   let mainDi: DiContainer;
   let clusterStore: ClusterStore;
   let createCluster: (model: ClusterModel) => Cluster;
 
   beforeEach(async () => {
-    const dis = getDisForUnitTesting({ doGeneralOverrides: true });
+    const dis = getDisForUnitTesting({
+      doStoresOverrides: [
+        "cluster-store-token",
+      ],
+    });
 
     mockFs();
 
@@ -105,10 +92,6 @@ describe("cluster-store", () => {
         getCustomKubeConfigDirectoryInjectable,
       );
 
-      // TODO: Remove these by removing Singleton base-class from BaseStore
-      ClusterStore.getInstance(false)?.unregisterIpcListener();
-      ClusterStore.resetInstance();
-
       const mockOpts = {
         "some-directory-for-user-data": {
           "lens-cluster-store.json": JSON.stringify({}),
@@ -117,7 +100,7 @@ describe("cluster-store", () => {
 
       mockFs(mockOpts);
 
-      clusterStore = mainDi.inject(clusterStoreInjectable);
+      clusterStore = mainDi.inject(clusterStoreInjectionToken);
     });
 
     afterEach(() => {
@@ -197,9 +180,7 @@ describe("cluster-store", () => {
 
   describe("config with existing clusters", () => {
     beforeEach(() => {
-      ClusterStore.resetInstance();
-
-      const mockOpts = {
+      mockFs({
         "temp-kube-config": kubeconfig,
         "some-directory-for-user-data": {
           "lens-cluster-store.json": JSON.stringify({
@@ -233,11 +214,9 @@ describe("cluster-store", () => {
             ],
           }),
         },
-      };
+      });
 
-      mockFs(mockOpts);
-
-      clusterStore = mainDi.inject(clusterStoreInjectable);
+      clusterStore = mainDi.inject(clusterStoreInjectionToken);
     });
 
     afterEach(() => {
@@ -252,7 +231,7 @@ describe("cluster-store", () => {
     });
 
     it("allows getting all of the clusters", async () => {
-      const storedClusters = clusterStore.clustersList;
+      const storedClusters = clusterStore.clustersList.get();
 
       expect(storedClusters.length).toBe(3);
       expect(storedClusters[0].id).toBe("cluster1");
@@ -265,29 +244,28 @@ describe("cluster-store", () => {
 
   describe("config with invalid cluster kubeconfig", () => {
     beforeEach(() => {
-      const invalidKubeconfig = `
-apiVersion: v1
-clusters:
-- cluster:
-    server: https://localhost
-  name: test2
-contexts:
-- context:
-    cluster: test
-    user: test
-  name: test
-current-context: test
-kind: Config
-preferences: {}
-users:
-- name: test
-  user:
-    token: kubeconfig-user-q4lm4:xxxyyyy
-`;
+      const invalidKubeconfig = [
+        "apiVersion: v1",
+        "clusters:",
+        "- cluster:",
+        "    server: https://localhost",
+        "  name: test2",
+        "contexts:",
+        "- context:",
+        "    cluster: test",
+        "    user: test",
+        "  name: test",
+        "current-context: test",
+        "kind: Config",
+        "preferences: {}",
+        "users:",
+        "- name: test",
+        "  user:",
+        "    token: kubeconfig-user-q4lm4:xxxyyyy",
+        "",
+      ].join("\n");
 
-      ClusterStore.resetInstance();
-
-      const mockOpts = {
+      mockFs({
         "invalid-kube-config": invalidKubeconfig,
         "valid-kube-config": kubeconfig,
         "some-directory-for-user-data": {
@@ -315,11 +293,9 @@ users:
             ],
           }),
         },
-      };
+      });
 
-      mockFs(mockOpts);
-
-      clusterStore = mainDi.inject(clusterStoreInjectable);
+      clusterStore = mainDi.inject(clusterStoreInjectionToken);
     });
 
     afterEach(() => {
@@ -327,7 +303,7 @@ users:
     });
 
     it("does not enable clusters with invalid kubeconfig", () => {
-      const storedClusters = clusterStore.clustersList;
+      const storedClusters = clusterStore.clustersList.get();
 
       expect(storedClusters.length).toBe(1);
     });
@@ -335,8 +311,7 @@ users:
 
   describe("pre 3.6.0-beta.1 config with an existing cluster", () => {
     beforeEach(() => {
-      ClusterStore.resetInstance();
-      const mockOpts = {
+      mockFs({
         "some-directory-for-user-data": {
           "lens-cluster-store.json": JSON.stringify({
             __internal__: {
@@ -357,11 +332,9 @@ users:
           }),
           icon_path: testDataIcon,
         },
-      };
+      });
 
-      mockFs(mockOpts);
-
-      clusterStore = mainDi.inject(clusterStoreInjectable);
+      clusterStore = mainDi.inject(clusterStoreInjectionToken);
     });
 
     afterEach(() => {
@@ -369,13 +342,13 @@ users:
     });
 
     it("migrates to modern format with kubeconfig in a file", async () => {
-      const config = clusterStore.clustersList[0].kubeConfigPath;
+      const config = clusterStore.clustersList.get()[0].kubeConfigPath;
 
       expect(fs.readFileSync(config, "utf8")).toBe(minimalValidKubeConfig);
     });
 
     it("migrates to modern format with icon not in file", async () => {
-      const { icon } = clusterStore.clustersList[0].preferences;
+      const { icon } = clusterStore.clustersList.get()[0].preferences;
 
       expect(icon.startsWith("data:;base64,")).toBe(true);
     });

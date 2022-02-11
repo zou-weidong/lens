@@ -5,21 +5,20 @@
 
 import { action, computed, makeObservable } from "mobx";
 import type { TabId } from "../dock/store";
-import { DockTabStorageState, DockTabStore } from "../dock-tab-store/dock-tab.store";
-import { getReleaseValues } from "../../../../common/k8s-api/endpoints/helm-releases.api";
-import type { StorageHelper } from "../../../utils";
+import type { DockTabStoreOptions } from "../dock-tab.store";
+import { DockTabStore } from "../dock-tab.store";
+import { getReleaseValues } from "../../../../common/k8s-api/endpoints";
 
-export interface IChartUpgradeData {
+export interface ChartUpgradeData {
   releaseName: string;
   releaseNamespace: string;
 }
 
 interface Dependencies {
-  valuesStore: DockTabStore<string>;
-  createStorage: <T>(storageKey: string, options: DockTabStorageState<T>) => StorageHelper<DockTabStorageState<T>>;
+  readonly valuesStore: DockTabStore<string>;
 }
 
-export class UpgradeChartTabStore extends DockTabStore<IChartUpgradeData> {
+export class UpgradeChartTabStore extends DockTabStore<ChartUpgradeData> {
   @computed private get releaseNameReverseLookup(): Map<string, string> {
     return new Map(this.getAllData().map(([id, { releaseName }]) => [releaseName, id]));
   }
@@ -28,11 +27,8 @@ export class UpgradeChartTabStore extends DockTabStore<IChartUpgradeData> {
     return this.dependencies.valuesStore;
   }
 
-  constructor(protected dependencies : Dependencies) {
-    super(dependencies, {
-      storageKey: "chart_releases",
-    });
-
+  constructor(protected readonly dependencies: Dependencies, opts: DockTabStoreOptions<ChartUpgradeData>) {
+    super(opts);
     makeObservable(this);
   }
 

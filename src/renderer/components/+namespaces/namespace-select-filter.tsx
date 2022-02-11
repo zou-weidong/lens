@@ -7,13 +7,14 @@ import "./namespace-select-filter.scss";
 
 import React from "react";
 import { observer } from "mobx-react";
-import { components, OptionTypeBase, PlaceholderProps } from "react-select";
+import type { OptionTypeBase, PlaceholderProps } from "react-select";
+import { components } from "react-select";
 
 import { Icon } from "../icon";
 import { NamespaceSelect } from "./namespace-select";
 import type { NamespaceStore } from "./namespace-store/namespace.store";
 
-import type { SelectOption, SelectProps } from "../select";
+import type { SelectOption } from "../select";
 import { withInjectables } from "@ogre-tools/injectable-react";
 import type { NamespaceSelectFilterModel } from "./namespace-select-filter-model/namespace-select-filter-model";
 import namespaceSelectFilterModelInjectable from "./namespace-select-filter-model/namespace-select-filter-model.injectable";
@@ -23,7 +24,7 @@ interface Dependencies {
   model: NamespaceSelectFilterModel;
 }
 
-const NonInjectedNamespaceSelectFilter = observer(({ model }: SelectProps & Dependencies) => (
+const NonInjectedNamespaceSelectFilter = observer(({ model }: Dependencies) => (
   <div
     onKeyUp={model.onKeyUp}
     onKeyDown={model.onKeyDown}
@@ -50,7 +51,6 @@ const NonInjectedNamespaceSelectFilter = observer(({ model }: SelectProps & Depe
   </div>
 ));
 
-
 const formatOptionLabelFor =
   (model: NamespaceSelectFilterModel) =>
     ({ value: namespace, label }: SelectOption) => {
@@ -69,10 +69,10 @@ const formatOptionLabelFor =
       return label;
     };
 
-export const NamespaceSelectFilter = withInjectables<Dependencies, SelectProps>(NonInjectedNamespaceSelectFilter, {
+export const NamespaceSelectFilter = withInjectables<Dependencies>(NonInjectedNamespaceSelectFilter, {
   getProps: (di, props) => ({
-    model: di.inject(namespaceSelectFilterModelInjectable),
     ...props,
+    model: di.inject(namespaceSelectFilterModelInjectable),
   }),
 });
 
@@ -105,9 +105,9 @@ const NonInjectedPlaceholder = observer(({ namespaceStore, ...props }: CustomPla
 },
 );
 
-const Placeholder = withInjectables<PlaceholderDependencies, CustomPlaceholderProps>( NonInjectedPlaceholder, {
+const Placeholder = withInjectables<PlaceholderDependencies, CustomPlaceholderProps>(NonInjectedPlaceholder, {
   getProps: (di, props) => ({
-    namespaceStore: di.inject(namespaceStoreInjectable),
     ...props,
+    namespaceStore: di.inject(namespaceStoreInjectable),
   }),
 });

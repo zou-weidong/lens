@@ -7,7 +7,7 @@
 import { action, makeObservable } from "mobx";
 import type { ObservableHistory } from "mobx-observable-history";
 
-export interface PageParamInit<V = any> {
+export interface PageParamInit<V> {
   name: string;
   defaultValue?: V; // multi-values param must be defined with array-value, e.g. []
   prefix?: string; // name prefix, for extensions it's `${extension.id}:`
@@ -15,12 +15,27 @@ export interface PageParamInit<V = any> {
   stringify?(value: V): string | string[]; // to URL
 }
 
+export interface SetPageParamOptions {
+  /**
+   * @default true
+   */
+  mergeGlobals?: boolean;
+  /**
+   * @default false
+   */
+  replaceHistory?: boolean;
+}
+
+export interface PageParamDependencies {
+  readonly history: ObservableHistory;
+}
+
 // TODO: write tests
-export class PageParam<V = any> {
+export class PageParam<V> {
   readonly name: string;
   readonly isMulti: boolean;
 
-  constructor(private init: PageParamInit<V>, private history: ObservableHistory) {
+  constructor(protected readonly dependencies: PageParamDependencies, private init: PageParamInit<V>) {
     makeObservable(this);
     const { prefix, name, defaultValue } = init;
 
@@ -59,10 +74,10 @@ export class PageParam<V = any> {
   }
 
   @action
-  set(value: V, { mergeGlobals = true, replaceHistory = false } = {}): void {
+  set(value: V, { mergeGlobals = true, replaceHistory = false }: SetPageParamOptions = {}): void {
     const search = this.toString({ mergeGlobals, value });
 
-    this.history.merge({ search }, replaceHistory);
+    this.dependencies.history.merge({ search }, replaceHistory);
   }
 
   /**
@@ -76,10 +91,10 @@ export class PageParam<V = any> {
     if (this.isMulti) {
       this.clear();
       values.forEach(value => {
-        this.history.searchParams.append(this.name, value);
+        this.dependencies.history.searchParams.append(this.name, value);
       });
     } else {
-      this.history.searchParams.set(this.name, values[0]);
+      this.dependencies.history.searchParams.set(this.name, values[0]);
     }
   }
 
@@ -87,21 +102,21 @@ export class PageParam<V = any> {
    * Get stringified raw value(s) from `document.location.search`
    */
   getRaw(): string | string[] {
-    const values: string[] = this.history.searchParams.getAll(this.name);
+    const values: string[] = this.dependencies.history.searchParams.getAll(this.name);
 
     return this.isMulti ? values : values[0];
   }
 
   @action
   clear() {
-    this.history.searchParams.delete(this.name);
+    this.dependencies.history.searchParams.delete(this.name);
   }
 
   toString({ withPrefix = true, mergeGlobals = true, value = this.get() } = {}): string {
     let searchParams = new URLSearchParams();
 
     if (mergeGlobals) {
-      searchParams = new URLSearchParams(this.history.searchParams);
+      searchParams = new URLSearchParams(this.dependencies.history.searchParams);
       searchParams.delete(this.name);
     }
 

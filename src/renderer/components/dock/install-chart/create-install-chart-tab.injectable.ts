@@ -4,44 +4,52 @@
  */
 import { getInjectable } from "@ogre-tools/injectable";
 import installChartTabStoreInjectable from "./store.injectable";
-import type { HelmChart } from "../../../../common/k8s-api/endpoints/helm-charts.api";
-import {
+import type { HelmChart } from "../../../../common/k8s-api/endpoints";
+import type {
   DockTab,
   DockTabCreate,
-  DockTabCreateSpecific,
+  DockTabCreateSpecific } from "../dock/store";
+import {
   TabKind,
 } from "../dock/store";
 import type { InstallChartTabStore } from "./store";
 import createDockTabInjectable from "../dock/create-dock-tab.injectable";
+
+export type CreateInstallChartTab = (chart: HelmChart, tabParams?: DockTabCreateSpecific) => DockTab;
 
 interface Dependencies {
   createDockTab: (rawTab: DockTabCreate, addNumber: boolean) => DockTab;
   installChartStore: InstallChartTabStore;
 }
 
-const createInstallChartTab = ({ createDockTab, installChartStore }: Dependencies) => (chart: HelmChart, tabParams: DockTabCreateSpecific = {}) => {
-  const { name, repo, version } = chart;
+const createInstallChartTab = ({
+  createDockTab,
+  installChartStore,
+}: Dependencies): CreateInstallChartTab => (
+  (chart, tabParams = {}) => {
+    const { name, repo, version } = chart;
 
-  const tab = createDockTab(
-    {
-      title: `Helm Install: ${repo}/${name}`,
-      ...tabParams,
-      kind: TabKind.INSTALL_CHART,
-    },
-    false,
-  );
+    const tab = createDockTab(
+      {
+        title: `Helm Install: ${repo}/${name}`,
+        ...tabParams,
+        kind: TabKind.INSTALL_CHART,
+      },
+      false,
+    );
 
-  installChartStore.setData(tab.id, {
-    name,
-    repo,
-    version,
-    namespace: "default",
-    releaseName: "",
-    description: "",
-  });
+    installChartStore.setData(tab.id, {
+      name,
+      repo,
+      version,
+      namespace: "default",
+      releaseName: "",
+      description: "",
+    });
 
-  return tab;
-};
+    return tab;
+  }
+);
 
 const createInstallChartTabInjectable = getInjectable({
   id: "create-install-chart-tab",

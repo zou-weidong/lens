@@ -6,7 +6,8 @@
 import { promiseExecFile } from "../../common/utils/promise-exec";
 import type { BaseEncodingOptions } from "fs";
 import type { ExecFileOptions } from "child_process";
-import { helmBinaryPath } from "../../common/vars";
+import { getLegacyGlobalDiForExtensionApi } from "../../extensions/di-legacy-globals/setup";
+import bundledHelmBinaryPathInjectable from "../../common/vars/bundled-helm-binary.injectable";
 
 /**
  * ExecFile the bundled helm CLI
@@ -14,7 +15,7 @@ import { helmBinaryPath } from "../../common/vars";
  */
 export async function execHelm(args: string[], options?: BaseEncodingOptions & ExecFileOptions): Promise<string> {
   try {
-    const { stdout } = await promiseExecFile(helmBinaryPath.get(), args, options);
+    const { stdout } = await promiseExecFile(getLegacyGlobalDiForExtensionApi().inject(bundledHelmBinaryPathInjectable), args, options);
 
     return stdout;
   } catch (error) {

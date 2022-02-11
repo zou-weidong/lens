@@ -9,22 +9,35 @@ import { computed, makeObservable, reaction } from "mobx";
 import { disposeOnUnmount, observer } from "mobx-react";
 import type { RouteComponentProps } from "react-router";
 import { ClusterStatus } from "./cluster-status";
-import { ClusterFrameHandler } from "./lens-views";
-import type { Cluster } from "../../../common/cluster/cluster";
-import { ClusterStore } from "../../../common/cluster-store/cluster-store";
-import { catalogEntityRegistry } from "../../api/catalog-entity-registry";
-import { navigate } from "../../navigation";
-import { catalogURL, ClusterViewRouteParams } from "../../../common/routes";
-import { requestClusterActivation } from "../../ipc";
+import type { ClusterFramesManager } from "./frames/manager";
+import type { Cluster } from "../../../common/clusters/cluster";
+import type { ClusterViewRouteParams } from "../../../common/routes";
+import { catalogURL } from "../../../common/routes";
+import type { Navigate } from "../../navigation/navigate.injectable";
+import type { GetClusterById } from "../../../common/clusters/get-by-id.injectable";
+import type { SetActiveEntity } from "../../catalog/entity/set-active.injectable";
+import { withInjectables } from "@ogre-tools/injectable-react";
+import getClusterByIdInjectable from "../../../common/clusters/get-by-id.injectable";
+import navigateInjectable from "../../navigation/navigate.injectable";
+import setActiveEntityInjectable from "../../catalog/entity/set-active.injectable";
+import clusterFramesManagerInjectable from "./frames/manager.injectable";
+import type { ActivateCluster } from "../../../common/ipc/cluster/activate.token";
+import activateClusterInjectable from "../../ipc/cluster/activate.injectable";
 
 export interface ClusterViewProps extends RouteComponentProps<ClusterViewRouteParams> {
 }
 
-@observer
-export class ClusterView extends React.Component<ClusterViewProps> {
-  private store = ClusterStore.getInstance();
+interface Dependencies {
+  navigate: Navigate;
+  getClusterById: GetClusterById;
+  setActiveEntity: SetActiveEntity;
+  framesManager: ClusterFramesManager;
+  activateCluster: ActivateCluster;
+}
 
-  constructor(props: ClusterViewProps) {
+@observer
+class NonInjectedClusterView extends React.Component<ClusterViewProps & Dependencies> {
+  constructor(props: ClusterViewProps & Dependencies) {
     super(props);
     makeObservable(this);
   }
@@ -34,13 +47,13 @@ export class ClusterView extends React.Component<ClusterViewProps> {
   }
 
   @computed get cluster(): Cluster | undefined {
-    return this.store.getById(this.clusterId);
+    return this.props.getClusterById(this.clusterId);
   }
 
   @computed get isReady(): boolean {
     const { cluster, clusterId } = this;
 
-    return cluster?.ready && cluster?.available && ClusterFrameHandler.getInstance().hasLoadedView(clusterId);
+    return cluster?.ready && cluster?.available && this.props.framesManager.hasLoadedView(clusterId);
   }
 
   componentDidMount() {
@@ -48,24 +61,24 @@ export class ClusterView extends React.Component<ClusterViewProps> {
   }
 
   componentWillUnmount() {
-    ClusterFrameHandler.getInstance().clearVisibleCluster();
-    catalogEntityRegistry.activeEntity = null;
+    this.props.framesManager.clearVisibleCluster();
+    this.props.setActiveEntity(null);
   }
 
   bindEvents() {
     disposeOnUnmount(this, [
       reaction(() => this.clusterId, async (clusterId) => {
-        ClusterFrameHandler.getInstance().setVisibleCluster(clusterId);
-        ClusterFrameHandler.getInstance().initView(clusterId);
-        requestClusterActivation(clusterId, false); // activate and fetch cluster's state from main
-        catalogEntityRegistry.activeEntity = clusterId;
+        this.props.framesManager.setVisibleCluster(clusterId);
+        this.props.framesManager.initView(clusterId);
+        this.props.activateCluster(clusterId, false); // activate and fetch cluster's state from main
+        this.props.setActiveEntity(clusterId);
       }, {
         fireImmediately: true,
       }),
 
       reaction(() => [this.cluster?.ready, this.cluster?.disconnected], ([, disconnected]) => {
-        if (ClusterFrameHandler.getInstance().hasLoadedView(this.clusterId) && disconnected) {
-          navigate(catalogURL()); // redirect to catalog when active cluster get disconnected/not available
+        if (this.props.framesManager.hasLoadedView(this.clusterId) && disconnected) {
+          this.props.navigate(catalogURL()); // redirect to catalog when active cluster get disconnected/not available
         }
       }),
     ]);
@@ -89,3 +102,14 @@ export class ClusterView extends React.Component<ClusterViewProps> {
     );
   }
 }
+
+export const ClusterView = withInjectables<Dependencies, ClusterViewProps>(NonInjectedClusterView, {
+  getProps: (di, props) => ({
+    ...props,
+    getClusterById: di.inject(getClusterByIdInjectable),
+    navigate: di.inject(navigateInjectable),
+    setActiveEntity: di.inject(setActiveEntityInjectable),
+    framesManager: di.inject(clusterFramesManagerInjectable),
+    activateCluster: di.inject(activateClusterInjectable),
+  }),
+});

@@ -3,7 +3,7 @@
  * Licensed under MIT License. See LICENSE in root directory for more information.
  */
 
-import type { Cluster } from "../../common/cluster/cluster";
+import type { Cluster } from "../../common/clusters/cluster";
 import type { NamespaceStore } from "../components/+namespaces/namespace-store/namespace.store";
 import type { ClusterContext } from "../../common/k8s-api/cluster-context";
 import { computed, makeObservable } from "mobx";

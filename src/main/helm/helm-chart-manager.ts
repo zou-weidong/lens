@@ -8,7 +8,7 @@ import v8 from "v8";
 import * as yaml from "js-yaml";
 import type { HelmRepo } from "./helm-repo-manager";
 import logger from "../logger";
-import type { RepoHelmChartList } from "../../common/k8s-api/endpoints/helm-charts.api";
+import type { RepoHelmChartList } from "../../common/k8s-api/endpoints";
 import { iter, sortCharts } from "../../common/utils";
 import { execHelm } from "./exec";
 

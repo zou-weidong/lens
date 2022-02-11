@@ -5,10 +5,12 @@
 
 import "./input.scss";
 
-import React, { DOMAttributes, InputHTMLAttributes, TextareaHTMLAttributes } from "react";
+import type { DOMAttributes, InputHTMLAttributes, TextareaHTMLAttributes } from "react";
+import React from "react";
 import { boundMethod, cssNames, debouncePromise, getRandId } from "../../utils";
 import { Icon } from "../icon";
-import { Tooltip, TooltipProps } from "../tooltip";
+import type { TooltipProps } from "../tooltip";
+import { Tooltip } from "../tooltip";
 import * as Validators from "./input_validators";
 import type { InputValidator } from "./input_validators";
 import isFunction from "lodash/isFunction";
@@ -36,7 +38,7 @@ export interface IconDataFnArg {
  */
 export type IconData = string | React.ReactNode | ((opt: IconDataFnArg) => React.ReactNode);
 
-export type InputProps = Omit<InputElementProps, "onChange" | "onSubmit"> & {
+export interface InputProps extends Omit<InputElementProps, "onChange" | "onSubmit"> {
   theme?: "round-black" | "round";
   className?: string;
   value?: string;
@@ -55,7 +57,7 @@ export type InputProps = Omit<InputElementProps, "onChange" | "onSubmit"> & {
   blurOnEnter?: boolean;
   onChange?(value: string, evt: React.ChangeEvent<InputElement>): void;
   onSubmit?(value: string, evt: React.KeyboardEvent<InputElement>): void;
-};
+}
 
 interface State {
   focused: boolean;

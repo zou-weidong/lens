@@ -4,7 +4,7 @@
  */
 
 import type { RouteProps } from "react-router";
-import { buildURL } from "../utils/buildUrl";
+import { buildURL } from "../utils";
 
 export const volumeClaimsRoute: RouteProps = {
   path: "/persistent-volume-claims",

@@ -3,29 +3,29 @@
  * Licensed under MIT License. See LICENSE in root directory for more information.
  */
 
-import { action, comparer, computed, IReactionDisposer, makeObservable, reaction } from "mobx";
-import { autoBind, noop, StorageHelper, toggle } from "../../../utils";
-import { KubeObjectStore, KubeObjectStoreLoadingParams } from "../../../../common/k8s-api/kube-object.store";
-import { Namespace, namespacesApi } from "../../../../common/k8s-api/endpoints/namespaces.api";
+import type { IReactionDisposer } from "mobx";
+import { action, comparer, computed, makeObservable, reaction } from "mobx";
+import { autoBind, noop, toggle } from "../../../utils";
+import type { KubeObjectStoreLoadingParams } from "../../../../common/k8s-api/kube-object.store";
+import { KubeObjectStore } from "../../../../common/k8s-api/kube-object.store";
+import { Namespace } from "../../../../common/k8s-api/endpoints";
+import type { StorageLayer } from "../../../utils/storage/create.injectable";
+import type { KubeApi } from "../../../../common/k8s-api/kube-api";
 
 interface Dependencies {
-  storage: StorageHelper<string[] | undefined>;
+  storage: StorageLayer<string[] | undefined>;
 }
 
 export class NamespaceStore extends KubeObjectStore<Namespace> {
-  api = namespacesApi;
-
-  constructor(private dependencies: Dependencies) {
-    super();
+  constructor(private dependencies: Dependencies, api: KubeApi<Namespace>) {
+    super(api);
     makeObservable(this);
     autoBind(this);
-
     this.init();
   }
 
   private async init() {
     await this.contextReady;
-    await this.dependencies.storage.whenReady;
 
     this.selectNamespaces(this.initialNamespaces);
     this.autoLoadAllowedNamespaces();

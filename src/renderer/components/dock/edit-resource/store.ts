@@ -3,12 +3,11 @@
  * Licensed under MIT License. See LICENSE in root directory for more information.
  */
 
-import type { StorageHelper } from "../../../utils";
-import { DockTabStorageState, DockTabStore } from "../dock-tab-store/dock-tab.store";
+import { DockTabStore, type DockTabStoreOptions } from "../dock-tab.store";
 import type { TabId } from "../dock/store";
 import type { KubeObject } from "../../../../common/k8s-api/kube-object";
-import { apiManager } from "../../../../common/k8s-api/api-manager";
 import type { KubeObjectStore } from "../../../../common/k8s-api/kube-object.store";
+import type { ApiManager } from "../../../../common/k8s-api/api-manager";
 
 export interface EditingResource {
   resource: string; // resource path, e.g. /api/v1/namespaces/default
@@ -17,18 +16,16 @@ export interface EditingResource {
 }
 
 interface Dependencies {
-  createStorage:<T> (storageKey: string, options: DockTabStorageState<T>) => StorageHelper<DockTabStorageState<T>>;
+  readonly apiManager: ApiManager;
 }
 
 export class EditResourceTabStore extends DockTabStore<EditingResource> {
-  constructor(protected dependencies: Dependencies) {
-    super(dependencies, {
-      storageKey: "edit_resource_store",
-    });
-  }
-
   protected finalizeDataForSave({ draft, ...data }: EditingResource): EditingResource {
     return data; // skip saving draft to local-storage
+  }
+
+  constructor(protected readonly dependencies: Dependencies, options?: DockTabStoreOptions<EditingResource>) {
+    super(options);
   }
 
   isReady(tabId: TabId) {
@@ -36,7 +33,7 @@ export class EditResourceTabStore extends DockTabStore<EditingResource> {
   }
 
   getStore(tabId: TabId): KubeObjectStore<KubeObject> | undefined {
-    return apiManager.getStore(this.getResourcePath(tabId));
+    return this.dependencies.apiManager.getStore(this.getResourcePath(tabId));
   }
 
   getResource(tabId: TabId): KubeObject | undefined {

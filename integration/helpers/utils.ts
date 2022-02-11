@@ -7,7 +7,8 @@ import { mkdirp, remove } from "fs-extra";
 import * as os from "os";
 import * as path from "path";
 import * as uuid from "uuid";
-import { ElectronApplication, Frame, Page, _electron as electron } from "playwright";
+import type { ElectronApplication, Frame, Page } from "playwright";
+import { _electron as electron } from "playwright";
 import { noop } from "lodash";
 
 export const appPaths: Partial<Record<NodeJS.Platform, string>> = {
@@ -15,14 +16,6 @@ export const appPaths: Partial<Record<NodeJS.Platform, string>> = {
   "linux": "./dist/linux-unpacked/open-lens",
   "darwin": "./dist/mac/OpenLens.app/Contents/MacOS/OpenLens",
 };
-
-export function itIf(condition: boolean) {
-  return condition ? it : it.skip;
-}
-
-export function describeIf(condition: boolean) {
-  return condition ? describe : describe.skip;
-}
 
 async function getMainWindow(app: ElectronApplication, timeout = 50_000): Promise<Page> {
   const deadline = Date.now() + timeout;
@@ -48,7 +41,6 @@ async function attemptStart() {
   await mkdirp(CICD);
 
   const app = await electron.launch({
-    args: ["--integration-testing"], // this argument turns off the blocking of quit
     executablePath: appPaths[process.platform],
     bypassCSP: true,
     env: {
@@ -56,7 +48,7 @@ async function attemptStart() {
       ...process.env,
     },
     timeout: 100_000,
-  } as Parameters<typeof electron["launch"]>[0]);
+  });
 
   try {
     const window = await getMainWindow(app);

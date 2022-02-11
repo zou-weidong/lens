@@ -2,9 +2,10 @@
  * Copyright (c) OpenLens Authors. All rights reserved.
  * Licensed under MIT License. See LICENSE in root directory for more information.
  */
-import { isClusterPageContext } from "../../utils/cluster-id-url-parsing";
+import type { DerivedKubeApiOptions } from "../kube-api";
 import { KubeApi } from "../kube-api";
 import { KubeObject } from "../kube-object";
+import type { RoleRef } from "./role-binding.api";
 
 export type ClusterRoleBindingSubjectKind = "Group" | "ServiceAccount" | "User";
 
@@ -15,19 +16,13 @@ export interface ClusterRoleBindingSubject {
   namespace?: string;
 }
 
-export interface ClusterRoleBinding {
-  subjects?: ClusterRoleBindingSubject[];
-  roleRef: {
-    kind: string;
-    name: string;
-    apiGroup?: string;
-  };
-}
-
 export class ClusterRoleBinding extends KubeObject {
   static kind = "ClusterRoleBinding";
   static namespaced = false;
   static apiBase = "/apis/rbac.authorization.k8s.io/v1/clusterrolebindings";
+
+  declare subjects?: ClusterRoleBindingSubject[];
+  declare roleRef?: RoleRef;
 
   getSubjects() {
     return this.subjects || [];
@@ -38,17 +33,11 @@ export class ClusterRoleBinding extends KubeObject {
   }
 }
 
-/**
- * Only available within kubernetes cluster pages
- */
-let clusterRoleBindingApi: KubeApi<ClusterRoleBinding>;
-
-if (isClusterPageContext()) {
-  clusterRoleBindingApi = new KubeApi({
-    objectConstructor: ClusterRoleBinding,
-  });
+export class ClusterRoleBindingApi extends KubeApi<ClusterRoleBinding> {
+  constructor(opts: DerivedKubeApiOptions = {}) {
+    super({
+      ...opts,
+      objectConstructor: ClusterRoleBinding,
+    });
+  }
 }
-
-export {
-  clusterRoleBindingApi,
-};

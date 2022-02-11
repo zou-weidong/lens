@@ -9,7 +9,7 @@ import React from "react";
 import { observer } from "mobx-react";
 import { OverviewWorkloadStatus } from "./overview-workload-status";
 import { Link } from "react-router-dom";
-import type { KubeResource } from "../../../common/rbac";
+import type { KubeResource } from "../../../common/k8s/resources";
 import { withInjectables } from "@ogre-tools/injectable-react";
 import type { IComputedValue } from "mobx";
 import workloadsInjectable from "./workloads.injectable";

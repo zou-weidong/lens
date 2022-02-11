@@ -5,22 +5,22 @@
 
 import * as uuid from "uuid";
 
-import { broadcastMessage } from "../../../common/ipc";
-import { ProtocolHandlerExtension, ProtocolHandlerInternal } from "../../../common/protocol-handler";
 import { delay, noop } from "../../../common/utils";
 import { LensExtension } from "../../../extensions/main-api";
-import { ExtensionsStore } from "../../../extensions/extensions-store/extensions-store";
-import type { LensProtocolRouterMain } from "../lens-protocol-router-main/lens-protocol-router-main";
+import type { ExtensionsPreferencesStore } from "../../../common/extensions/preferences/store";
+import type { LensProtocolRouterMain } from "../router";
 import mockFs from "mock-fs";
 import { getDiForUnitTesting } from "../../getDiForUnitTesting";
-import extensionLoaderInjectable
-  from "../../../extensions/extension-loader/extension-loader.injectable";
-import lensProtocolRouterMainInjectable
-  from "../lens-protocol-router-main/lens-protocol-router-main.injectable";
-import extensionsStoreInjectable
-  from "../../../extensions/extensions-store/extensions-store.injectable";
-
-jest.mock("../../../common/ipc");
+import lensProtocolRouterMainInjectable from "../router.injectable";
+import extensionsPreferencesStoreInjectable from "../../extensions/preferences-store.injectable";
+import type { RouteProtocolExternal } from "../../../common/ipc/protocol-handler/router-external.token";
+import type { RouteProtocolInternal } from "../../../common/ipc/protocol-handler/router-internal.token";
+import emitInvalidProtocolUrlInjectable from "../../ipc/protocol-handler/invalid.injectable";
+import emitRouteProtocolExternalInjectable from "../../ipc/protocol-handler/route-external.injectable";
+import emitRouteProtocolInternalInjectable from "../../ipc/protocol-handler/route-internal.injectable";
+import { SemVer } from "semver";
+import type { ExtensionInstances } from "../../../common/extensions/instances.injectable";
+import extensionInstancesInjectable from "../../../common/extensions/instances.injectable";
 
 function throwIfDefined(val: any): void {
   if (val != null) {
@@ -29,11 +29,11 @@ function throwIfDefined(val: any): void {
 }
 
 describe("protocol router tests", () => {
-  // TODO: This test suite is using any to access protected property.
-  // Unit tests are allowed to only public interfaces.
-  let extensionLoader: any;
+  let extensionInstances: ExtensionInstances;
+  let emitRouteProtocolExternal: jest.MockedFunction<RouteProtocolExternal>;
+  let emitRouteProtocolInternal: jest.MockedFunction<RouteProtocolInternal>;
   let lpr: LensProtocolRouterMain;
-  let extensionsStore: ExtensionsStore;
+  let extensionsStore: ExtensionsPreferencesStore;
 
   beforeEach(async () => {
     const di = getDiForUnitTesting({ doGeneralOverrides: true });
@@ -44,10 +44,11 @@ describe("protocol router tests", () => {
 
     await di.runSetups();
 
-    extensionLoader = di.inject(extensionLoaderInjectable);
-    extensionsStore = di.inject(extensionsStoreInjectable);
-
-
+    di.override(emitInvalidProtocolUrlInjectable, () => jest.fn());
+    di.override(emitRouteProtocolExternalInjectable, () => emitRouteProtocolExternal = jest.fn());
+    di.override(emitRouteProtocolInternalInjectable, () => emitRouteProtocolInternal = jest.fn());
+    extensionInstances = di.inject(extensionInstancesInjectable);
+    extensionsStore = di.inject(extensionsPreferencesStoreInjectable);
     lpr = di.inject(lensProtocolRouterMainInjectable);
 
     lpr.rendererLoaded = true;
@@ -55,10 +56,6 @@ describe("protocol router tests", () => {
 
   afterEach(() => {
     jest.clearAllMocks();
-
-    // TODO: Remove Singleton from BaseStore to achieve independent unit testing
-    ExtensionsStore.resetInstance();
-
     mockFs.restore();
   });
 
@@ -85,10 +82,13 @@ describe("protocol router tests", () => {
       manifestPath: "/foo/bar",
       manifest: {
         name: "@mirantis/minikube",
-        version: "0.1.1",
+        version: new SemVer("0.1.1"),
+        description: "foobar",
+        engines: {
+          lens: ">=1.0.0",
+        },
       },
       isBundled: false,
-      isEnabled: true,
       isCompatible: true,
       absolutePath: "/foo/bar",
     });
@@ -98,8 +98,8 @@ describe("protocol router tests", () => {
       handler: noop,
     });
 
-    extensionLoader.instances.set(extId, ext);
-    (extensionsStore as any).state.set(extId, { enabled: true, name: "@mirantis/minikube" });
+    extensionInstances.set(extId, ext);
+    extensionsStore.setEnabled(extId, true);
 
     lpr.addInternalHandler("/", noop);
 
@@ -116,8 +116,8 @@ describe("protocol router tests", () => {
     }
 
     await delay(50);
-    expect(broadcastMessage).toHaveBeenCalledWith(ProtocolHandlerInternal, "lens://app", "matched");
-    expect(broadcastMessage).toHaveBeenCalledWith(ProtocolHandlerExtension, "lens://extension/@mirantis/minikube", "matched");
+    expect(emitRouteProtocolInternal).toHaveBeenCalledWith("lens://app", "matched");
+    expect(emitRouteProtocolExternal).toHaveBeenCalledWith("lens://extension/@mirantis/minikube", "matched");
   });
 
   it("should call handler if matches", async () => {
@@ -132,7 +132,7 @@ describe("protocol router tests", () => {
     }
 
     expect(called).toBe(true);
-    expect(broadcastMessage).toBeCalledWith(ProtocolHandlerInternal, "lens://app/page", "matched");
+    expect(emitRouteProtocolInternal).toBeCalledWith("lens://app/page", "matched");
   });
 
   it("should call most exact handler", async () => {
@@ -148,7 +148,7 @@ describe("protocol router tests", () => {
     }
 
     expect(called).toBe("foo");
-    expect(broadcastMessage).toBeCalledWith(ProtocolHandlerInternal, "lens://app/page/foo", "matched");
+    expect(emitRouteProtocolInternal).toBeCalledWith("lens://app/page/foo", "matched");
   });
 
   it("should call most exact handler for an extension", async () => {
@@ -160,10 +160,13 @@ describe("protocol router tests", () => {
       manifestPath: "/foo/bar",
       manifest: {
         name: "@foobar/icecream",
-        version: "0.1.1",
+        version: new SemVer("0.1.1"),
+        description: "foobar",
+        engines: {
+          lens: ">=1.0.0",
+        },
       },
       isBundled: false,
-      isEnabled: true,
       isCompatible: true,
       absolutePath: "/foo/bar",
     });
@@ -177,8 +180,8 @@ describe("protocol router tests", () => {
         handler: params => { called = params.pathname.id; },
       });
 
-    extensionLoader.instances.set(extId, ext);
-    (extensionsStore as any).state.set(extId, { enabled: true, name: "@foobar/icecream" });
+    extensionInstances.set(extId, ext);
+    extensionsStore.setEnabled(extId, true);
 
     try {
       expect(await lpr.route("lens://extension/@foobar/icecream/page/foob")).toBeUndefined();
@@ -188,7 +191,7 @@ describe("protocol router tests", () => {
 
     await delay(50);
     expect(called).toBe("foob");
-    expect(broadcastMessage).toBeCalledWith(ProtocolHandlerExtension, "lens://extension/@foobar/icecream/page/foob", "matched");
+    expect(emitRouteProtocolExternal).toBeCalledWith("lens://extension/@foobar/icecream/page/foob", "matched");
   });
 
   it("should work with non-org extensions", async () => {
@@ -201,10 +204,13 @@ describe("protocol router tests", () => {
         manifestPath: "/foo/bar",
         manifest: {
           name: "@foobar/icecream",
-          version: "0.1.1",
+          version: new SemVer("0.1.1"),
+          description: "foobar",
+          engines: {
+            lens: ">=1.0.0",
+          },
         },
         isBundled: false,
-        isEnabled: true,
         isCompatible: true,
         absolutePath: "/foo/bar",
       });
@@ -215,8 +221,8 @@ describe("protocol router tests", () => {
           handler: params => { called = params.pathname.id; },
         });
 
-      extensionLoader.instances.set(extId, ext);
-      (extensionsStore as any).state.set(extId, { enabled: true, name: "@foobar/icecream" });
+      extensionInstances.set(extId, ext);
+      extensionsStore.setEnabled(extId, true);
     }
 
     {
@@ -226,10 +232,13 @@ describe("protocol router tests", () => {
         manifestPath: "/foo/bar",
         manifest: {
           name: "icecream",
-          version: "0.1.1",
+          version: new SemVer("0.1.1"),
+          description: "foobar",
+          engines: {
+            lens: ">=1.0.0",
+          },
         },
         isBundled: false,
-        isEnabled: true,
         isCompatible: true,
         absolutePath: "/foo/bar",
       });
@@ -240,8 +249,8 @@ describe("protocol router tests", () => {
           handler: () => { called = 1; },
         });
 
-      extensionLoader.instances.set(extId, ext);
-      (extensionsStore as any).state.set(extId, { enabled: true, name: "icecream" });
+      extensionInstances.set(extId, ext);
+      extensionsStore.setEnabled(extId, true);
     }
 
     (extensionsStore as any).state.set("@foobar/icecream", { enabled: true, name: "@foobar/icecream" });
@@ -256,7 +265,7 @@ describe("protocol router tests", () => {
     await delay(50);
 
     expect(called).toBe(1);
-    expect(broadcastMessage).toBeCalledWith(ProtocolHandlerExtension, "lens://extension/icecream/page", "matched");
+    expect(emitRouteProtocolExternal).toBeCalledWith("lens://extension/icecream/page", "matched");
   });
 
   it("should throw if urlSchema is invalid", () => {
@@ -278,7 +287,7 @@ describe("protocol router tests", () => {
     }
 
     expect(called).toBe(3);
-    expect(broadcastMessage).toBeCalledWith(ProtocolHandlerInternal, "lens://app/page/foo/bar/bat", "matched");
+    expect(emitRouteProtocolInternal).toBeCalledWith("lens://app/page/foo/bar/bat", "matched");
   });
 
   it("should call most exact handler with 2 found handlers", async () => {
@@ -295,6 +304,6 @@ describe("protocol router tests", () => {
     }
 
     expect(called).toBe(1);
-    expect(broadcastMessage).toBeCalledWith(ProtocolHandlerInternal, "lens://app/page/foo/bar/bat", "matched");
+    expect(emitRouteProtocolInternal).toBeCalledWith("lens://app/page/foo/bar/bat", "matched");
   });
 });

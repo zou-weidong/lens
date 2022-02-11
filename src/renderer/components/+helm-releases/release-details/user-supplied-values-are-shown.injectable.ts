@@ -5,10 +5,13 @@
 import { getInjectable } from "@ogre-tools/injectable";
 import { observable } from "mobx";
 
-const userSuppliedValuesAreShownInjectable = getInjectable({
-  id: "user-supplied-values-are-shown",
+export interface UserSuppliedValuesAreShown {
+  readonly value: boolean;
+  toggle: () => void;
+}
 
-  instantiate: () => {
+const userSuppliedValuesAreShownInjectable = getInjectable({
+  instantiate: (): UserSuppliedValuesAreShown => {
     const state = observable.box(false);
 
     return {
@@ -21,6 +24,7 @@ const userSuppliedValuesAreShownInjectable = getInjectable({
       },
     };
   },
+  id: "user-supplied-values-are-shown",
 });
 
 export default userSuppliedValuesAreShownInjectable;

@@ -9,13 +9,14 @@ import React from "react";
 import { observer } from "mobx-react";
 import { boundMethod, cssNames, prevDefault, isMiddleClick } from "../../utils";
 import type { DockStore, DockTab as DockTabModel } from "./dock/store";
-import { Tab, TabProps } from "../tabs";
+import type { TabProps } from "../tabs";
+import { Tab } from "../tabs";
 import { Icon } from "../icon";
 import { Menu, MenuItem } from "../menu";
 import { observable, makeObservable } from "mobx";
-import { isMac } from "../../../common/vars";
 import { withInjectables } from "@ogre-tools/injectable-react";
 import dockStoreInjectable from "./dock/store.injectable";
+import isMacInjectable from "../../../common/vars/is-mac.injectable";
 
 export interface DockTabProps extends TabProps<DockTabModel> {
   moreActions?: React.ReactNode;
@@ -23,6 +24,7 @@ export interface DockTabProps extends TabProps<DockTabModel> {
 
 interface Dependencies {
   dockStore: DockStore;
+  isMac: boolean;
 }
 
 @observer
@@ -76,7 +78,7 @@ class NonInjectedDockTab extends React.Component<DockTabProps & Dependencies> {
   }
 
   render() {
-    const { className, moreActions, dockStore, ...tabProps } = this.props;
+    const { className, moreActions, dockStore, isMac, ...tabProps } = this.props;
     const { title, pinned } = tabProps.value;
     const label = (
       <div className="flex gaps align-center" onAuxClick={isMiddleClick(prevDefault(this.close))}>
@@ -107,13 +109,10 @@ class NonInjectedDockTab extends React.Component<DockTabProps & Dependencies> {
   }
 }
 
-export const DockTab = withInjectables<Dependencies, DockTabProps>(
-  NonInjectedDockTab,
-
-  {
-    getProps: (di, props) => ({
-      dockStore: di.inject(dockStoreInjectable),
-      ...props,
-    }),
-  },
-);
+export const DockTab = withInjectables<Dependencies, DockTabProps>(NonInjectedDockTab, {
+  getProps: (di, props) => ({
+    ...props,
+    dockStore: di.inject(dockStoreInjectable),
+    isMac: di.inject(isMacInjectable),
+  }),
+});

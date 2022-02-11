@@ -4,7 +4,7 @@
  */
 
 import type React from "react";
-import type { CatalogEntity } from "../../../common/catalog";
+import type { CatalogEntity } from "../../../common/catalog/entity";
 import type { TableCellProps } from "../table";
 
 /**

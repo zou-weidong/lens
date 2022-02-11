@@ -6,24 +6,29 @@ import { withInjectables } from "@ogre-tools/injectable-react";
 import { observer } from "mobx-react";
 import React from "react";
 import { nodesRoute, nodesURL } from "../../../common/routes";
-import type { IsAllowedResource } from "../../../common/utils/is-allowed-resource.injectable";
-import isAllowedResourceInjectable from "../../../common/utils/is-allowed-resource.injectable";
-import { isActiveRoute } from "../../navigation";
+import type { AllowedResources } from "../../clusters/allowed-resources.injectable";
+import allowedResourcesInjectable from "../../clusters/allowed-resources.injectable";
+import type { IsRouteActive } from "../../navigation/is-route-active.injectable";
+import isRouteActiveInjectable from "../../navigation/is-route-active.injectable";
 import { Icon } from "../icon";
-import { SidebarItem } from "../layout/sidebar-item";
+import { SidebarItem } from "../layout/sidebar/item";
 
 export interface NodeSidebarItemProps {}
 
 interface Dependencies {
-  isAllowedResource: IsAllowedResource;
+  allowedResources: AllowedResources;
+  isRouteActive: IsRouteActive;
 }
 
-const NonInjectedNodeSidebarItem = observer(({ isAllowedResource }: Dependencies & NodeSidebarItemProps) => (
+const NonInjectedNodeSidebarItem = observer(({
+  allowedResources,
+  isRouteActive,
+}: Dependencies & NodeSidebarItemProps) => (
   <SidebarItem
     id="nodes"
     text="Nodes"
-    isActive={isActiveRoute(nodesRoute)}
-    isHidden={!isAllowedResource("nodes")}
+    isActive={isRouteActive(nodesRoute)}
+    isHidden={!allowedResources.has("nodes")}
     url={nodesURL()}
     icon={<Icon svg="nodes"/>}
   />
@@ -31,7 +36,8 @@ const NonInjectedNodeSidebarItem = observer(({ isAllowedResource }: Dependencies
 
 export const NodesSidebarItem = withInjectables<Dependencies, NodeSidebarItemProps>(NonInjectedNodeSidebarItem, {
   getProps: (di, props) => ({
-    isAllowedResource: di.inject(isAllowedResourceInjectable),
     ...props,
+    allowedResources: di.inject(allowedResourcesInjectable),
+    isRouteActive: di.inject(isRouteActiveInjectable),
   }),
 });

@@ -4,13 +4,15 @@
  */
 import { getInjectable } from "@ogre-tools/injectable";
 import { CatalogEntityStore } from "./catalog-entity.store";
-import catalogEntityRegistryInjectable from "../../../api/catalog-entity-registry/catalog-entity-registry.injectable";
+import catalogEntityRegistryInjectable from "../../../catalog/entity/registry.injectable";
+import catalogCategoryRegistryInjectable from "../../../catalog/category/registry.injectable";
 
 const catalogEntityStoreInjectable = getInjectable({
   id: "catalog-entity-store",
 
   instantiate: (di) => new CatalogEntityStore({
-    registry: di.inject(catalogEntityRegistryInjectable),
+    entityRegistry: di.inject(catalogEntityRegistryInjectable),
+    categoryRegistry: di.inject(catalogCategoryRegistryInjectable),
   }),
 });
 

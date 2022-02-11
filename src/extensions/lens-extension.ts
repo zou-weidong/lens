@@ -3,30 +3,21 @@
  * Licensed under MIT License. See LICENSE in root directory for more information.
  */
 
-import type { InstalledExtension } from "./extension-discovery/extension-discovery";
-import { action, observable, makeObservable, computed } from "mobx";
-import logger from "../main/logger";
+import { action, observable, makeObservable } from "mobx";
 import type { ProtocolHandlerRegistration } from "./registries";
-import type { PackageJson } from "type-fest";
-import { Disposer, disposer } from "../common/utils";
-import {
-  LensExtensionDependencies,
-  setLensExtensionDependencies,
-} from "./lens-extension-set-dependencies";
+import { disposer } from "../common/utils";
+import type { LensExtensionDependencies } from "./lens-extension-set-dependencies";
+import { extensionDependencies } from "./lens-extension-set-dependencies";
+import type { SemVer } from "semver";
+import type { InstalledExtension } from "../common/extensions/installed.injectable";
+import type { LensExtensionId, LensExtensionManifest } from "../common/extensions/manifest";
+import type { RegisterExtension } from "../common/extensions/loader/load-instances.injectable";
 
-export type LensExtensionId = string; // path to manifest (package.json)
 export type LensExtensionConstructor = new (...args: ConstructorParameters<typeof LensExtension>) => LensExtension;
-
-export interface LensExtensionManifest extends PackageJson {
-  name: string;
-  version: string;
-  main?: string; // path to %ext/dist/main.js
-  renderer?: string; // path to %ext/dist/renderer.js
-}
 
 export const Disposers = Symbol();
 
-export class LensExtension {
+export class LensExtension<Dependencies extends LensExtensionDependencies = LensExtensionDependencies> {
   readonly id: LensExtensionId;
   readonly manifest: LensExtensionManifest;
   readonly manifestPath: string;
@@ -36,8 +27,18 @@ export class LensExtension {
 
   @observable private _isEnabled = false;
 
-  @computed get isEnabled() {
+  /**
+   * This is a marker for "has been enabled", not "should be enabled"
+   */
+  get hasBeenEnabled() {
     return this._isEnabled;
+  }
+
+  /**
+   * @deprecated use `this.hasBeenEnabled` instead
+   */
+  get isEnabled() {
+    return this.hasBeenEnabled;
   }
 
   [Disposers] = disposer();
@@ -62,11 +63,10 @@ export class LensExtension {
     return this.manifest.description;
   }
 
-  private dependencies: LensExtensionDependencies;
-
-  [setLensExtensionDependencies] = (dependencies: LensExtensionDependencies) => {
-    this.dependencies = dependencies;
-  };
+  /**
+   * @internal
+   */
+  [extensionDependencies]: Dependencies;
 
   /**
    * getExtensionFileFolder returns the path to an already created folder. This
@@ -75,12 +75,12 @@ export class LensExtension {
    * Note: there is no security done on this folder, only obfuscation of the
    * folder name.
    */
-  async getExtensionFileFolder(): Promise<string> {
-    return this.dependencies.fileSystemProvisionerStore.requestDirectory(this.id);
+  getExtensionFileFolder(): Promise<string> {
+    return this[extensionDependencies].requestDirectory(this.id);
   }
 
   @action
-  async enable(register: (ext: LensExtension) => Promise<Disposer[]>) {
+  async enable(register: RegisterExtension) {
     if (this._isEnabled) {
       return;
     }
@@ -88,10 +88,10 @@ export class LensExtension {
     try {
       this._isEnabled = true;
 
-      this[Disposers].push(...await register(this));
-      logger.info(`[EXTENSION]: enabled ${this.name}@${this.version}`);
+      this[Disposers].push(await register(this));
+      this[extensionDependencies].logger.info(`enabled ${this.name}@${this.version}`);
     } catch (error) {
-      logger.error(`[EXTENSION]: failed to activate ${this.name}@${this.version}: ${error}`);
+      this[extensionDependencies].logger.error(`failed to activate ${this.name}@${this.version}: ${error}`);
     }
   }
 
@@ -106,9 +106,9 @@ export class LensExtension {
     try {
       await this.onDeactivate();
       this[Disposers]();
-      logger.info(`[EXTENSION]: disabled ${this.name}@${this.version}`);
+      this[extensionDependencies].logger.info(`disabled ${this.name}@${this.version}`);
     } catch (error) {
-      logger.error(`[EXTENSION]: disabling ${this.name}@${this.version} threw an error: ${error}`);
+      this[extensionDependencies].logger.error(`disabling ${this.name}@${this.version} threw an error: ${error}`);
     }
   }
 
@@ -129,6 +129,6 @@ export function sanitizeExtensionName(name: string) {
   return name.replace("@", "").replace("/", "--");
 }
 
-export function extensionDisplayName(name: string, version: string) {
-  return `${name}@${version}`;
+export function extensionDisplayName(name: string, version: SemVer) {
+  return `${name}@${version.format()}`;
 }

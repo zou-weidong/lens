@@ -10,19 +10,20 @@ import { ConfigMaps } from "../+config-maps";
 import { PodDisruptionBudgets } from "../+config-pod-disruption-budgets";
 import { ResourceQuotas } from "../+config-resource-quotas";
 import { Secrets } from "../+config-secrets";
-import isAllowedResourceInjectable, { IsAllowedResource } from "../../../common/utils/is-allowed-resource.injectable";
 import type { TabLayoutRoute } from "../layout/tab-layout";
 import * as routes from "../../../common/routes";
+import type { AllowedResources } from "../../clusters/allowed-resources.injectable";
+import allowedResourcesInjectable from "../../clusters/allowed-resources.injectable";
 
 interface Dependencies {
-  isAllowedResource: IsAllowedResource;
+  allowedResources: AllowedResources;
 }
 
-function getRouteTabs({ isAllowedResource }: Dependencies) {
+function getRouteTabs({ allowedResources }: Dependencies) {
   return computed(() => {
     const tabs: TabLayoutRoute[] = [];
 
-    if (isAllowedResource("configmaps")) {
+    if (allowedResources.has("configmaps")) {
       tabs.push({
         title: "ConfigMaps",
         component: ConfigMaps,
@@ -31,7 +32,7 @@ function getRouteTabs({ isAllowedResource }: Dependencies) {
       });
     }
 
-    if (isAllowedResource("secrets")) {
+    if (allowedResources.has("secrets")) {
       tabs.push({
         title: "Secrets",
         component: Secrets,
@@ -40,7 +41,7 @@ function getRouteTabs({ isAllowedResource }: Dependencies) {
       });
     }
 
-    if (isAllowedResource("resourcequotas")) {
+    if (allowedResources.has("resourcequotas")) {
       tabs.push({
         title: "Resource Quotas",
         component: ResourceQuotas,
@@ -49,7 +50,7 @@ function getRouteTabs({ isAllowedResource }: Dependencies) {
       });
     }
 
-    if (isAllowedResource("limitranges")) {
+    if (allowedResources.has("limitranges")) {
       tabs.push({
         title: "Limit Ranges",
         component: LimitRanges,
@@ -58,7 +59,7 @@ function getRouteTabs({ isAllowedResource }: Dependencies) {
       });
     }
 
-    if (isAllowedResource("horizontalpodautoscalers")) {
+    if (allowedResources.has("horizontalpodautoscalers")) {
       tabs.push({
         title: "HPA",
         component: HorizontalPodAutoscalers,
@@ -67,7 +68,7 @@ function getRouteTabs({ isAllowedResource }: Dependencies) {
       });
     }
 
-    if (isAllowedResource("poddisruptionbudgets")) {
+    if (allowedResources.has("poddisruptionbudgets")) {
       tabs.push({
         title: "Pod Disruption Budgets",
         component: PodDisruptionBudgets,
@@ -81,11 +82,10 @@ function getRouteTabs({ isAllowedResource }: Dependencies) {
 }
 
 const configRoutesInjectable = getInjectable({
-  id: "config-routes",
-
   instantiate: (di) => getRouteTabs({
-    isAllowedResource: di.inject(isAllowedResourceInjectable),
+    allowedResources: di.inject(allowedResourcesInjectable),
   }),
+  id: "config-routes",
 });
 
 export default configRoutesInjectable;

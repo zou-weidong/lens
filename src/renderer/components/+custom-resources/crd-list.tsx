@@ -11,17 +11,14 @@ import { observer } from "mobx-react";
 import { Link } from "react-router-dom";
 import { stopPropagation } from "../../utils";
 import { KubeObjectListLayout } from "../kube-object-list-layout";
-import { crdStore } from "./crd.store";
-import type { CustomResourceDefinition } from "../../../common/k8s-api/endpoints/crd.api";
-import { Select, SelectOption } from "../select";
-import { createPageParam } from "../../navigation";
+import type { CustomResourceDefinitionStore } from "./definitions/store";
+import type { SelectOption } from "../select";
+import { Select } from "../select";
 import { Icon } from "../icon";
-import type { TableSortCallbacks } from "../table";
-
-export const crdGroupsUrlParam = createPageParam<string[]>({
-  name: "groups",
-  defaultValue: [],
-});
+import type { PageParam } from "../../navigation/page-param";
+import { withInjectables } from "@ogre-tools/injectable-react";
+import crdGroupsUrlParamInjectable from "./groups-url-param.injectable";
+import customResourceDefinitionStoreInjectable from "./definitions/store.injectable";
 
 enum columnId {
   kind = "kind",
@@ -31,56 +28,63 @@ enum columnId {
   age = "age",
 }
 
+interface Dependencies {
+  crdGroupsUrlParam: PageParam<string[]>;
+  customResourceDefinitionStore: CustomResourceDefinitionStore;
+}
+
 @observer
-export class CustomResourceDefinitions extends React.Component {
-  constructor(props: {}) {
+class NonInjectedCustomResourceDefinitions extends React.Component<Dependencies> {
+  constructor(props: Dependencies) {
     super(props);
     makeObservable(this);
   }
 
   get selectedGroups(): string[] {
-    return crdGroupsUrlParam.get();
+    return this.props.crdGroupsUrlParam.get();
   }
 
   @computed get items() {
     if (this.selectedGroups.length) {
-      return crdStore.items.filter(item => this.selectedGroups.includes(item.getGroup()));
+      return this.props.customResourceDefinitionStore.items.filter(item => this.selectedGroups.includes(item.getGroup()));
     }
 
-    return crdStore.items; // show all by default
+    return this.props.customResourceDefinitionStore.items; // show all by default
   }
 
   toggleSelection(group: string) {
-    const groups = new Set(crdGroupsUrlParam.get());
+    const groups = new Set(this.props.crdGroupsUrlParam.get());
 
     if (groups.has(group)) {
       groups.delete(group);
     } else {
       groups.add(group);
     }
-    crdGroupsUrlParam.set([...groups]);
+    this.props.crdGroupsUrlParam.set([...groups]);
   }
 
   render() {
     const { items, selectedGroups } = this;
-    const sortingCallbacks: TableSortCallbacks<CustomResourceDefinition> = {
-      [columnId.kind]: crd => crd.getResourceKind(),
-      [columnId.group]: crd => crd.getGroup(),
-      [columnId.version]: crd => crd.getVersion(),
-      [columnId.scope]: crd => crd.getScope(),
-    };
 
     return (
       <KubeObjectListLayout
         isConfigurable
         tableId="crd"
         className="CrdList"
-        store={crdStore}
-        // Don't subscribe the `crdStore` because <Sidebar> already has and is always mounted
-        subscribeStores={false}
+        store={this.props.customResourceDefinitionStore}
         items={items}
-        sortingCallbacks={sortingCallbacks}
-        searchFilters={Object.values(sortingCallbacks)}
+        sortingCallbacks={{
+          [columnId.kind]: crd => crd.getResourceKind(),
+          [columnId.group]: crd => crd.getGroup(),
+          [columnId.version]: crd => crd.getVersion(),
+          [columnId.scope]: crd => crd.getScope(),
+        }}
+        searchFilters={[
+          crd => crd.getResourceKind(),
+          crd => crd.getGroup(),
+          crd => crd.getVersion(),
+          crd => crd.getScope(),
+        ]}
         renderHeaderTitle="Custom Resources"
         customizeHeader={({ filters, ...headerPlaceholders }) => {
           let placeholder = <>All groups</>;
@@ -96,7 +100,7 @@ export class CustomResourceDefinitions extends React.Component {
                 <Select
                   className="group-select"
                   placeholder={placeholder}
-                  options={Object.keys(crdStore.groups)}
+                  options={Object.keys(this.props.customResourceDefinitionStore.groups)}
                   onChange={({ value: group }: SelectOption) => this.toggleSelection(group)}
                   closeMenuOnSelect={false}
                   controlShouldRenderValue={false}
@@ -137,3 +141,11 @@ export class CustomResourceDefinitions extends React.Component {
     );
   }
 }
+
+export const CustomResourceDefinitions = withInjectables<Dependencies>(NonInjectedCustomResourceDefinitions, {
+  getProps: (di, props) => ({
+    ...props,
+    crdGroupsUrlParam: di.inject(crdGroupsUrlParamInjectable),
+    customResourceDefinitionStore: di.inject(customResourceDefinitionStoreInjectable),
+  }),
+});

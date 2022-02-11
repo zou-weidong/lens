@@ -9,24 +9,23 @@ import type { IComputedValue } from "mobx";
 import { observer } from "mobx-react";
 import React, { useState } from "react";
 import commandOverlayInjectable from "./command-overlay.injectable";
-import type { CatalogEntity } from "../../../common/catalog";
-import { navigate } from "../../navigation";
-import { broadcastMessage } from "../../../common/ipc";
-import { IpcRendererNavigationEvents } from "../../navigation/events";
 import type { RegisteredCommand } from "./registered-commands/commands";
 import { iter } from "../../utils";
 import { orderBy } from "lodash";
 import { withInjectables } from "@ogre-tools/injectable-react";
 import registeredCommandsInjectable from "./registered-commands/registered-commands.injectable";
-import { catalogEntityRegistry } from "../../api/catalog-entity-registry";
+import type { CatalogEntity, NavigateAction } from "../../../common/catalog/entity";
+import activeEntityInjectable from "../../catalog/entity/active-entity.injectable";
+import navigateActionInjectable from "../../window/navigate-action.injectable";
 
 interface Dependencies {
   commands: IComputedValue<Map<string, RegisteredCommand>>;
-  activeEntity?: CatalogEntity;
+  activeEntity: IComputedValue<CatalogEntity | undefined>;
   closeCommandOverlay: () => void;
+  navigate: NavigateAction;
 }
 
-const NonInjectedCommandDialog = observer(({ commands, activeEntity, closeCommandOverlay }: Dependencies) => {
+const NonInjectedCommandDialog = observer(({ commands, activeEntity, closeCommandOverlay, navigate }: Dependencies) => {
   const [searchValue, setSearchValue] = useState("");
 
   const executeAction = (commandId: string) => {
@@ -39,16 +38,8 @@ const NonInjectedCommandDialog = observer(({ commands, activeEntity, closeComman
     try {
       closeCommandOverlay();
       command.action({
-        entity: activeEntity,
-        navigate: (url, opts = {}) => {
-          const { forceRootFrame = false } = opts;
-
-          if (forceRootFrame) {
-            broadcastMessage(IpcRendererNavigationEvents.NAVIGATE_IN_APP, url);
-          } else {
-            navigate(url);
-          }
-        },
+        entity: activeEntity.get(),
+        navigate,
       });
     } catch (error) {
       console.error("[COMMAND-DIALOG] failed to execute command", command.id, error);
@@ -56,7 +47,7 @@ const NonInjectedCommandDialog = observer(({ commands, activeEntity, closeComman
   };
 
   const context = {
-    entity: activeEntity,
+    entity: activeEntity.get(),
   };
   const activeCommands = iter.filter(commands.get().values(), command => {
     try {
@@ -104,8 +95,8 @@ const NonInjectedCommandDialog = observer(({ commands, activeEntity, closeComman
 export const CommandDialog = withInjectables<Dependencies>(NonInjectedCommandDialog, {
   getProps: di => ({
     commands: di.inject(registeredCommandsInjectable),
-    // TODO: replace with injection
-    activeEntity: catalogEntityRegistry.activeEntity,
+    activeEntity: di.inject(activeEntityInjectable),
     closeCommandOverlay: di.inject(commandOverlayInjectable).close,
+    navigate: di.inject(navigateActionInjectable),
   }),
 });

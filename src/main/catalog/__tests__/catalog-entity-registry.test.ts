@@ -3,10 +3,13 @@
  * Licensed under MIT License. See LICENSE in root directory for more information.
  */
 
-import { observable, reaction } from "mobx";
-import { WebLink, WebLinkSpec, WebLinkStatus } from "../../../common/catalog-entities";
-import { catalogCategoryRegistry, CatalogEntity, CatalogEntityMetadata } from "../../../common/catalog";
-import { CatalogEntityRegistry } from "../catalog-entity-registry";
+import { computed, observable, reaction } from "mobx";
+import type { WebLinkSpec, WebLinkStatus } from "../../../common/catalog/entity/declarations";
+import { WebLink } from "../../../common/catalog/entity/declarations";
+import { CatalogEntity, type CatalogEntityMetadata } from "../../../common/catalog/entity";
+import { getDiForUnitTesting } from "../../getDiForUnitTesting";
+import type { CatalogEntityRegistry } from "../entity/registry";
+import catalogEntityRegistryInjectable from "../entity/registry.injectable";
 
 class InvalidEntity extends CatalogEntity<CatalogEntityMetadata, WebLinkStatus, WebLinkSpec> {
   public readonly apiVersion = "entity.k8slens.dev/v1alpha1";
@@ -61,26 +64,28 @@ describe("CatalogEntityRegistry", () => {
   });
 
   beforeEach(() => {
-    registry = new CatalogEntityRegistry(catalogCategoryRegistry);
+    const di = getDiForUnitTesting({ doGeneralOverrides: true });
+
+    registry = di.inject(catalogEntityRegistryInjectable);
   });
 
   describe("addSource", () => {
-    it ("allows to add an observable source", () => {
-      const source = observable.array([]);
+    it ("allows to add a computed source", () => {
+      const source = observable.array<CatalogEntity>([]);
 
-      registry.addObservableSource("test", source);
-      expect(registry.items.length).toEqual(0);
+      registry.addSource(computed(() => [...source]));
+      expect(registry.entities.get().length).toEqual(0);
 
       source.push(entity);
 
-      expect(registry.items.length).toEqual(1);
+      expect(registry.entities.get().length).toEqual(1);
     });
 
     it ("added source change triggers reaction", (done) => {
-      const source = observable.array([]);
+      const source = observable.array<CatalogEntity>([]);
 
-      registry.addObservableSource("test", source);
-      reaction(() => registry.items, () => {
+      registry.addSource(computed(() => [...source]));
+      reaction(() => registry.entities.get(), () => {
         done();
       });
 
@@ -90,31 +95,31 @@ describe("CatalogEntityRegistry", () => {
 
   describe("removeSource", () => {
     it ("removes source", () => {
-      const source = observable.array([]);
+      const source = observable.array<CatalogEntity>([]);
+      const removeSource = registry.addSource(computed(() => [...source]));
 
-      registry.addObservableSource("test", source);
       source.push(entity);
-      registry.removeSource("test");
-
-      expect(registry.items.length).toEqual(0);
+      expect(registry.entities.get().length).toEqual(1);
+      removeSource();
+      expect(registry.entities.get().length).toEqual(0);
     });
   });
 
-  describe("items", () => {
-    it("returns added items", () => {
-      expect(registry.items.length).toBe(0);
+  describe("entities.get()", () => {
+    it("returns added entities.get()", () => {
+      expect(registry.entities.get().length).toBe(0);
 
-      const source = observable.array([entity]);
+      const source = observable.array<CatalogEntity>([entity]);
 
-      registry.addObservableSource("test", source);
-      expect(registry.items.length).toBe(1);
+      registry.addSource(computed(() => [...source]));
+      expect(registry.entities.get().length).toBe(1);
     });
 
-    it("does not return items without matching category", () => {
-      const source = observable.array([invalidEntity]);
+    it("does not return entities.get() without matching category", () => {
+      const source = observable.array<CatalogEntity>([invalidEntity]);
 
-      registry.addObservableSource("test", source);
-      expect(registry.items.length).toBe(0);
+      registry.addSource(computed(() => [...source]));
+      expect(registry.entities.get().length).toBe(0);
     });
   });
 });

@@ -4,5 +4,5 @@
  */
 
 export { Singleton, openExternal, openBrowser } from "../../common/utils";
-export { prevDefault, stopPropagation } from "../../renderer/utils/prevDefault";
-export { cssNames } from "../../renderer/utils/cssNames";
+export { prevDefault, stopPropagation } from "../../renderer/utils";
+export { cssNames } from "../../renderer/utils";

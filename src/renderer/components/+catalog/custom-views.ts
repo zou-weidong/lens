@@ -4,7 +4,7 @@
  */
 
 import type React from "react";
-import type { CatalogCategory } from "../../api/catalog-entity";
+import type { CatalogCategory } from "../../../common/catalog/category";
 
 /**
  * The props for CustomCategoryViewComponents.View

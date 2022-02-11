@@ -6,31 +6,28 @@
 import { mapValues } from "lodash";
 import { observer } from "mobx-react";
 import React, { useContext } from "react";
-import { isMetricsEmpty, normalizeMetrics } from "../../../common/k8s-api/endpoints/metrics.api";
-import { BarChart, cpuOptions, memoryOptions } from "../chart";
-import { IResourceMetricsValue, ResourceMetricsContext } from "../resource-metrics";
+import { isMetricsEmpty, normalizeMetrics } from "../../../common/k8s-api/endpoints";
+import type { ChartDataSets } from "../chart";
+import { BarChart } from "../chart";
+import type { MetricsTabs } from "../chart/options";
+import { metricTabOptions } from "../chart/options";
+import { ResourceMetricsContext } from "../resource-metrics";
 import { NoMetrics } from "../resource-metrics/no-metrics";
 
-import type { WorkloadKubeObject } from "../../../common/k8s-api/workload-kube-object";
-import type { IPodMetrics } from "../../../common/k8s-api/endpoints";
-
-export const podMetricTabs = [
+export const podMetricTabs: MetricsTabs[] = [
   "CPU",
   "Memory",
   "Network",
   "Filesystem",
 ];
 
-type IContext = IResourceMetricsValue<WorkloadKubeObject, { metrics: IPodMetrics }>;
-
 export const PodCharts = observer(() => {
-  const { params: { metrics }, tabId, object } = useContext<IContext>(ResourceMetricsContext);
+  const { metrics, tab, object } = useContext(ResourceMetricsContext);
   const id = object.getId();
 
   if (!metrics) return null;
   if (isMetricsEmpty(metrics)) return <NoMetrics/>;
 
-  const options = tabId == 0 ? cpuOptions : memoryOptions;
   const {
     cpuUsage,
     memoryUsage,
@@ -41,9 +38,8 @@ export const PodCharts = observer(() => {
     networkTransmit,
   } = mapValues(metrics, metric => normalizeMetrics(metric).data.result[0].values);
 
-  const datasets = [
-    // CPU
-    [
+  const datasets: Partial<Record<MetricsTabs, ChartDataSets[]>> = {
+    CPU: [
       {
         id: `${id}-cpuUsage`,
         label: `Usage`,
@@ -52,8 +48,7 @@ export const PodCharts = observer(() => {
         data: cpuUsage.map(([x, y]) => ({ x, y })),
       },
     ],
-    // Memory
-    [
+    Memory: [
       {
         id: `${id}-memoryUsage`,
         label: `Usage`,
@@ -62,8 +57,7 @@ export const PodCharts = observer(() => {
         data: memoryUsage.map(([x, y]) => ({ x, y })),
       },
     ],
-    // Network
-    [
+    Network: [
       {
         id: `${id}-networkReceive`,
         label: `Receive`,
@@ -79,8 +73,7 @@ export const PodCharts = observer(() => {
         data: networkTransmit.map(([x, y]) => ({ x, y })),
       },
     ],
-    // Filesystem
-    [
+    Filesystem: [
       {
         id: `${id}-fsUsage`,
         label: `Usage`,
@@ -103,13 +96,13 @@ export const PodCharts = observer(() => {
         data: fsReads.map(([x, y]) => ({ x, y })),
       },
     ],
-  ];
+  };
 
   return (
     <BarChart
-      name={`${object.getName()}-metric-${tabId}`}
-      options={options}
-      data={{ datasets: datasets[tabId] }}
+      name={`${object.getName()}-metric-${tab}`}
+      options={metricTabOptions[tab]}
+      data={{ datasets: datasets[tab] }}
     />
   );
 });

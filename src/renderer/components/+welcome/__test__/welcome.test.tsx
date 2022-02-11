@@ -14,7 +14,8 @@ import { renderFor } from "../../test-utils/renderFor";
 import type { DiContainer } from "@ogre-tools/injectable";
 import rendererExtensionsInjectable from "../../../../extensions/renderer-extensions.injectable";
 import { LensRendererExtension } from "../../../../extensions/lens-renderer-extension";
-import type { WelcomeBannerRegistration } from "../welcome-banner-items/welcome-banner-registration";
+import type { WelcomeBannerRegistration } from "../banner-items.injectable";
+import { SemVer } from "semver";
 
 jest.mock("electron", () => ({
   ipcRenderer: {
@@ -101,8 +102,14 @@ class TestExtension extends LensRendererExtension {
       absolutePath: "irrelevant",
       isBundled: false,
       isCompatible: false,
-      isEnabled: false,
-      manifest: { name: id, version: "some-version" },
+      manifest: {
+        name: id,
+        version: new SemVer("1.0.0"),
+        description: "foo",
+        engines: {
+          lens: ">=1.0.0",
+        },
+      },
       manifestPath: "irrelevant",
     });
 

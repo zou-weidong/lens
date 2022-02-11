@@ -3,12 +3,10 @@
  * Licensed under MIT License. See LICENSE in root directory for more information.
  */
 import { getInjectable } from "@ogre-tools/injectable";
-import { rollbackRelease } from "../../../../common/k8s-api/endpoints/helm-releases.api";
+import { rollbackRelease } from "../../../../common/k8s-api/endpoints";
 import releasesInjectable from "../releases.injectable";
 
 const rollbackReleaseInjectable = getInjectable({
-  id: "rollback-release",
-
   instantiate: (di) => {
     const releases = di.inject(releasesInjectable);
 
@@ -18,6 +16,7 @@ const rollbackReleaseInjectable = getInjectable({
       releases.invalidate();
     };
   },
+  id: "rollback-release",
 });
 
 export default rollbackReleaseInjectable;

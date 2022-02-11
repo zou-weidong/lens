@@ -8,7 +8,7 @@ import { Console } from "console";
 import { stdout, stderr } from "process";
 import { getDiForUnitTesting } from "../getDiForUnitTesting";
 import directoryForUserDataInjectable
-  from "../../common/app-paths/directory-for-user-data/directory-for-user-data.injectable";
+  from "../../common/paths/user-data.injectable";
 import searchStoreInjectable from "./search-store.injectable";
 
 jest.mock("electron", () => ({

@@ -10,18 +10,22 @@ import { computed, observable, makeObservable } from "mobx";
 import { observer } from "mobx-react";
 import { orderBy } from "lodash";
 import { TabLayout } from "../layout/tab-layout";
-import { EventStore, eventStore } from "./event.store";
-import { KubeObjectListLayout, KubeObjectListLayoutProps } from "../kube-object-list-layout";
-import type { KubeEvent } from "../../../common/k8s-api/endpoints/events.api";
+import type { KubeObjectListLayoutProps } from "../kube-object-list-layout";
+import { KubeObjectListLayout } from "../kube-object-list-layout";
+import type { KubeEvent } from "../../../common/k8s-api/endpoints";
 import type { TableSortCallbacks, TableSortParams } from "../table";
 import type { HeaderCustomizer } from "../item-object-list";
 import { Tooltip } from "../tooltip";
 import { Link } from "react-router-dom";
-import { cssNames, IClassName, stopPropagation } from "../../utils";
+import type { IClassName } from "../../utils";
+import { cssNames, prevDefault } from "../../utils";
 import { Icon } from "../icon";
 import { eventsURL } from "../../../common/routes";
-import { getDetailsUrl } from "../kube-detail-params";
-import { apiManager } from "../../../common/k8s-api/api-manager";
+import { withInjectables } from "@ogre-tools/injectable-react";
+import type { ShowDetails } from "../kube-object/details/show.injectable";
+import showDetailsInjectable from "../kube-object/details/show.injectable";
+import type { KubeEventStore } from "./store";
+import kubeEventStoreInjectable from "./store.injectable";
 
 enum columnId {
   message = "message",
@@ -44,8 +48,13 @@ const defaultProps: Partial<EventsProps> = {
   compactLimit: 10,
 };
 
+interface Dependencies {
+  showDetails: ShowDetails;
+  kubeEventStore: KubeEventStore;
+}
+
 @observer
-export class Events extends React.Component<EventsProps> {
+class NonInjectedEvents extends React.Component<EventsProps & Dependencies> {
   static defaultProps = defaultProps as object;
   now = Date.now();
 
@@ -63,17 +72,13 @@ export class Events extends React.Component<EventsProps> {
     [columnId.lastSeen]: event => this.now - new Date(event.lastTimestamp).getTime(),
   };
 
-  constructor(props: EventsProps) {
+  constructor(props: EventsProps & Dependencies) {
     super(props);
     makeObservable(this);
   }
 
-  get store(): EventStore {
-    return eventStore;
-  }
-
   @computed get items(): KubeEvent[] {
-    const items = this.store.contextItems;
+    const items = this.props.kubeEventStore.contextItems;
     const { sortBy, orderBy: order } = this.sorting;
 
     // we must sort items before passing to "KubeObjectListLayout -> Table"
@@ -92,8 +97,8 @@ export class Events extends React.Component<EventsProps> {
   }
 
   customizeHeader: HeaderCustomizer = ({ info, title, ...headerPlaceholders }) => {
-    const { compact } = this.props;
-    const { store, items, visibleItems } = this;
+    const { compact, kubeEventStore } = this.props;
+    const { items, visibleItems } = this;
     const allEventsAreShown = visibleItems.length === items.length;
 
     // handle "compact"-mode header
@@ -115,7 +120,7 @@ export class Events extends React.Component<EventsProps> {
           small
           material="help_outline"
           className="help-icon"
-          tooltip={`Limited to ${store.limit}`}
+          tooltip={`Limited to ${kubeEventStore.limit}`}
         />
       </>,
       title,
@@ -124,15 +129,14 @@ export class Events extends React.Component<EventsProps> {
   };
 
   render() {
-    const { store } = this;
-    const { compact, compactLimit, className, ...layoutProps } = this.props;
+    const { compact, compactLimit, className, showDetails, kubeEventStore, ...layoutProps } = this.props;
 
     const events = (
       <KubeObjectListLayout
         {...layoutProps}
         isConfigurable
         tableId="events"
-        store={store}
+        store={kubeEventStore}
         className={cssNames("Events", className, { compact })}
         renderHeaderTitle="Events"
         customizeHeader={this.customizeHeader}
@@ -180,9 +184,9 @@ export class Events extends React.Component<EventsProps> {
               ),
             },
             event.getNs(),
-            <Link key="link" to={getDetailsUrl(apiManager.lookupApiLink(involvedObject, event))} onClick={stopPropagation}>
+            <a key="link" onClick={prevDefault(() => showDetails(involvedObject, event))}>
               {involvedObject.kind}: {involvedObject.name}
-            </Link>,
+            </a>,
             event.getSource(),
             event.count,
             event.getAge(),
@@ -203,3 +207,11 @@ export class Events extends React.Component<EventsProps> {
     );
   }
 }
+
+export const Events = withInjectables<Dependencies, EventsProps>(NonInjectedEvents, {
+  getProps: (di, props) => ({
+    ...props,
+    showDetails: di.inject(showDetailsInjectable),
+    kubeEventStore: di.inject(kubeEventStoreInjectable),
+  }),
+});

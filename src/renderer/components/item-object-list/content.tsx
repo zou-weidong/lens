@@ -8,19 +8,25 @@ import "./item-list-layout.scss";
 import React, { ReactNode } from "react";
 import { computed, makeObservable } from "mobx";
 import { Observer, observer } from "mobx-react";
-import { ConfirmDialog, ConfirmDialogParams } from "../confirm-dialog";
+import type { ConfirmDialogParams } from "../confirm-dialog/view";
 import { Table, TableCell, TableCellProps, TableHead, TableProps, TableRow, TableRowProps, TableSortCallbacks } from "../table";
 import { boundMethod, cssNames, IClassName, isReactNode, prevDefault, stopPropagation } from "../../utils";
 import { AddRemoveButtons, AddRemoveButtonsProps } from "../add-remove-buttons";
 import { NoItems } from "../no-items";
 import { Spinner } from "../spinner";
 import type { ItemObject, ItemStore } from "../../../common/item.store";
-import { Filter, pageFilters } from "./page-filters.store";
-import { ThemeStore } from "../../theme.store";
+import type { Filter, PageFiltersStore } from "./page-filters/store";
 import { MenuActions } from "../menu/menu-actions";
 import { MenuItem } from "../menu";
 import { Checkbox } from "../checkbox";
-import { UserStore } from "../../../common/user-store";
+import type { ActiveTheme } from "../../themes/active.injectable";
+import { withInjectables } from "@ogre-tools/injectable-react";
+import activeThemeInjectable from "../../themes/active.injectable";
+import type { ColumnVisibility } from "../../../common/user-preferences/column-visibility.injectable";
+import tableColumnVisibilityInjectable from "../../../common/user-preferences/column-visibility.injectable";
+import type { OpenConfirmDialog } from "../confirm-dialog/open.injectable";
+import openConfirmDialogInjectable from "../confirm-dialog/open.injectable";
+import pageFiltersStoreInjectable from "./page-filters/store.injectable";
 
 export interface ItemListLayoutContentProps<I extends ItemObject> {
   getFilters: () => Filter[];
@@ -57,9 +63,16 @@ export interface ItemListLayoutContentProps<I extends ItemObject> {
   failedToLoadMessage?: React.ReactNode;
 }
 
+interface Dependencies {
+  activeTheme: ActiveTheme;
+  columnVisibility: ColumnVisibility;
+  openConfirmDialog: OpenConfirmDialog;
+  pageFiltersStore: PageFiltersStore;
+}
+
 @observer
-export class ItemListLayoutContent<I extends ItemObject> extends React.Component<ItemListLayoutContentProps<I>> {
-  constructor(props: ItemListLayoutContentProps<I>) {
+class NonInjectedItemListLayoutContent<I extends ItemObject> extends React.Component<ItemListLayoutContentProps<I> & Dependencies> {
+  constructor(props: ItemListLayoutContentProps<I> & Dependencies) {
     super(props);
     makeObservable(this);
   }
@@ -146,7 +159,7 @@ export class ItemListLayoutContent<I extends ItemObject> extends React.Component
 
   @boundMethod
   removeItemsDialog(selectedItems: I[]) {
-    const { customizeRemoveDialog, store } = this.props;
+    const { customizeRemoveDialog, store, openConfirmDialog } = this.props;
     const visibleMaxNamesCount = 5;
     const selectedNames = selectedItems.map(ns => ns.getName()).slice(0, visibleMaxNamesCount).join(", ");
     const dialogCustomProps = customizeRemoveDialog ? customizeRemoveDialog(selectedItems) : {};
@@ -164,7 +177,7 @@ export class ItemListLayoutContent<I extends ItemObject> extends React.Component
       ? () => store.removeItems(selectedItems)
       : store.removeSelectedItems;
 
-    ConfirmDialog.open({
+    openConfirmDialog({
       ok: onConfirm,
       labelOk: "Remove",
       message,
@@ -173,20 +186,27 @@ export class ItemListLayoutContent<I extends ItemObject> extends React.Component
   }
 
   renderNoItems() {
+    const {
+      pageFiltersStore,
+      failedToLoadMessage,
+      getIsReady,
+      getFilters,
+    } = this.props;
+
     if (this.failedToLoad) {
-      return <NoItems>{this.props.failedToLoadMessage}</NoItems>;
+      return <NoItems>{failedToLoadMessage}</NoItems>;
     }
 
-    if (!this.props.getIsReady()) {
+    if (!getIsReady()) {
       return <Spinner center />;
     }
 
-    if (this.props.getFilters().length > 0) {
+    if (getFilters().length > 0) {
       return (
         <NoItems>
           No items found.
           <p>
-            <a onClick={() => pageFilters.reset()} className="contrast">
+            <a onClick={() => pageFiltersStore.reset()} className="contrast">
               Reset filters?
             </a>
           </p>
@@ -242,10 +262,10 @@ export class ItemListLayoutContent<I extends ItemObject> extends React.Component
   render() {
     const {
       store, hasDetailsView, addRemoveButtons = {}, virtual, sortingCallbacks,
-      detailsItem, className, tableProps = {}, tableId, getItems,
+      detailsItem, className, tableProps = {}, tableId, getItems, activeTheme,
     } = this.props;
     const selectedItemId = detailsItem && detailsItem.getId();
-    const classNames = cssNames(className, "box", "grow", ThemeStore.getInstance().activeTheme.type);
+    const classNames = cssNames(className, "box", "grow", activeTheme.value.type);
     const items = getItems();
     const selectedItems = store.pickOnlySelected(items);
 
@@ -286,23 +306,23 @@ export class ItemListLayoutContent<I extends ItemObject> extends React.Component
   }
 
   showColumn({ id: columnId, showWithColumn }: TableCellProps): boolean {
-    const { tableId, isConfigurable } = this.props;
+    const { isConfigurable, columnVisibility } = this.props;
 
-    return !isConfigurable || !UserStore.getInstance().isTableColumnHidden(tableId, columnId, showWithColumn);
+    return !isConfigurable || !columnVisibility.isHidden(columnId, showWithColumn);
   }
 
   renderColumnVisibilityMenu() {
-    const { renderTableHeader, tableId } = this.props;
+    const { renderTableHeader, columnVisibility } = this.props;
 
     return (
       <MenuActions className="ItemListLayoutVisibilityMenu" toolbar={false} autoCloseOnSelect={false}>
-        {renderTableHeader.map((cellProps, index) => (
-          !cellProps.showWithColumn && (
+        {renderTableHeader.map(({ showWithColumn, title, className, id }, index) => (
+          !showWithColumn && (
             <MenuItem key={index} className="input">
               <Checkbox
-                label={cellProps.title ?? `<${cellProps.className}>`}
-                value={this.showColumn(cellProps)}
-                onChange={() => UserStore.getInstance().toggleTableColumnVisibility(tableId, cellProps.id)}
+                label={title ?? `<${className}>`}
+                value={this.showColumn({ id, showWithColumn })}
+                onChange={() => columnVisibility.toggleIsHidden(id)}
               />
             </MenuItem>
           )
@@ -310,4 +330,20 @@ export class ItemListLayoutContent<I extends ItemObject> extends React.Component
       </MenuActions>
     );
   }
+}
+
+const InjectedItemListLayoutContent = withInjectables<Dependencies, ItemListLayoutContentProps<ItemObject>>(NonInjectedItemListLayoutContent, {
+  getProps: (di, props) => ({
+    ...props,
+    activeTheme: di.inject(activeThemeInjectable),
+    columnVisibility: di.inject(tableColumnVisibilityInjectable, {
+      tableId: props.tableId,
+    }),
+    openConfirmDialog: di.inject(openConfirmDialogInjectable),
+    pageFiltersStore: di.inject(pageFiltersStoreInjectable),
+  }),
+});
+
+export function ItemListLayoutContent<I extends ItemObject>(props: ItemListLayoutContentProps<I>) {
+  return <InjectedItemListLayoutContent {...props} />;
 }

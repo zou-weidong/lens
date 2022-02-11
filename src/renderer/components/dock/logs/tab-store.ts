@@ -3,8 +3,7 @@
  * Licensed under MIT License. See LICENSE in root directory for more information.
  */
 
-import { DockTabStorageState, DockTabStore } from "../dock-tab-store/dock-tab.store";
-import type { StorageHelper } from "../../../utils";
+import { DockTabStore } from "../dock-tab.store";
 import type { TabId } from "../dock/store";
 import { logTabDataValidator } from "./log-tab-data.validator";
 
@@ -55,18 +54,7 @@ export interface LogTabData {
    */
   showPrevious: boolean;
 }
-
-interface Dependencies {
-  createStorage: <T>(storageKey: string, options: DockTabStorageState<T>) => StorageHelper<DockTabStorageState<T>>;
-}
-
 export class LogTabStore extends DockTabStore<LogTabData> {
-  constructor(protected dependencies: Dependencies) {
-    super(dependencies, {
-      storageKey: "pod_logs",
-    });
-  }
-
   /**
    * Returns true if the data for `tabId` is valid
    */

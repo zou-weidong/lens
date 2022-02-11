@@ -3,31 +3,37 @@
  * Licensed under MIT License. See LICENSE in root directory for more information.
  */
 
-import { StatefulSet, StatefulSetApi } from "../endpoints/stateful-set.api";
-import type { KubeJsonApi } from "../kube-json-api";
-
-class StatefulSetApiTest extends StatefulSetApi {
-  public setRequest(request: any) {
-    this.request = request;
-  }
-}
+import { StatefulSetApi } from "../endpoints/stateful-set.api";
+import type { JsonApiHandler } from "../json-api";
+import type { KubeJsonApiData } from "../kube-json-api";
 
 describe("StatefulSetApi", () => {
+  let request: jest.Mocked<JsonApiHandler<KubeJsonApiData>>;
+  let api: StatefulSetApi;
+
+  beforeEach(() => {
+    request = {
+      del: jest.fn(),
+      get: jest.fn(),
+      getResponse: jest.fn(),
+      patch: jest.fn(),
+      post: jest.fn(),
+      put: jest.fn(),
+      config: {
+        apiBase: "foo/bar/bat",
+        serverAddress: "localhost",
+      },
+    };
+    api = new StatefulSetApi({
+      request,
+    });
+  });
+
   describe("scale", () => {
-    const requestMock = {
-      patch: () => ({}),
-    } as unknown as KubeJsonApi;
-
-    const sub = new StatefulSetApiTest({ objectConstructor: StatefulSet });
-
-    sub.setRequest(requestMock);
-
     it("requests Kubernetes API with PATCH verb and correct amount of replicas", () => {
-      const patchSpy = jest.spyOn(requestMock, "patch");
+      api.scale({ namespace: "default", name: "statefulset-1" }, 5);
 
-      sub.scale({ namespace: "default", name: "statefulset-1" }, 5);
-
-      expect(patchSpy).toHaveBeenCalledWith("/apis/apps/v1/namespaces/default/statefulsets/statefulset-1/scale", {
+      expect(request.patch).toHaveBeenCalledWith("/apis/apps/v1/namespaces/default/statefulsets/statefulset-1/scale", {
         data: {
           spec: {
             replicas: 5,

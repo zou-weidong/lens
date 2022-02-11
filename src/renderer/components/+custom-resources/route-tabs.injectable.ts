@@ -3,11 +3,12 @@
  * Licensed under MIT License. See LICENSE in root directory for more information.
  */
 import { getInjectable } from "@ogre-tools/injectable";
-import { computed, IComputedValue } from "mobx";
+import type { IComputedValue } from "mobx";
+import { computed } from "mobx";
 import type { CustomResourceDefinition } from "../../../common/k8s-api/endpoints";
 import { crdURL, crdDefinitionsRoute } from "../../../common/routes";
 import type { TabLayoutRoute } from "../layout/tab-layout";
-import groupedCustomResourceDefinitionsInjectable from "./grouped-custom-resources.injectable";
+import groupedCustomResourceDefinitionsInjectable from "./definitions/grouped.injectable";
 
 export interface CustomResourceTabLayoutRoute extends Omit<TabLayoutRoute, "component"> {
   id: string;

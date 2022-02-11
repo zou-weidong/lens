@@ -11,18 +11,18 @@ import { Ingresses } from "../+network-ingresses";
 import { NetworkPolicies } from "../+network-policies";
 import { PortForwards } from "../+network-port-forwards";
 import * as routes from "../../../common/routes";
-import type { IsAllowedResource } from "../../../common/utils/is-allowed-resource.injectable";
-import isAllowedResourceInjectable from "../../../common/utils/is-allowed-resource.injectable";
+import type { AllowedResources } from "../../clusters/allowed-resources.injectable";
+import allowedResourcesInjectable from "../../clusters/allowed-resources.injectable";
 
 interface Dependencies {
-  isAllowedResource: IsAllowedResource;
+  allowedResources: AllowedResources;
 }
 
-function getRouteTabs({ isAllowedResource }: Dependencies) {
+function getRouteTabs({ allowedResources }: Dependencies) {
   return computed(() => {
     const tabs: TabLayoutRoute[] = [];
 
-    if (isAllowedResource("services")) {
+    if (allowedResources.has("services")) {
       tabs.push({
         title: "Services",
         component: Services,
@@ -31,7 +31,7 @@ function getRouteTabs({ isAllowedResource }: Dependencies) {
       });
     }
 
-    if (isAllowedResource("endpoints")) {
+    if (allowedResources.has("endpoints")) {
       tabs.push({
         title: "Endpoints",
         component: Endpoints,
@@ -40,7 +40,7 @@ function getRouteTabs({ isAllowedResource }: Dependencies) {
       });
     }
 
-    if (isAllowedResource("ingresses")) {
+    if (allowedResources.has("ingresses")) {
       tabs.push({
         title: "Ingresses",
         component: Ingresses,
@@ -49,7 +49,7 @@ function getRouteTabs({ isAllowedResource }: Dependencies) {
       });
     }
 
-    if (isAllowedResource("networkpolicies")) {
+    if (allowedResources.has("networkpolicies")) {
       tabs.push({
         title: "Network Policies",
         component: NetworkPolicies,
@@ -73,7 +73,7 @@ const networkRouteTabsInjectable = getInjectable({
   id: "network-route-tabs",
 
   instantiate: (di) => getRouteTabs({
-    isAllowedResource: di.inject(isAllowedResourceInjectable),
+    allowedResources: di.inject(allowedResourcesInjectable),
   }),
 });
 

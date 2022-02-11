@@ -4,7 +4,7 @@
  */
 
 import { KubeConfig } from "@kubernetes/client-node";
-import { validateKubeConfig, loadConfigFromString } from "../kube-helpers";
+import { validateKubeConfig, loadConfigFromString } from "../k8s/helpers";
 
 const kubeconfig = `
 apiVersion: v1

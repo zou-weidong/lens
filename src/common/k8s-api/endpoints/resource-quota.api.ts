@@ -4,8 +4,8 @@
  */
 
 import { KubeObject } from "../kube-object";
+import type { DerivedKubeApiOptions } from "../kube-api";
 import { KubeApi } from "../kube-api";
-import { isClusterPageContext } from "../../utils/cluster-id-url-parsing";
 
 export interface IResourceQuotaValues {
   [quota: string]: string;
@@ -65,14 +65,11 @@ export class ResourceQuota extends KubeObject {
   }
 }
 
-let resourceQuotaApi: KubeApi<ResourceQuota>;
-
-if (isClusterPageContext()) {
-  resourceQuotaApi = new KubeApi<ResourceQuota>({
-    objectConstructor: ResourceQuota,
-  });
+export class ResourceQuotaApi extends KubeApi<ResourceQuota> {
+  constructor(opts: DerivedKubeApiOptions = {}) {
+    super({
+      objectConstructor: ResourceQuota,
+      ...opts,
+    });
+  }
 }
-
-export {
-  resourceQuotaApi,
-};

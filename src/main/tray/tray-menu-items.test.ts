@@ -4,12 +4,13 @@
  */
 import type { DiContainer } from "@ogre-tools/injectable";
 import { LensMainExtension } from "../../extensions/lens-main-extension";
-import trayItemsInjectable from "./tray-menu-items.injectable";
+import extensionTrayMenuItemsInjectable from "./extension-menu-items.injectable";
 import type { IComputedValue } from "mobx";
 import { computed, ObservableMap, runInAction } from "mobx";
 import { getDiForUnitTesting } from "../getDiForUnitTesting";
 import mainExtensionsInjectable from "../../extensions/main-extensions.injectable";
 import type { TrayMenuRegistration } from "./tray-menu-registration";
+import { SemVer } from "semver";
 
 describe("tray-menu-items", () => {
   let di: DiContainer;
@@ -28,7 +29,7 @@ describe("tray-menu-items", () => {
       () => computed(() => [...extensionsStub.values()]),
     );
 
-    trayMenuItems = di.inject(trayItemsInjectable);
+    trayMenuItems = di.inject(extensionTrayMenuItemsInjectable);
   });
 
   it("does not have any items yet", () => {
@@ -112,8 +113,14 @@ class SomeTestExtension extends LensMainExtension {
       absolutePath: "irrelevant",
       isBundled: false,
       isCompatible: false,
-      isEnabled: false,
-      manifest: { name: id, version: "some-version" },
+      manifest: {
+        name: id,
+        version: new SemVer("1.0.0"),
+        description: "foobar",
+        engines: {
+          lens: ">=1.0.0",
+        },
+      },
       manifestPath: "irrelevant",
     });
 

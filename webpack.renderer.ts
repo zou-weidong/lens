@@ -3,24 +3,40 @@
  * Licensed under MIT License. See LICENSE in root directory for more information.
  */
 
-import * as vars from "./src/common/vars";
 import path from "path";
 import type webpack from "webpack";
 import HtmlWebpackPlugin from "html-webpack-plugin";
 import MiniCssExtractPlugin from "mini-css-extract-plugin";
 import ForkTsCheckerPlugin from "fork-ts-checker-webpack-plugin";
 import MonacoWebpackPlugin from "monaco-editor-webpack-plugin";
-import getTSLoader from "./src/common/getTSLoader";
+import getTSLoader from "./getTSLoader";
 import CircularDependencyPlugin from "circular-dependency-plugin";
 import ReactRefreshWebpackPlugin from "@pmmmwh/react-refresh-webpack-plugin";
+import packageJson from "./package.json";
+import type { WebpackPluginInstance } from "webpack";
 
 export function webpackLensRenderer({ showVars = true } = {}): webpack.Configuration {
-  if (showVars) {
-    console.info("WEBPACK:renderer", { ...vars });
-  }
-
+  const isDevelopment = process.env.NODE_ENV !== "production";
+  const buildDir = path.join(process.cwd(), "static", "build");
+  const rendererDir = path.join(process.cwd(), "src", "renderer");
+  const htmlTemplate = path.join(rendererDir, "template.html");
   const assetsFolderName = "assets";
-  const { appName, buildDir, htmlTemplate, isDevelopment, publicPath, rendererDir } = vars;
+  const publicPath = "/build";
+  const appName = isDevelopment
+    ? `${packageJson.productName}Dev`
+    : packageJson.productName;
+
+  if (showVars) {
+    console.info("WEBPACK:renderer", {
+      isDevelopment,
+      buildDir,
+      rendererDir,
+      htmlTemplate,
+      assetsFolderName,
+      publicPath,
+      appName,
+    });
+  }
 
   return {
     target: "electron-renderer",
@@ -103,7 +119,7 @@ export function webpackLensRenderer({ showVars = true } = {}): webpack.Configura
         cwd: __dirname,
         exclude: /node_modules/,
         failOnError: true,
-      }),
+      }) as unknown as WebpackPluginInstance,
 
       new MiniCssExtractPlugin({
         filename: "[name].css",
@@ -143,15 +159,21 @@ export function fontsLoaderWebpackRules(): webpack.RuleSetRule[] {
   ];
 }
 
+export interface CssModulesWebpackRuleOptions {
+  styleLoader?: string;
+}
+
 /**
  * Import CSS or SASS styles with modules support (*.module.scss)
- * @param {string} styleLoader
  */
-export function cssModulesWebpackRule(
-  {
-    styleLoader = vars.isDevelopment ? "style-loader" : MiniCssExtractPlugin.loader,
-  } = {}): webpack.RuleSetRule {
-  const { isDevelopment, sassCommonVars } = vars;
+export function cssModulesWebpackRule(opts: CssModulesWebpackRuleOptions = {}): webpack.RuleSetRule {
+  const sassCommonVars = path.join(process.cwd(), "src", "renderer", "components", "vars.scss");
+  const isDevelopment = process.env.NODE_ENV !== "production";
+  const styleLoader = opts.styleLoader ?? (
+    isDevelopment
+      ? "style-loader"
+      : MiniCssExtractPlugin.loader
+  );
 
   return {
     test: /\.s?css$/,

@@ -10,13 +10,12 @@ import "./select.scss";
 import React, { ReactNode } from "react";
 import { computed, makeObservable } from "mobx";
 import { observer } from "mobx-react";
-import ReactSelect, { components } from "react-select";
-import ReactSelectCreatable from "react-select/creatable";
-import type { ActionMeta, OptionTypeBase, Props as ReactSelectProps, Styles } from "react-select";
-import type { CreatableProps } from "react-select/creatable";
-
-import { ThemeStore } from "../../theme.store";
+import ReactSelect, { ActionMeta, components, OptionTypeBase, Props as ReactSelectProps, Styles } from "react-select";
+import ReactSelectCreatable, { CreatableProps } from "react-select/creatable";
 import { boundMethod, cssNames } from "../../utils";
+import type { ActiveTheme } from "../../themes/active.injectable";
+import { withInjectables } from "@ogre-tools/injectable-react";
+import activeThemeInjectable from "../../themes/active.injectable";
 
 const { Menu } = components;
 
@@ -39,21 +38,25 @@ export interface SelectProps<T = any> extends ReactSelectProps<T, boolean>, Crea
   onChange?(option: T, meta?: ActionMeta<any>): void;
 }
 
+interface Dependencies {
+  activeTheme: ActiveTheme;
+}
+
 @observer
-export class Select extends React.Component<SelectProps> {
+class NonInjectedSelect extends React.Component<SelectProps & Dependencies> {
   static defaultProps: SelectProps = {
     autoConvertOptions: true,
     menuPortalTarget: document.body,
     menuPlacement: "auto",
   };
 
-  constructor(props: SelectProps) {
+  constructor(props: SelectProps & Dependencies) {
     super(props);
     makeObservable(this);
   }
 
   @computed get themeClass() {
-    const themeName = this.props.themeName || ThemeStore.getInstance().activeTheme.type;
+    const themeName = this.props.themeName || this.props.activeTheme.value.type;
 
     return `theme-${themeName}`;
   }
@@ -97,9 +100,8 @@ export class Select extends React.Component<SelectProps> {
 
   @boundMethod
   onChange(value: SelectOption, meta: ActionMeta<any>) {
-    if (this.props.onChange) {
-      this.props.onChange(value, meta);
-    }
+    this.props.onChange?.(value, meta);
+    this.props.onValueChange?.(value.value);
   }
 
   @boundMethod
@@ -144,3 +146,10 @@ export class Select extends React.Component<SelectProps> {
       : <ReactSelect {...selectProps}/>;
   }
 }
+
+export const Select = withInjectables<Dependencies, SelectProps>(NonInjectedSelect, {
+  getProps: (di, props) => ({
+    ...props,
+    activeTheme: di.inject(activeThemeInjectable),
+  }),
+});

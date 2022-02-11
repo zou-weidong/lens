@@ -6,48 +6,42 @@
 import Webpack from "webpack";
 import WebpackDevServer from "webpack-dev-server";
 import { webpackLensRenderer } from "./webpack.renderer";
-import { buildDir } from "./src/common/vars";
-import logger from "./src/common/logger";
+import path from "path";
 
 /**
- * Creates `webpack-dev-server`
  * API docs:
- * @url https://webpack.js.org/configuration/dev-server/
- * @url https://github.com/chimurai/http-proxy-middleware
+ * https://webpack.js.org/configuration/dev-server/
+ * https://github.com/chimurai/http-proxy-middleware
  */
-function createDevServer(): WebpackDevServer {
-  const config = webpackLensRenderer({ showVars: false });
-  const compiler = Webpack(config);
 
-  const server = new WebpackDevServer({
-    setupExitSignals: true,
-    headers: {
-      "Access-Control-Allow-Origin": "*",
-    },
-    allowedHosts: "all",
-    host: "localhost",
-    static: buildDir, // aka `devServer.contentBase` in webpack@4
-    hot: "only", // use HMR only without errors
-    liveReload: false,
-    devMiddleware: {
-      writeToDisk: false,
-      index: "OpenLensDev.html",
-      publicPath: "/build",
-    },
-    proxy: {
-      "^/$": "/build/",
-    },
-    client: {
-      overlay: false, // don't show warnings and errors on top of rendered app view
-      logging: "error",
-    },
-  }, compiler);
+const config = webpackLensRenderer({ showVars: false });
+const compiler = Webpack(config);
+const buildDir = path.join(process.cwd(), "static", "build");
 
-  logger.info(`[WEBPACK-DEV-SERVER]: created with options`, server.options);
+const server = new WebpackDevServer({
+  setupExitSignals: true,
+  headers: {
+    "Access-Control-Allow-Origin": "*",
+  },
+  allowedHosts: "all",
+  host: "localhost",
+  static: buildDir, // aka `devServer.contentBase` in webpack@4
+  hot: "only", // use HMR only without errors
+  liveReload: false,
+  devMiddleware: {
+    writeToDisk: false,
+    index: "OpenLensDev.html",
+    publicPath: "/build/",
+  },
+  proxy: {
+    "^/$": "/build/",
+  },
+  client: {
+    overlay: false, // don't show warnings and errors on top of rendered app view
+    logging: "error",
+  },
+}, compiler);
 
-  return server;
-}
-
-const server = createDevServer();
+console.info(`[WEBPACK-DEV-SERVER]: created with options`, server.options);
 
 server.start();

@@ -11,16 +11,14 @@ import lensCreateResourceTemplatesInjectable from "./lens-templates.injectable";
 export type RawTemplates = [group: string, items: [file: string, contents: string][]];
 
 const createResourceTemplatesInjectable = getInjectable({
-  id: "create-resource-templates",
-
-  instantiate: async (di) => {
-    const lensResourceTemplates = await di.inject(lensCreateResourceTemplatesInjectable);
+  instantiate: (di) => {
+    const lensResourceTemplates = di.inject(lensCreateResourceTemplatesInjectable);
     const userResourceTemplates = di.inject(userCreateResourceTemplatesInjectable);
 
     return computed(() => {
       const res = [
         ...userResourceTemplates.get(),
-        lensResourceTemplates,
+        lensResourceTemplates.get(),
       ];
 
       return res.map(([group, items]) => ({
@@ -29,6 +27,7 @@ const createResourceTemplatesInjectable = getInjectable({
       }) as GroupSelectOption<SelectOption<string>>);
     });
   },
+  id: "create-resource-templates",
 });
 
 export default createResourceTemplatesInjectable;

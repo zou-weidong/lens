@@ -7,14 +7,18 @@
 // Docs: https://github.com/npm/node-tar
 import tar, { ExtractOptions, FileStat } from "tar";
 import path from "path";
+import type { JsonValue } from "type-fest";
 
-export interface ReadFileFromTarOpts {
+export interface ReadFileFromTarOpts<ParseJson extends boolean> {
   tarPath: string;
   filePath: string;
-  parseJson?: boolean;
+  parseJson?: ParseJson;
 }
 
-export function readFileFromTar<R = Buffer>({ tarPath, filePath, parseJson }: ReadFileFromTarOpts): Promise<R> {
+export function readFileFromTar(opts: ReadFileFromTarOpts<true>): Promise<JsonValue>;
+export function readFileFromTar(opts: ReadFileFromTarOpts<false>): Promise<Buffer>;
+
+export function readFileFromTar({ tarPath, filePath, parseJson }: ReadFileFromTarOpts<boolean>): Promise<Buffer | JsonValue> {
   return new Promise((resolve, reject) => {
     const fileChunks: Buffer[] = [];
 

@@ -3,19 +3,20 @@
  * Licensed under MIT License. See LICENSE in root directory for more information.
  */
 import { getInjectable } from "@ogre-tools/injectable";
-import { KubeAuthProxy, KubeAuthProxyDependencies } from "./kube-auth-proxy";
-import type { Cluster } from "../../common/cluster/cluster";
+import type { KubeAuthProxyDependencies } from "./kube-auth-proxy";
+import { KubeAuthProxy } from "./kube-auth-proxy";
+import type { Cluster } from "../../common/clusters/cluster";
 import path from "path";
-import { getBinaryName } from "../../common/vars";
-import directoryForBundledBinariesInjectable from "../../common/app-paths/directory-for-bundled-binaries/directory-for-bundled-binaries.injectable";
+import directoryForBundledBinariesInjectable from "../../common/vars/directory-for-bundled-binaries.injectable";
+import { getBinaryName } from "../utils";
 
 const createKubeAuthProxyInjectable = getInjectable({
   id: "create-kube-auth-proxy",
 
   instantiate: (di) => {
-    const binaryName = getBinaryName("lens-k8s-proxy");
+    const kubeAuthProxyBinaryName = getBinaryName("lens-k8s-proxy");
     const dependencies: KubeAuthProxyDependencies = {
-      proxyBinPath: path.join(di.inject(directoryForBundledBinariesInjectable), binaryName),
+      proxyBinPath: path.join(di.inject(directoryForBundledBinariesInjectable), kubeAuthProxyBinaryName),
     };
 
     return (cluster: Cluster, environmentVariables: NodeJS.ProcessEnv) => (

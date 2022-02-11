@@ -5,15 +5,24 @@
 
 import "./menu.scss";
 
-import React, { Fragment, ReactElement, ReactNode } from "react";
+import type { ReactElement, ReactNode, MouseEvent } from "react";
+import React, { useImperativeHandle, useRef, forwardRef, Fragment } from "react";
 import { createPortal } from "react-dom";
-import { autoBind, cssNames, noop } from "../../utils";
+import { autoBind, cssNames, getOrInsertWith, iter, noop } from "../../utils";
 import { Animate } from "../animate";
-import { Icon, IconProps } from "../icon";
+import type { IconProps } from "../icon";
+import { Icon } from "../icon";
 import isEqual from "lodash/isEqual";
+
+type GlobalMouseEvent = globalThis.MouseEvent;
 
 export const MenuContext = React.createContext<MenuContextValue>(null);
 export type MenuContextValue = Menu;
+
+enum Direction {
+  FORWARD = 1,
+  REVERSE = 1,
+}
 
 export interface MenuPosition {
   left?: boolean;
@@ -67,7 +76,7 @@ export class Menu extends React.Component<MenuProps, State> {
   }
   public opener: HTMLElement;
   public elem: HTMLUListElement;
-  protected items: { [index: number]: MenuItem } = {};
+  protected readonly items = new Map<number, React.MutableRefObject<MenuItemRef>>();
   public state: State = {};
 
   get isOpen() {
@@ -83,7 +92,9 @@ export class Menu extends React.Component<MenuProps, State> {
       const parent = this.elem.parentElement;
       const position = window.getComputedStyle(parent).position;
 
-      if (position === "static") parent.style.position = "relative";
+      if (position === "static") {
+        parent.style.position = "relative";
+      }
     } else if (this.isOpen) {
       this.refreshPosition();
     }
@@ -119,29 +130,24 @@ export class Menu extends React.Component<MenuProps, State> {
   }
 
   protected get focusableItems() {
-    return Object.values(this.items).filter(item => item.isFocusable);
+    return [...iter.filter(this.items.values(), item => item.current.isFocusable)];
   }
 
   protected get focusedItem() {
-    return this.focusableItems.find(item => item.elem === document.activeElement);
+    return iter.find(this.items.values(), item => item.current.isFocused);
   }
 
-  protected focusNextItem(reverse = false) {
+  protected focusNextItem(direction: Direction) {
     const items = this.focusableItems;
-    const activeIndex = items.findIndex(item => item === this.focusedItem);
 
     if (!items.length) {
       return;
     }
 
-    if (activeIndex > -1) {
-      let nextItem = reverse ? items[activeIndex - 1] : items[activeIndex + 1];
+    const activeIndex = Math.max(items.findIndex(item => item === this.focusedItem), 0);
+    const nextItem = items[activeIndex + direction] ?? items[activeIndex];
 
-      if (!nextItem) nextItem = items[activeIndex];
-      nextItem.elem.focus();
-    } else {
-      items[0].elem.focus();
-    }
+    nextItem.current?.focus();
   }
 
   refreshPosition = () => {
@@ -198,7 +204,7 @@ export class Menu extends React.Component<MenuProps, State> {
     this.refreshPosition();
 
     if (this.props.autoFocus) {
-      this.focusNextItem();
+      this.focusNextItem(Direction.FORWARD);
     }
   }
 
@@ -233,18 +239,18 @@ export class Menu extends React.Component<MenuProps, State> {
         const focusedItem = this.focusedItem;
 
         if (focusedItem) {
-          focusedItem.elem.click();
+          focusedItem.current.click();
           evt.preventDefault();
         }
         break;
       }
 
       case "ArrowUp":
-        this.focusNextItem(true);
+        this.focusNextItem(Direction.REVERSE);
         break;
 
       case "ArrowDown":
-        this.focusNextItem();
+        this.focusNextItem(Direction.FORWARD);
         break;
     }
   }
@@ -268,7 +274,7 @@ export class Menu extends React.Component<MenuProps, State> {
     }
   }
 
-  onClickOutside(evt: MouseEvent) {
+  onClickOutside(evt: GlobalMouseEvent) {
     if (!this.props.closeOnClickOutside) return;
     if (!this.isOpen || evt.target === document.body) return;
     const target = evt.target as HTMLElement;
@@ -292,10 +298,6 @@ export class Menu extends React.Component<MenuProps, State> {
     this.elem = elem;
   }
 
-  protected bindItemRef(item: MenuItem, index: number) {
-    this.items[index] = item;
-  }
-
   render() {
     const { position, id } = this.props;
     let { className, usePortal } = this.props;
@@ -311,9 +313,9 @@ export class Menu extends React.Component<MenuProps, State> {
     }
     const menuItems = React.Children.toArray(children).map((item: ReactElement<MenuItemProps>, index) => {
       if (item.type === MenuItem) {
-        return React.cloneElement(item, {
-          ref: (item: MenuItem) => this.bindItemRef(item, index),
-        });
+        const ref = getOrInsertWith(this.items, index, () => useRef());
+
+        return React.cloneElement(item, { ref });
       }
 
       return item;
@@ -343,93 +345,82 @@ export class Menu extends React.Component<MenuProps, State> {
   }
 }
 
-export function SubMenu(props: Partial<MenuProps>) {
-  const { className, ...menuProps } = props;
-
-  return (
-    <Menu
-      className={cssNames("SubMenu", className)}
-      isOpen open={noop} close={noop}
-      position={{}} // reset position, must be handled in css
-      closeOnClickOutside={false}
-      closeOnClickItem={false}
-      {...menuProps}
-    />
-  );
-}
+export const SubMenu = ({ className, ...menuProps }: Partial<MenuProps>) => (
+  <Menu
+    className={cssNames("SubMenu", className)}
+    isOpen
+    open={noop}
+    close={noop}
+    position={{}} // reset position, must be handled in css
+    closeOnClickOutside={false}
+    closeOnClickItem={false}
+    {...menuProps} />
+);
 
 export interface MenuItemProps extends React.HTMLProps<any> {
-  icon?: string | Partial<IconProps>;
+  icon?: string | IconProps;
   disabled?: boolean;
   active?: boolean;
   spacer?: boolean;
   href?: string;
 }
 
-const defaultPropsMenuItem: Partial<MenuItemProps> = {
-  onClick: noop,
-};
-
-export class MenuItem extends React.Component<MenuItemProps> {
-  static defaultProps = defaultPropsMenuItem as object;
-  static contextType = MenuContext;
-
-  declare context: MenuContextValue;
-  public elem: HTMLElement;
-
-  constructor(props: MenuItemProps) {
-    super(props);
-    autoBind(this);
-  }
-
-  get isFocusable() {
-    const { disabled, spacer } = this.props;
-
-    return !(disabled || spacer);
-  }
-
-  get isLink() {
-    return !!this.props.href;
-  }
-
-  onClick(evt: React.MouseEvent) {
-    const menu = this.context;
-    const { spacer, onClick } = this.props;
-
-    if (spacer) return;
-    onClick(evt);
-
-    if (menu.props.closeOnClickItem && !evt.defaultPrevented) {
-      menu.close();
-    }
-  }
-
-  protected bindRef(elem: HTMLElement) {
-    this.elem = elem;
-  }
-
-  render() {
-    const { className, disabled, active, spacer, icon, children, ...props } = this.props;
-    let iconProps: Partial<IconProps>;
-
-    if (icon) {
-      iconProps = {};
-      if (typeof icon === "string") iconProps.material = icon;
-      else Object.assign(iconProps, icon);
-    }
-    const elemProps: React.HTMLProps<any> = {
-      tabIndex: this.isFocusable ? 0 : -1,
-      ...props,
-      className: cssNames("MenuItem", className, { disabled, active, spacer }),
-      onClick: this.onClick,
-      children: icon ? <><Icon {...iconProps}/> {children}</> : children,
-      ref: this.bindRef,
-    };
-
-    if (this.isLink) {
-      return <a {...elemProps}/>;
-    }
-
-    return <li {...elemProps}/>;
-  }
+export interface MenuItemRef {
+  focus(): void;
+  click(): void;
+  readonly isFocusable: boolean;
+  readonly isFocused: boolean;
 }
+
+export const MenuItem = forwardRef<MenuItemRef, MenuItemProps>(({ className, disabled, active, spacer, icon, children, onClick = noop, ...props }, ref) => {
+  const elem = useRef<HTMLAnchorElement & HTMLLIElement>();
+  const isFocusable = !(disabled || spacer);
+
+  useImperativeHandle(ref, () => ({
+    focus: () => elem.current?.focus(),
+    click: () => elem.current?.click(),
+    get isFocusable() {
+      return isFocusable;
+    },
+    get isFocused() {
+      return elem.current === document.activeElement;
+    },
+  }));
+
+  return (
+    <MenuContext.Consumer>
+      {menu => {
+        const childProps = {
+          tabIndex: isFocusable ? 0 : -1,
+          ...props,
+          className: cssNames("MenuItem", className, { disabled, active, spacer }),
+          onClick: (event: MouseEvent<HTMLElement>) => {
+            if (spacer) {
+              return;
+            }
+
+            onClick(event);
+
+            if (menu.props.closeOnClickItem && !event.defaultPrevented) {
+              menu.close();
+            }
+          },
+        };
+        const child = <>
+          {icon && (
+            <Icon {...(
+              typeof icon === "string"
+                ? { material: icon }
+                : icon
+            )} />
+          )}
+          {children}
+        </>;
+
+        return props.href
+          ? <a {...childProps} ref={elem}>{child}</a>
+          : <li {...childProps} ref={elem}>{child}</li>;
+      } }
+    </MenuContext.Consumer>
+  );
+});

@@ -3,14 +3,23 @@
  * Licensed under MIT License. See LICENSE in root directory for more information.
  */
 
-import { IMetrics, IMetricsReqParams, metricsApi } from "./metrics.api";
+import type { IMetrics, IMetricsReqParams } from "./metrics.api";
+import { metricsApi } from "./metrics.api";
+import type { KubeObjectMetadata } from "../kube-object";
 import { KubeObject } from "../kube-object";
+import type { DerivedKubeApiOptions, IgnoredKubeApiOptions } from "../kube-api";
 import { KubeApi } from "../kube-api";
-import { isClusterPageContext } from "../../utils/cluster-id-url-parsing";
 
 export class ClusterApi extends KubeApi<Cluster> {
   static kind = "Cluster";
   static namespaced = true;
+
+  constructor(opts: DerivedKubeApiOptions & IgnoredKubeApiOptions = {}) {
+    super({
+      ...opts,
+      objectConstructor: Cluster,
+    });
+  }
 }
 
 export function getMetricsByNodeNames(nodeNames: string[], params?: IMetricsReqParams): Promise<IClusterMetrics> {
@@ -37,87 +46,71 @@ export function getMetricsByNodeNames(nodeNames: string[], params?: IMetricsReqP
   }, params);
 }
 
-export enum ClusterStatus {
+export enum ClusterStatusKind {
   ACTIVE = "Active",
   CREATING = "Creating",
   REMOVING = "Removing",
   ERROR = "Error",
 }
 
-export interface IClusterMetrics<T = IMetrics> {
-  [metric: string]: T;
-  memoryUsage: T;
-  memoryRequests: T;
-  memoryLimits: T;
-  memoryCapacity: T;
-  cpuUsage: T;
-  cpuRequests: T;
-  cpuLimits: T;
-  cpuCapacity: T;
-  podUsage: T;
-  podCapacity: T;
-  fsSize: T;
-  fsUsage: T;
+export interface IClusterMetrics {
+  [metric: string]: IMetrics;
+  memoryUsage: IMetrics;
+  memoryRequests: IMetrics;
+  memoryLimits: IMetrics;
+  memoryCapacity: IMetrics;
+  cpuUsage: IMetrics;
+  cpuRequests: IMetrics;
+  cpuLimits: IMetrics;
+  cpuCapacity: IMetrics;
+  podUsage: IMetrics;
+  podCapacity: IMetrics;
+  fsSize: IMetrics;
+  fsUsage: IMetrics;
 }
 
-export interface Cluster {
-  spec: {
-    clusterNetwork?: {
-      serviceDomain?: string;
-      pods?: {
-        cidrBlocks?: string[];
-      };
-      services?: {
-        cidrBlocks?: string[];
-      };
+export interface ClusterSpec {
+  clusterNetwork?: {
+    serviceDomain?: string;
+    pods?: {
+      cidrBlocks?: string[];
     };
-    providerSpec: {
-      value: {
-        profile: string;
-      };
+    services?: {
+      cidrBlocks?: string[];
     };
   };
-  status?: {
-    apiEndpoints: {
-      host: string;
-      port: string;
-    }[];
-    providerStatus: {
-      adminUser?: string;
-      adminPassword?: string;
-      kubeconfig?: string;
-      processState?: string;
-      lensAddress?: string;
+  providerSpec: {
+    value: {
+      profile: string;
     };
-    errorMessage?: string;
-    errorReason?: string;
   };
 }
 
-export class Cluster extends KubeObject {
+export interface ClusterStatus {
+  apiEndpoints: {
+    host: string;
+    port: string;
+  }[];
+  providerStatus: {
+    adminUser?: string;
+    adminPassword?: string;
+    kubeconfig?: string;
+    processState?: string;
+    lensAddress?: string;
+  };
+  errorMessage?: string;
+  errorReason?: string;
+}
+
+export class Cluster extends KubeObject<KubeObjectMetadata, ClusterStatus, ClusterSpec> {
   static kind = "Cluster";
   static apiBase = "/apis/cluster.k8s.io/v1alpha1/clusters";
 
   getStatus() {
-    if (this.metadata.deletionTimestamp) return ClusterStatus.REMOVING;
-    if (!this.status || !this.status) return ClusterStatus.CREATING;
-    if (this.status.errorMessage) return ClusterStatus.ERROR;
+    if (this.metadata.deletionTimestamp) return ClusterStatusKind.REMOVING;
+    if (!this.status || !this.status) return ClusterStatusKind.CREATING;
+    if (this.status.errorMessage) return ClusterStatusKind.ERROR;
 
-    return ClusterStatus.ACTIVE;
+    return ClusterStatusKind.ACTIVE;
   }
 }
-
-/**
- * Only available within kubernetes cluster pages
- */
-let clusterApi: ClusterApi;
-
-if (isClusterPageContext()) { // initialize automatically only when within a cluster iframe/context
-  clusterApi = new ClusterApi({
-    objectConstructor: Cluster,
-  });
-}
-
-export {
-  clusterApi,
-};

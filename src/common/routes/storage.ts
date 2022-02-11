@@ -4,7 +4,7 @@
  */
 
 import type { RouteProps } from "react-router";
-import type { URLParams } from "../utils/buildUrl";
+import type { URLParams } from "../utils";
 import { storageClassesRoute } from "./storage-classes";
 import { volumeClaimsRoute, volumeClaimsURL } from "./volume-claims";
 import { volumesRoute } from "./volumes";

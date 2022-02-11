@@ -7,16 +7,23 @@ import path from "path";
 import type webpack from "webpack";
 import ForkTsCheckerPlugin from "fork-ts-checker-webpack-plugin";
 import nodeExternals from "webpack-node-externals";
-import * as vars from "./src/common/vars";
-import getTSLoader from "./src/common/getTSLoader";
+import getTSLoader from "./getTSLoader";
 import CircularDependencyPlugin from "circular-dependency-plugin";
 import { iconsAndImagesWebpackRules } from "./webpack.renderer";
+import type { WebpackPluginInstance } from "webpack";
 
 const configs: { (): webpack.Configuration }[] = [];
 
 configs.push((): webpack.Configuration => {
-  console.info("WEBPACK:main", { ...vars });
-  const { mainDir, buildDir, isDevelopment } = vars;
+  const isDevelopment = process.env.NODE_ENV !== "production";
+  const buildDir = path.join(process.cwd(), "static", "build");
+  const mainDir = path.join(process.cwd(), "src", "main");
+
+  console.info("WEBPACK:main", {
+    isDevelopment,
+    buildDir,
+    mainDir,
+  });
 
   return {
     name: "lens-app-main",
@@ -54,7 +61,7 @@ configs.push((): webpack.Configuration => {
         cwd: __dirname,
         exclude: /node_modules/,
         failOnError: true,
-      }),
+      }) as unknown as WebpackPluginInstance,
     ].filter(Boolean),
   };
 });

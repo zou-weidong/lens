@@ -6,7 +6,7 @@
 import "./pod-details-container.scss";
 
 import React from "react";
-import type { IPodContainer, IPodContainerStatus, Pod } from "../../../common/k8s-api/endpoints";
+import type { PodContainer, IPodContainerStatus, Pod, IMetrics } from "../../../common/k8s-api/endpoints";
 import { DrawerItem } from "../drawer";
 import { cssNames } from "../../utils";
 import { StatusBrick } from "../status-brick";
@@ -14,24 +14,25 @@ import { Badge } from "../badge";
 import { ContainerEnvironment } from "./pod-container-env";
 import { PodContainerPort } from "./pod-container-port";
 import { ResourceMetrics } from "../resource-metrics";
-import type { IMetrics } from "../../../common/k8s-api/endpoints/metrics.api";
 import { ContainerCharts } from "./container-charts";
 import { LocaleDate } from "../locale-date";
-import { getActiveClusterEntity } from "../../api/catalog-entity-registry";
-import { ClusterMetricsResourceType } from "../../../common/cluster-types";
-import type { PortForwardStore } from "../../port-forward";
+import { ClusterMetricsResourceType } from "../../../common/clusters/cluster-types";
+import type { PortForwardStore } from "../../port-forward/store";
 import { disposeOnUnmount, observer } from "mobx-react";
 import { withInjectables } from "@ogre-tools/injectable-react";
-import portForwardStoreInjectable from "../../port-forward/port-forward-store/port-forward-store.injectable";
+import portForwardStoreInjectable from "../../port-forward/store.injectable";
+import type { ShouldDisplayMetric } from "../../clusters/should-display-metric.injectable";
+import shouldDisplayMetricInjectable from "../../clusters/should-display-metric.injectable";
 
 export interface PodDetailsContainerProps {
   pod: Pod;
-  container: IPodContainer;
+  container: PodContainer;
   metrics?: { [key: string]: IMetrics };
 }
 
 interface Dependencies {
   portForwardStore: PortForwardStore;
+  shouldDisplayMetric: ShouldDisplayMetric;
 }
 
 @observer
@@ -70,7 +71,7 @@ class NonInjectedPodDetailsContainer extends React.Component<PodDetailsContainer
   }
 
   render() {
-    const { pod, container, metrics } = this.props;
+    const { pod, container, metrics, shouldDisplayMetric } = this.props;
 
     if (!pod || !container) return null;
     const { name, image, imagePullPolicy, ports, volumeMounts, command, args } = container;
@@ -83,23 +84,24 @@ class NonInjectedPodDetailsContainer extends React.Component<PodDetailsContainer
     const readiness = pod.getReadinessProbe(container);
     const startup = pod.getStartupProbe(container);
     const isInitContainer = !!pod.getInitContainers().find(c => c.name == name);
-    const metricTabs = [
-      "CPU",
-      "Memory",
-      "Filesystem",
-    ];
-    const isMetricHidden = getActiveClusterEntity()?.isMetricHidden(ClusterMetricsResourceType.Container);
 
     return (
       <div className="PodDetailsContainer">
         <div className="pod-container-title">
           <StatusBrick className={cssNames(state, { ready })}/>{name}
         </div>
-        {!isMetricHidden && !isInitContainer &&
-        <ResourceMetrics tabs={metricTabs} params={{ metrics }}>
-          <ContainerCharts/>
-        </ResourceMetrics>
-        }
+        {(shouldDisplayMetric(ClusterMetricsResourceType.Container) && !isInitContainer) && (
+          <ResourceMetrics
+            tabs={[
+              "CPU",
+              "Memory",
+              "Filesystem",
+            ]}
+            metrics={metrics}
+          >
+            <ContainerCharts/>
+          </ResourceMetrics>
+        )}
         {status &&
         <DrawerItem name="Status">
           {this.renderStatus(state, status)}
@@ -191,13 +193,10 @@ class NonInjectedPodDetailsContainer extends React.Component<PodDetailsContainer
   }
 }
 
-export const PodDetailsContainer = withInjectables<Dependencies, PodDetailsContainerProps>(
-  NonInjectedPodDetailsContainer,
-
-  {
-    getProps: (di, props) => ({
-      portForwardStore: di.inject(portForwardStoreInjectable),
-      ...props,
-    }),
-  },
-);
+export const PodDetailsContainer = withInjectables<Dependencies, PodDetailsContainerProps>(NonInjectedPodDetailsContainer, {
+  getProps: (di, props) => ({
+    ...props,
+    portForwardStore: di.inject(portForwardStoreInjectable),
+    shouldDisplayMetric: di.inject(shouldDisplayMetricInjectable),
+  }),
+});

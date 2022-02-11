@@ -10,20 +10,25 @@ import { disposeOnUnmount, observer } from "mobx-react";
 import type { Service, ServicePort } from "../../../common/k8s-api/endpoints";
 import { action, makeObservable, observable, reaction } from "mobx";
 import { cssNames } from "../../utils";
-import { Notifications } from "../notifications";
 import { Button } from "../button";
-import type { ForwardedPort } from "../../port-forward";
-import {
-  aboutPortForwarding,
-  notifyErrorPortForwarding, openPortForward,
-  PortForwardStore,
-  predictProtocol,
-} from "../../port-forward";
+import type { ForwardedPort } from "../../port-forward/item";
 import { Spinner } from "../spinner";
 import { withInjectables } from "@ogre-tools/injectable-react";
-import portForwardStoreInjectable from "../../port-forward/port-forward-store/port-forward-store.injectable";
-import portForwardDialogModelInjectable from "../../port-forward/port-forward-dialog-model/port-forward-dialog-model.injectable";
-import logger from "../../../common/logger";
+import portForwardStoreInjectable from "../../port-forward/store.injectable";
+import type { LensLogger } from "../../../common/logger";
+import type { PortForwardStore } from "../../port-forward/store";
+import type { OpenPortForwardDialog } from "../+network-port-forwards/dialog/open.injectable";
+import { predictProtocol } from "../../port-forward/utils";
+import type { OpenPortForward } from "../../port-forward/open.injectable";
+import type { AboutPortForwardingNotification } from "../../port-forward/about-notification.injectable";
+import type { PortForwardingErrorNotification } from "../../port-forward/error-notification.injectable";
+import type { ErrorNotification } from "../notifications/error.injectable";
+import aboutPortForwardingNotificationInjectable from "../../port-forward/about-notification.injectable";
+import portForwardingErrorNotificationInjectable from "../../port-forward/error-notification.injectable";
+import errorNotificationInjectable from "../notifications/error.injectable";
+import servicesLoggerInjectable from "./logger.injectable";
+import openPortForwardInjectable from "../../port-forward/open.injectable";
+import openPortForwardDialogInjectable from "../+network-port-forwards/dialog/open.injectable";
 
 export interface ServicePortComponentProps {
   service: Service;
@@ -32,7 +37,12 @@ export interface ServicePortComponentProps {
 
 interface Dependencies {
   portForwardStore: PortForwardStore;
-  openPortForwardDialog: (item: ForwardedPort, options: { openInBrowser: boolean; onClose: () => void }) => void;
+  openPortForwardDialog: OpenPortForwardDialog;
+  openPortForward: OpenPortForward;
+  aboutPortForwardingNotification: AboutPortForwardingNotification;
+  portForwardingErrorNotification: PortForwardingErrorNotification;
+  errorNotification: ErrorNotification;
+  logger: LensLogger;
 }
 
 @observer
@@ -111,17 +121,17 @@ class NonInjectedServicePortComponent extends React.Component<ServicePortCompone
       this.forwardPort = portForward.forwardPort;
 
       if (portForward.status === "Active") {
-        openPortForward(portForward);
+        this.props.openPortForward(portForward);
 
         // if this is the first port-forward show the about notification
         if (!length) {
-          aboutPortForwarding();
+          this.props.aboutPortForwardingNotification();
         }
       } else {
-        notifyErrorPortForwarding(`Error occurred starting port-forward, the local port may not be available or the ${portForward.kind} ${portForward.name} may not be reachable`);
+        this.props.portForwardingErrorNotification(`Error occurred starting port-forward, the local port may not be available or the ${portForward.kind} ${portForward.name} may not be reachable`);
       }
     } catch (error) {
-      logger.error("[SERVICE-PORT-COMPONENT]:", error, portForward);
+      this.props.logger.error(String(error), portForward);
     } finally {
       this.checkExistingPortForwarding();
       this.waiting = false;
@@ -144,7 +154,7 @@ class NonInjectedServicePortComponent extends React.Component<ServicePortCompone
     try {
       await this.portForwardStore.remove(portForward);
     } catch (error) {
-      Notifications.error(`Error occurred stopping the port-forward from port ${portForward.forwardPort}.`);
+      this.props.errorNotification(`Error occurred stopping the port-forward from port ${portForward.forwardPort}.`);
     } finally {
       this.checkExistingPortForwarding();
       this.forwardPort = 0;
@@ -186,15 +196,16 @@ class NonInjectedServicePortComponent extends React.Component<ServicePortCompone
   }
 }
 
-export const ServicePortComponent = withInjectables<Dependencies, ServicePortComponentProps>(
-  NonInjectedServicePortComponent,
-
-  {
-    getProps: (di, props) => ({
-      portForwardStore: di.inject(portForwardStoreInjectable),
-      openPortForwardDialog: di.inject(portForwardDialogModelInjectable).open,
-      ...props,
-    }),
-  },
-);
+export const ServicePortComponent = withInjectables<Dependencies, ServicePortComponentProps>(NonInjectedServicePortComponent, {
+  getProps: (di, props) => ({
+    ...props,
+    portForwardStore: di.inject(portForwardStoreInjectable),
+    logger: di.inject(servicesLoggerInjectable),
+    aboutPortForwardingNotification: di.inject(aboutPortForwardingNotificationInjectable),
+    portForwardingErrorNotification: di.inject(portForwardingErrorNotificationInjectable),
+    errorNotification: di.inject(errorNotificationInjectable),
+    openPortForward: di.inject(openPortForwardInjectable),
+    openPortForwardDialog: di.inject(openPortForwardDialogInjectable),
+  }),
+});
 

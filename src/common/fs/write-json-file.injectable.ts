@@ -13,14 +13,21 @@ interface Dependencies {
   ensureDir: (dir: string, options?: EnsureOptions | number) => Promise<void>;
 }
 
-const writeJsonFile = ({ writeJson, ensureDir }: Dependencies) => async (filePath: string, content: JsonValue) => {
-  await ensureDir(path.dirname(filePath), { mode: 0o755 });
+export type WriteJsonFile = (filePath: string, content: JsonValue) => Promise<void>;
 
-  await writeJson(filePath, content, {
-    encoding: "utf-8",
-    spaces: 2,
-  });
-};
+const writeJsonFile = ({
+  writeJson,
+  ensureDir,
+}: Dependencies): WriteJsonFile => (
+  async (filePath, content) => {
+    await ensureDir(path.dirname(filePath), { mode: 0o755 });
+
+    await writeJson(filePath, content, {
+      encoding: "utf-8",
+      spaces: 2,
+    });
+  }
+);
 
 const writeJsonFileInjectable = getInjectable({
   id: "write-json-file",

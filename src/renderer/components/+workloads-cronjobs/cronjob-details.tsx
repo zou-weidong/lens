@@ -10,40 +10,53 @@ import kebabCase from "lodash/kebabCase";
 import { disposeOnUnmount, observer } from "mobx-react";
 import { DrawerItem, DrawerTitle } from "../drawer";
 import { Badge } from "../badge/badge";
-import { jobStore } from "../+workloads-jobs/job.store";
-import { Link } from "react-router-dom";
-import { cronJobStore } from "./cronjob.store";
 import type { KubeObjectDetailsProps } from "../kube-object-details";
-import { getDetailsUrl } from "../kube-detail-params";
-import { CronJob, Job } from "../../../common/k8s-api/endpoints";
+import type { Job } from "../../../common/k8s-api/endpoints";
+import { CronJob } from "../../../common/k8s-api/endpoints";
 import { KubeObjectMeta } from "../kube-object-meta";
 import logger from "../../../common/logger";
 import type { KubeObjectStore } from "../../../common/k8s-api/kube-object.store";
 import type { KubeObject } from "../../../common/k8s-api/kube-object";
 import type { Disposer } from "../../../common/utils";
 import { withInjectables } from "@ogre-tools/injectable-react";
-import kubeWatchApiInjectable
-  from "../../kube-watch-api/kube-watch-api.injectable";
+import type { ShowDetails } from "../kube-object/details/show.injectable";
+import { prevDefault } from "../../utils";
+import showDetailsInjectable from "../kube-object/details/show.injectable";
+import cronJobStoreInjectable from "./store.injectable";
+import type { JobStore } from "../+workloads-jobs/store";
+import jobStoreInjectable from "../+workloads-jobs/store.injectable";
+import type { CronJobStore } from "./store";
+import subscribeStoresInjectable from "../../kube-watch-api/subscribe-stores.injectable";
 
 export interface CronJobDetailsProps extends KubeObjectDetailsProps<CronJob> {
 }
 
 interface Dependencies {
   subscribeStores: (stores: KubeObjectStore<KubeObject>[]) => Disposer;
+  showDetails: ShowDetails;
+  cronJobStore: CronJobStore;
+  jobStore: JobStore;
 }
 
 @observer
 class NonInjectedCronJobDetails extends React.Component<CronJobDetailsProps & Dependencies> {
   componentDidMount() {
+    const {
+      cronJobStore,
+      jobStore,
+      subscribeStores,
+    } = this.props;
+
     disposeOnUnmount(this, [
-      this.props.subscribeStores([
+      subscribeStores([
         jobStore,
+        cronJobStore,
       ]),
     ]);
   }
 
   render() {
-    const { object: cronJob } = this.props;
+    const { object: cronJob, showDetails, cronJobStore, jobStore } = this.props;
 
     if (!cronJob) {
       return null;
@@ -86,9 +99,9 @@ class NonInjectedCronJobDetails extends React.Component<CronJobDetailsProps & De
               return (
                 <div className="job" key={job.getId()}>
                   <div className="title">
-                    <Link to={getDetailsUrl(job.selfLink)}>
+                    <a onClick={prevDefault(() => showDetails(job))}>
                       {job.getName()}
-                    </Link>
+                    </a>
                   </div>
                   <DrawerItem name="Condition" className="conditions" labelsOnly>
                     {condition && (
@@ -113,13 +126,12 @@ class NonInjectedCronJobDetails extends React.Component<CronJobDetailsProps & De
   }
 }
 
-export const CronJobDetails = withInjectables<Dependencies, CronJobDetailsProps>(
-  NonInjectedCronJobDetails,
-
-  {
-    getProps: (di, props) => ({
-      subscribeStores: di.inject(kubeWatchApiInjectable).subscribeStores,
-      ...props,
-    }),
-  },
-);
+export const CronJobDetails = withInjectables<Dependencies, CronJobDetailsProps>(NonInjectedCronJobDetails, {
+  getProps: (di, props) => ({
+    ...props,
+    subscribeStores: di.inject(subscribeStoresInjectable),
+    showDetails: di.inject(showDetailsInjectable),
+    cronJobStore: di.inject(cronJobStoreInjectable),
+    jobStore: di.inject(jobStoreInjectable),
+  }),
+});

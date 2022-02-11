@@ -5,7 +5,8 @@
 
 import "./info-panel.scss";
 
-import React, { Component, ReactNode } from "react";
+import type { ReactNode } from "react";
+import React, { Component } from "react";
 import { computed, observable, reaction, makeObservable } from "mobx";
 import { disposeOnUnmount, observer } from "mobx-react";
 import { cssNames } from "../../utils";
@@ -13,16 +14,19 @@ import { Button } from "../button";
 import { Icon } from "../icon";
 import { Spinner } from "../spinner";
 import type { DockStore, TabId } from "./dock/store";
-import { Notifications } from "../notifications";
 import { withInjectables } from "@ogre-tools/injectable-react";
 import dockStoreInjectable from "./dock/store.injectable";
+import type { OkNotification } from "../notifications/ok.injectable";
+import type { ErrorNotification } from "../notifications/error.injectable";
+import errorNotificationInjectable from "../notifications/error.injectable";
+import okNotificationInjectable from "../notifications/ok.injectable";
 
-export interface InfoPanelProps extends OptionalProps {
+export interface InfoPanelProps extends InfoPanelOptionalProps {
   tabId: TabId;
   submit?: () => Promise<ReactNode | string | void>;
 }
 
-export interface OptionalProps {
+export interface InfoPanelOptionalProps {
   className?: string;
   error?: string;
   controls?: ReactNode;
@@ -38,11 +42,13 @@ export interface OptionalProps {
 
 interface Dependencies {
   dockStore: DockStore;
+  okNotification: OkNotification;
+  errorNotification: ErrorNotification;
 }
 
 @observer
 class NonInjectedInfoPanel extends Component<InfoPanelProps & Dependencies> {
-  static defaultProps: OptionalProps = {
+  static defaultProps: InfoPanelOptionalProps = {
     submitLabel: "Submit",
     submittingMessage: "Submitting..",
     showButtons: true,
@@ -73,16 +79,20 @@ class NonInjectedInfoPanel extends Component<InfoPanelProps & Dependencies> {
   }
 
   submit = async () => {
-    const { showNotifications } = this.props;
+    const { showNotifications, okNotification, errorNotification } = this.props;
 
     this.waiting = true;
 
     try {
       const result = await this.props.submit();
 
-      if (showNotifications && result) Notifications.ok(result);
+      if (showNotifications && result) {
+        okNotification(result);
+      }
     } catch (error) {
-      if (showNotifications) Notifications.error(error.toString());
+      if (showNotifications) {
+        errorNotification(error.toString());
+      }
     } finally {
       this.waiting = false;
     }
@@ -150,13 +160,11 @@ class NonInjectedInfoPanel extends Component<InfoPanelProps & Dependencies> {
   }
 }
 
-export const InfoPanel = withInjectables<Dependencies, InfoPanelProps>(
-  NonInjectedInfoPanel,
-
-  {
-    getProps: (di, props) => ({
-      dockStore: di.inject(dockStoreInjectable),
-      ...props,
-    }),
-  },
-);
+export const InfoPanel = withInjectables<Dependencies, InfoPanelProps>(NonInjectedInfoPanel, {
+  getProps: (di, props) => ({
+    ...props,
+    dockStore: di.inject(dockStoreInjectable),
+    errorNotification: di.inject(errorNotificationInjectable),
+    okNotification: di.inject(okNotificationInjectable),
+  }),
+});

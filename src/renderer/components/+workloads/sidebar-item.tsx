@@ -7,27 +7,33 @@ import { withInjectables } from "@ogre-tools/injectable-react";
 import type { IComputedValue } from "mobx";
 import { observer } from "mobx-react";
 import { workloadsRoute, workloadsURL } from "../../../common/routes";
-import { isActiveRoute } from "../../navigation";
 import { Icon } from "../icon";
-import { SidebarItem } from "../layout/sidebar-item";
+import { SidebarItem } from "../layout/sidebar/item";
 import type { TabLayoutRoute } from "../layout/tab-layout";
-import { renderTabRoutesSidebarItems } from "../layout/tab-routes-sidebar-items";
 import workloadsRouteTabsInjectable from "./route-tabs.injectable";
+import isRouteActiveInjectable, { type IsRouteActive } from "../../navigation/is-route-active.injectable";
+import renderTabRoutesSidebarItemsInjectable, { type RenderTabRoutesSidebarItems } from "../layout/render-tab-routes-sidebar-items.injectable";
 
 export interface WorkloadSidebarItemProps {}
 
 interface Dependencies {
   routes: IComputedValue<TabLayoutRoute[]>;
+  renderTabRoutesSidebarItems: RenderTabRoutesSidebarItems;
+  isRouteActive: IsRouteActive;
 }
 
-const NonInjectedWorkloadsSidebarItem = observer(({ routes }: Dependencies & WorkloadSidebarItemProps) => {
+const NonInjectedWorkloadsSidebarItem = observer(({
+  routes,
+  renderTabRoutesSidebarItems,
+  isRouteActive,
+}: Dependencies & WorkloadSidebarItemProps) => {
   const tabRoutes = routes.get();
 
   return (
     <SidebarItem
       id="workloads"
       text="Workloads"
-      isActive={isActiveRoute(workloadsRoute)}
+      isActive={isRouteActive(workloadsRoute)}
       isHidden={tabRoutes.length == 0}
       url={workloadsURL()}
       icon={<Icon svg="workloads"/>}
@@ -39,7 +45,9 @@ const NonInjectedWorkloadsSidebarItem = observer(({ routes }: Dependencies & Wor
 
 export const WorkloadsSidebarItem = withInjectables<Dependencies, WorkloadSidebarItemProps>(NonInjectedWorkloadsSidebarItem, {
   getProps: (di, props) => ({
-    routes: di.inject(workloadsRouteTabsInjectable),
     ...props,
+    routes: di.inject(workloadsRouteTabsInjectable),
+    renderTabRoutesSidebarItems: di.inject(renderTabRoutesSidebarItemsInjectable),
+    isRouteActive: di.inject(isRouteActiveInjectable),
   }),
 });

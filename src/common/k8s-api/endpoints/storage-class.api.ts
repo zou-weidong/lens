@@ -5,24 +5,20 @@
 
 import { autoBind } from "../../utils";
 import { KubeObject } from "../kube-object";
+import type { DerivedKubeApiOptions } from "../kube-api";
 import { KubeApi } from "../kube-api";
 import type { KubeJsonApiData } from "../kube-json-api";
-import { isClusterPageContext } from "../../utils/cluster-id-url-parsing";
-
-export interface StorageClass {
-  provisioner: string; // e.g. "storage.k8s.io/v1"
-  mountOptions?: string[];
-  volumeBindingMode: string;
-  reclaimPolicy: string;
-  parameters: {
-    [param: string]: string; // every provisioner has own set of these parameters
-  };
-}
 
 export class StorageClass extends KubeObject {
   static kind = "StorageClass";
   static namespaced = false;
   static apiBase = "/apis/storage.k8s.io/v1/storageclasses";
+
+  declare provisioner: string; // e.g. "storage.k8s.io/v1"
+  declare mountOptions?: string[];
+  declare volumeBindingMode: string;
+  declare reclaimPolicy: string;
+  declare parameters: Partial<Record<string, string>>;
 
   constructor(data: KubeJsonApiData) {
     super(data);
@@ -47,14 +43,11 @@ export class StorageClass extends KubeObject {
   }
 }
 
-let storageClassApi: KubeApi<StorageClass>;
-
-if (isClusterPageContext()) {
-  storageClassApi = new KubeApi({
-    objectConstructor: StorageClass,
-  });
+export class StorageClassApi extends KubeApi<StorageClass> {
+  constructor(opts: DerivedKubeApiOptions = {}) {
+    super({
+      ...opts,
+      objectConstructor: StorageClass,
+    });
+  }
 }
-
-export {
-  storageClassApi,
-};

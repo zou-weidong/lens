@@ -6,11 +6,10 @@
 
 import path from "path";
 import type webpack from "webpack";
-import * as vars from "./src/common/vars";
 import { cssModulesWebpackRule, fontsLoaderWebpackRules, iconsAndImagesWebpackRules } from "./webpack.renderer";
 
 export default function generateExtensionTypes(): webpack.Configuration {
-  const { isDevelopment } = vars;
+  const isDevelopment = process.env.NODE_ENV !== "production";
   const entry = "./src/extensions/extension-api.ts";
   const outDir = "./src/extensions/npm/extensions/dist";
 

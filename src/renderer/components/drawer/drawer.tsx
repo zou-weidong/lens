@@ -8,16 +8,15 @@ import "./drawer.scss";
 import React from "react";
 import { clipboard } from "electron";
 import { createPortal } from "react-dom";
-import { cssNames, noop, StorageHelper } from "../../utils";
+import { cssNames, noop } from "../../utils";
 import { Icon } from "../icon";
 import { Animate, AnimateName } from "../animate";
 import { ResizeDirection, ResizeGrowthDirection, ResizeSide, ResizingAnchor } from "../resizing-anchor";
-import drawerStorageInjectable, {
-  defaultDrawerWidth,
-} from "./drawer-storage/drawer-storage.injectable";
+import drawerStorageInjectable, { defaultDrawerWidth, type DrawerStorageState } from "./storage.injectable";
 import { withInjectables } from "@ogre-tools/injectable-react";
 import historyInjectable from "../../navigation/history.injectable";
 import type { History } from "history";
+import type { StorageLayer } from "../../utils/storage/create.injectable";
 
 export type DrawerPosition = "top" | "left" | "right" | "bottom";
 
@@ -61,7 +60,7 @@ resizingAnchorProps.set("bottom", [ResizeDirection.VERTICAL, ResizeSide.LEADING,
 
 interface Dependencies {
   history: History;
-  drawerStorage: StorageHelper<{ width: number }>;
+  drawerStorage: StorageLayer<DrawerStorageState>;
 }
 
 class NonInjectedDrawer extends React.Component<DrawerProps & Dependencies, State> {
@@ -229,15 +228,11 @@ class NonInjectedDrawer extends React.Component<DrawerProps & Dependencies, Stat
   }
 }
 
-export const Drawer = withInjectables<Dependencies, DrawerProps>(
-  NonInjectedDrawer,
-
-  {
-    getProps: (di, props) => ({
-      history: di.inject(historyInjectable),
-      drawerStorage: di.inject(drawerStorageInjectable),
-      ...props,
-    }),
-  },
-);
+export const Drawer = withInjectables<Dependencies, DrawerProps>(NonInjectedDrawer, {
+  getProps: (di, props) => ({
+    ...props,
+    history: di.inject(historyInjectable),
+    drawerStorage: di.inject(drawerStorageInjectable),
+  }),
+});
 

@@ -9,11 +9,15 @@ import React, { isValidElement } from "react";
 import { observable, makeObservable } from "mobx";
 import { observer } from "mobx-react";
 import { boundMethod, cssNames } from "../../utils";
-import { ConfirmDialog } from "../confirm-dialog";
-import { Icon, IconProps } from "../icon";
-import { Menu, MenuItem, MenuProps } from "./menu";
+import type { IconProps } from "../icon";
+import { Icon } from "../icon";
+import type { MenuProps } from "./menu";
+import { Menu, MenuItem } from "./menu";
 import uniqueId from "lodash/uniqueId";
 import isString from "lodash/isString";
+import type { OpenConfirmDialog } from "../confirm-dialog/open.injectable";
+import { withInjectables } from "@ogre-tools/injectable-react";
+import openConfirmDialogInjectable from "../confirm-dialog/open.injectable";
 
 export interface MenuActionsProps extends Partial<MenuProps> {
   className?: string;
@@ -26,8 +30,12 @@ export interface MenuActionsProps extends Partial<MenuProps> {
   onOpen?(): void;
 }
 
+interface Dependencies {
+  openConfirmDialog: OpenConfirmDialog;
+}
+
 @observer
-export class MenuActions extends React.Component<MenuActionsProps> {
+class NonInjectedMenuActions extends React.Component<MenuActionsProps & Dependencies> {
   static defaultProps: MenuActionsProps = {
     get removeConfirmationMessage() {
       return `Remove item?`;
@@ -43,20 +51,20 @@ export class MenuActions extends React.Component<MenuActionsProps> {
     this.isOpen = !this.isOpen;
   };
 
-  constructor(props: MenuActionsProps) {
+  constructor(props: MenuActionsProps & Dependencies) {
     super(props);
     makeObservable(this);
   }
 
   @boundMethod
   remove() {
-    const { removeAction } = this.props;
+    const { removeAction, openConfirmDialog } = this.props;
     let { removeConfirmationMessage } = this.props;
 
     if (typeof removeConfirmationMessage === "function") {
       removeConfirmationMessage = removeConfirmationMessage();
     }
-    ConfirmDialog.open({
+    openConfirmDialog({
       ok: removeAction,
       labelOk: `Remove`,
       message: <div>{removeConfirmationMessage}</div>,
@@ -73,7 +81,7 @@ export class MenuActions extends React.Component<MenuActionsProps> {
 
       return React.cloneElement(triggerIcon, { id: this.id, className } as any);
     }
-    const iconProps: Partial<IconProps> = {
+    const iconProps: IconProps = {
       id: this.id,
       interactive: true,
       material: isString(triggerIcon) ? triggerIcon : undefined,
@@ -137,3 +145,10 @@ export class MenuActions extends React.Component<MenuActionsProps> {
     );
   }
 }
+
+export const MenuActions = withInjectables<Dependencies, MenuActionsProps>(NonInjectedMenuActions, {
+  getProps: (di, props) => ({
+    ...props,
+    openConfirmDialog: di.inject(openConfirmDialogInjectable),
+  }),
+});

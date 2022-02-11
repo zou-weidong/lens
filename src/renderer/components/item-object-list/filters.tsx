@@ -6,9 +6,9 @@
 import "./item-list-layout.scss";
 
 import React from "react";
-import { PageFiltersList } from "./page-filters-list";
+import { PageFiltersList } from "./page-filters/list";
 import { observer } from "mobx-react";
-import type { Filter } from "./page-filters.store";
+import type { Filter } from "./page-filters/store";
 
 export interface ItemListLayoutFilterProps {
   getIsReady: () => boolean;
@@ -17,7 +17,12 @@ export interface ItemListLayoutFilterProps {
   hideFilters: boolean;
 }
 
-export const ItemListLayoutFilters = observer(({ getFilters, getFiltersAreShown, getIsReady, hideFilters }: ItemListLayoutFilterProps) => {
+export const ItemListLayoutFilters = observer(({
+  getFilters,
+  getFiltersAreShown,
+  getIsReady,
+  hideFilters,
+}: ItemListLayoutFilterProps) => {
   const filters = getFilters();
 
   if (!getIsReady() || !filters.length || hideFilters || !getFiltersAreShown()) {

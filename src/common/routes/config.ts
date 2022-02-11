@@ -4,7 +4,7 @@
  */
 
 import type { RouteProps } from "react-router";
-import type { URLParams } from "../utils/buildUrl";
+import type { URLParams } from "../utils";
 import { configMapsRoute, configMapsURL } from "./config-maps";
 import { hpaRoute } from "./hpa";
 import { limitRangesRoute } from "./limit-ranges";

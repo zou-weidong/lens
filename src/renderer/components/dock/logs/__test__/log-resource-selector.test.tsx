@@ -9,38 +9,16 @@ import * as selectEvent from "react-select-event";
 import { Pod } from "../../../../../common/k8s-api/endpoints";
 import { LogResourceSelector } from "../resource-selector";
 import { dockerPod, deploymentPod1, deploymentPod2 } from "./pod.mock";
-import { ThemeStore } from "../../../../theme.store";
-import { UserStore } from "../../../../../common/user-store";
-import mockFs from "mock-fs";
 import { getDiForUnitTesting } from "../../../../getDiForUnitTesting";
 import type { DiRender } from "../../../test-utils/renderFor";
 import { renderFor } from "../../../test-utils/renderFor";
-import directoryForUserDataInjectable from "../../../../../common/app-paths/directory-for-user-data/directory-for-user-data.injectable";
-import callForLogsInjectable from "../call-for-logs.injectable";
-import { LogTabViewModel, LogTabViewModelDependencies } from "../logs-view-model";
+import directoryForUserDataInjectable from "../../../../../common/paths/user-data.injectable";
+import queryForLogsInjectable from "../call-for-logs.injectable";
+import type { LogTabViewModelDependencies } from "../logs-view-model";
+import { LogTabViewModel } from "../logs-view-model";
 import type { TabId } from "../../dock/store";
 import userEvent from "@testing-library/user-event";
 import { SearchStore } from "../../../../search-store/search-store";
-
-jest.mock("electron", () => ({
-  app: {
-    getVersion: () => "99.99.99",
-    getName: () => "lens",
-    setName: jest.fn(),
-    setPath: jest.fn(),
-    getPath: () => "tmp",
-    getLocale: () => "en",
-    setLoginItemSettings: jest.fn(),
-  },
-  ipcMain: {
-    on: jest.fn(),
-    handle: jest.fn(),
-  },
-  ipcRenderer: {
-    on: jest.fn(),
-    invoke: jest.fn(),
-  },
-}));
 
 function mockLogTabViewModel(tabId: TabId, deps: Partial<LogTabViewModelDependencies>): LogTabViewModel {
   return new LogTabViewModel(tabId, {
@@ -129,24 +107,11 @@ describe("<LogResourceSelector />", () => {
     const di = getDiForUnitTesting({ doGeneralOverrides: true });
 
     di.override(directoryForUserDataInjectable, () => "some-directory-for-user-data");
-    di.override(callForLogsInjectable, () => () => Promise.resolve("some-logs"));
+    di.override(queryForLogsInjectable, () => () => Promise.resolve("some-logs"));
 
     render = renderFor(di);
 
     await di.runSetups();
-
-    mockFs({
-      "tmp": {},
-    });
-
-    UserStore.createInstance();
-    ThemeStore.createInstance();
-  });
-
-  afterEach(() => {
-    UserStore.resetInstance();
-    ThemeStore.resetInstance();
-    mockFs.restore();
   });
 
   it("renders w/o errors", () => {

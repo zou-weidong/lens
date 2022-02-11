@@ -7,26 +7,31 @@ import "./hpa-details.scss";
 
 import React from "react";
 import { observer } from "mobx-react";
-import { Link } from "react-router-dom";
 import { DrawerItem, DrawerTitle } from "../drawer";
-import { Badge } from "../badge";
 import type { KubeObjectDetailsProps } from "../kube-object-details";
-import { cssNames } from "../../utils";
-import { HorizontalPodAutoscaler, HpaMetricType, IHpaMetric } from "../../../common/k8s-api/endpoints/hpa.api";
+import { prevDefault } from "../../utils";
+import type { IHpaMetric } from "../../../common/k8s-api/endpoints";
+import { HorizontalPodAutoscaler, HpaMetricType } from "../../../common/k8s-api/endpoints";
 import { Table, TableCell, TableHead, TableRow } from "../table";
-import { apiManager } from "../../../common/k8s-api/api-manager";
 import { KubeObjectMeta } from "../kube-object-meta";
-import { getDetailsUrl } from "../kube-detail-params";
 import logger from "../../../common/logger";
+import { withInjectables } from "@ogre-tools/injectable-react";
+import type { ShowDetails } from "../kube-object/details/show.injectable";
+import showDetailsInjectable from "../kube-object/details/show.injectable";
+import { Badge } from "../badge";
 
 export interface HpaDetailsProps extends KubeObjectDetailsProps<HorizontalPodAutoscaler> {
 }
 
-@observer
-export class HpaDetails extends React.Component<HpaDetailsProps> {
-  renderMetrics() {
-    const { object: hpa } = this.props;
+interface Dependencies {
+  showDetails: ShowDetails;
+}
 
+const NonInjectedHpaDetails = observer(({
+  object: hpa,
+  showDetails,
+}: Dependencies & HpaDetailsProps) => {
+  const renderMetrics = () => {
     const renderName = (metric: IHpaMetric) => {
       switch (metric.type) {
         case HpaMetricType.Resource: {
@@ -42,12 +47,10 @@ export class HpaDetails extends React.Component<HpaDetailsProps> {
         case HpaMetricType.Object: {
           const { target } = metric.object;
           const { kind, name } = target;
-          const objectUrl = getDetailsUrl(apiManager.lookupApiLink(target, hpa));
 
           return (
             <>
-              {metric.object.metricName} on{" "}
-              <Link to={objectUrl}>{kind}/{name}</Link>
+              {metric.object.metricName} on <a onClick={prevDefault(() => showDetails(target, hpa))}>{kind}/{name}</a>
             </>
           );
         }
@@ -78,67 +81,67 @@ export class HpaDetails extends React.Component<HpaDetailsProps> {
         }
       </Table>
     );
+  };
+
+  if (!hpa) {
+    return null;
   }
 
-  render() {
-    const { object: hpa } = this.props;
+  if (!(hpa instanceof HorizontalPodAutoscaler)) {
+    logger.error("[HpaDetails]: passed object that is not an instanceof HorizontalPodAutoscaler", hpa);
 
-    if (!hpa) {
-      return null;
-    }
+    return null;
+  }
 
-    if (!(hpa instanceof HorizontalPodAutoscaler)) {
-      logger.error("[HpaDetails]: passed object that is not an instanceof HorizontalPodAutoscaler", hpa);
+  const { scaleTargetRef } = hpa.spec;
 
-      return null;
-    }
+  return (
+    <div className="HpaDetails">
+      <KubeObjectMeta object={hpa}/>
 
-    const { scaleTargetRef } = hpa.spec;
+      <DrawerItem name="Reference">
+        {scaleTargetRef && (
+          <a onClick={prevDefault(() => showDetails(scaleTargetRef, hpa))}>
+            {scaleTargetRef.kind}/{scaleTargetRef.name}
+          </a>
+        )}
+      </DrawerItem>
 
-    return (
-      <div className="HpaDetails">
-        <KubeObjectMeta object={hpa}/>
+      <DrawerItem name="Min Pods">
+        {hpa.getMinPods()}
+      </DrawerItem>
 
-        <DrawerItem name="Reference">
-          {scaleTargetRef && (
-            <Link to={getDetailsUrl(apiManager.lookupApiLink(scaleTargetRef, hpa))}>
-              {scaleTargetRef.kind}/{scaleTargetRef.name}
-            </Link>
-          )}
-        </DrawerItem>
+      <DrawerItem name="Max Pods">
+        {hpa.getMaxPods()}
+      </DrawerItem>
 
-        <DrawerItem name="Min Pods">
-          {hpa.getMinPods()}
-        </DrawerItem>
+      <DrawerItem name="Replicas">
+        {hpa.getReplicas()}
+      </DrawerItem>
 
-        <DrawerItem name="Max Pods">
-          {hpa.getMaxPods()}
-        </DrawerItem>
+      <DrawerItem name="Status" className="status" labelsOnly>
+        {hpa.getConditions()
+          .map(({ type, tooltip, isReady }) => isReady && (
+            <Badge
+              key={type}
+              label={type}
+              tooltip={tooltip}
+              className={type.toLowerCase()}
+            />
+          ))}
+      </DrawerItem>
 
-        <DrawerItem name="Replicas">
-          {hpa.getReplicas()}
-        </DrawerItem>
-
-        <DrawerItem name="Status" className="status" labelsOnly>
-          {hpa.getConditions().map(({ type, tooltip, isReady }) => {
-            if (!isReady) return null;
-
-            return (
-              <Badge
-                key={type}
-                label={type}
-                tooltip={tooltip}
-                className={cssNames({ [type.toLowerCase()]: isReady })}
-              />
-            );
-          })}
-        </DrawerItem>
-
-        <DrawerTitle title="Metrics"/>
-        <div className="metrics">
-          {this.renderMetrics()}
-        </div>
+      <DrawerTitle title="Metrics"/>
+      <div className="metrics">
+        {renderMetrics()}
       </div>
-    );
-  }
-}
+    </div>
+  );
+});
+
+export const HpaDetails = withInjectables<Dependencies, HpaDetailsProps>(NonInjectedHpaDetails, {
+  getProps: (di, props) => ({
+    ...props,
+    showDetails: di.inject(showDetailsInjectable),
+  }),
+});

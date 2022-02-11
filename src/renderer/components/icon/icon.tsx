@@ -5,17 +5,73 @@
 
 import "./icon.scss";
 
-import React, { createRef, ReactNode } from "react";
+import React, { createRef } from "react";
 import { NavLink } from "react-router-dom";
 import type { LocationDescriptor } from "history";
 import { boundMethod, cssNames } from "../../utils";
-import { TooltipDecoratorProps, withTooltip } from "../tooltip";
+import type { TooltipDecoratorProps } from "../tooltip";
+import { withTooltip } from "../tooltip";
 import isNumber from "lodash/isNumber";
-import { decode } from "../../../common/utils/base64";
+import { base64 } from "../../../common/utils";
+import type { LiteralUnion, RequireExactlyOne } from "type-fest";
+import Configuration from "./configuration.svg";
+import Crane from "./crane.svg";
+import Group from "./group.svg";
+import Helm from "./helm.svg";
+import Install from "./install.svg";
+import Kube from "./kube.svg";
+import LensLogo from "./lens-logo.svg";
+import License from "./license.svg";
+import LogoLens from "./logo-lens.svg";
+import Logout from "./logout.svg";
+import Nodes from "./nodes.svg";
+import PushOff from "./push_off.svg";
+import PushPin from "./push_pin.svg";
+import Spinner from "./spinner.svg";
+import Ssh from "./ssh.svg";
+import Storage from "./storage.svg";
+import Terminal from "./terminal.svg";
+import User from "./user.svg";
+import Users from "./users.svg";
+import Wheel from "./wheel.svg";
+import Workloads from "./workloads.svg";
 
-export interface IconProps extends React.HTMLAttributes<any>, TooltipDecoratorProps {
-  material?: string;          // material-icon, see available names at https://material.io/icons/
-  svg?: string;               // svg-filename without extension in current folder
+const svgs = {
+  configuration: Configuration,
+  crane: Crane,
+  group: Group,
+  helm: Helm,
+  install: Install,
+  kube: Kube,
+  "lens-logo": LensLogo,
+  license: License,
+  "logo-lens": LogoLens,
+  logout: Logout,
+  nodes: Nodes,
+  push_off: PushOff,
+  push_pin: PushPin,
+  spinner: Spinner,
+  ssh: Ssh,
+  storage: Storage,
+  terminal: Terminal,
+  user: User,
+  users: Users,
+  wheel: Wheel,
+  workloads: Workloads,
+};
+
+export type IconDescriptorProps = RequireExactlyOne<{
+  /**
+   * material-icon, see available names at https://material.io/icons/
+   */
+  material?: string;
+  /**
+   * svg-filename without extension in current folder or an svg data URL
+   */
+  svg?: LiteralUnion<keyof typeof svgs, string>;
+}>;
+
+export interface BaseIconProps extends React.HTMLAttributes<Element>, TooltipDecoratorProps {
   link?: LocationDescriptor;   // render icon as NavLink from react-router-dom
   href?: string;              // render icon as hyperlink
   size?: string | number;     // icon-size
@@ -29,16 +85,30 @@ export interface IconProps extends React.HTMLAttributes<any>, TooltipDecoratorPr
   disabled?: boolean;
 }
 
+export type IconProps = BaseIconProps & IconDescriptorProps;
+
+const svgDataUrlPrefix = "data:image/svg+xml;base64,";
+
 @withTooltip
 export class Icon extends React.PureComponent<IconProps> {
   private readonly ref = createRef<HTMLAnchorElement>();
 
-  static defaultProps: IconProps = {
+  static defaultProps = {
     focusable: true,
   };
 
   static isSvg(content: string) {
     return String(content).includes("svg+xml"); // data-url for raw svg-icon
+  }
+
+  static convertProps(icon: string): IconDescriptorProps {
+    return Icon.isSvg(icon)
+      ? {
+        svg: icon,
+      }
+      : {
+        material: icon,
+      };
   }
 
   get isInteractive() {
@@ -76,6 +146,43 @@ export class Icon extends React.PureComponent<IconProps> {
     }
   }
 
+  private getSvgDataText(svg: string) {
+    if (svg.startsWith(svgDataUrlPrefix)) {
+      return svg;
+    }
+
+    const icon = svgs[svg as keyof typeof svgs];
+
+    if (icon) {
+      return icon;
+    }
+
+    throw new Error(`${svg} is invalid, either it is isn't a svg data URL or it is not the name of a built in svg`);
+  }
+
+  private getSvgContent(svg: string) {
+    const svgDataText = this.getSvgDataText(svg);
+    const __html = base64.decode(svgDataText.replace(svgDataUrlPrefix, ""));
+
+    return <span className="icon" dangerouslySetInnerHTML={{ __html }} />;
+  }
+
+  private getIconContent(svg: string | undefined, material: string | undefined) {
+    if (typeof svg === "string") {
+      return this.getSvgContent(svg);
+    }
+
+    if (typeof material === "string") {
+      return (
+        <span className="icon" data-icon-name={material}>
+          {material}
+        </span>
+      );
+    }
+
+    throw new Error(`one of IconProps.svg and IconProps.material is required`);
+  }
+
   render() {
     const { isInteractive } = this;
     const {
@@ -87,8 +194,6 @@ export class Icon extends React.PureComponent<IconProps> {
       onKeyDown: _onKeyDown,
       ...elemProps
     } = this.props;
-
-    let iconContent: ReactNode;
     const iconProps: Partial<IconProps> = {
       className: cssNames("Icon", className,
         { svg, material, interactive: isInteractive, disabled, sticker, active, focusable },
@@ -98,31 +203,14 @@ export class Icon extends React.PureComponent<IconProps> {
       onKeyDown: isInteractive ? this.onKeyDown : undefined,
       tabIndex: isInteractive && focusable && !disabled ? 0 : undefined,
       style: size ? { "--size": size + (isNumber(size) ? "px" : "") } as React.CSSProperties : undefined,
+      children: (
+        <>
+          {this.getIconContent(svg, material)}
+          {children}
+        </>
+      ),
       ...elemProps,
     };
-
-    // render as inline svg-icon
-    if (typeof svg === "string") {
-      const dataUrlPrefix = "data:image/svg+xml;base64,";
-      const svgIconDataUrl = svg.startsWith(dataUrlPrefix) ? svg : require(`./${svg}.svg`);
-      const svgIconText = typeof svgIconDataUrl == "string" // decode xml from data-url
-        ? decode(svgIconDataUrl.replace(dataUrlPrefix, "")) : "";
-
-      iconContent = <span className="icon" dangerouslySetInnerHTML={{ __html: svgIconText }} />;
-    }
-
-    // render as material-icon
-    if (typeof material === "string") {
-      iconContent = <span className="icon" data-icon-name={material}>{material}</span>;
-    }
-
-    // wrap icon's content passed from decorator
-    iconProps.children = (
-      <>
-        {iconContent}
-        {children}
-      </>
-    );
 
     // render icon type
     if (link) {

@@ -7,27 +7,33 @@ import type { IComputedValue } from "mobx";
 import { observer } from "mobx-react";
 import React from "react";
 import { storageRoute, storageURL } from "../../../common/routes";
-import { isActiveRoute } from "../../navigation";
+import isRouteActiveInjectable, { type IsRouteActive } from "../../navigation/is-route-active.injectable";
 import { Icon } from "../icon";
-import { SidebarItem } from "../layout/sidebar-item";
+import renderTabRoutesSidebarItemsInjectable, { type RenderTabRoutesSidebarItems } from "../layout/render-tab-routes-sidebar-items.injectable";
+import { SidebarItem } from "../layout/sidebar/item";
 import type { TabLayoutRoute } from "../layout/tab-layout";
-import { renderTabRoutesSidebarItems } from "../layout/tab-routes-sidebar-items";
 import storageRouteTabsInjectable from "./route-tabs.injectable";
 
 export interface StorageSidebarItemProps {}
 
 interface Dependencies {
   routes: IComputedValue<TabLayoutRoute[]>;
+  renderTabRoutesSidebarItems: RenderTabRoutesSidebarItems;
+  isRouteActive: IsRouteActive;
 }
 
-const NonInjectedStorageSidebarItem = observer(({ routes }: Dependencies & StorageSidebarItemProps) => {
+const NonInjectedStorageSidebarItem = observer(({
+  routes,
+  renderTabRoutesSidebarItems,
+  isRouteActive,
+}: Dependencies & StorageSidebarItemProps) => {
   const tabRoutes = routes.get();
 
   return (
     <SidebarItem
       id="storage"
       text="Storage"
-      isActive={isActiveRoute(storageRoute)}
+      isActive={isRouteActive(storageRoute)}
       isHidden={tabRoutes.length == 0}
       url={storageURL()}
       icon={<Icon svg="storage"/>}
@@ -39,7 +45,9 @@ const NonInjectedStorageSidebarItem = observer(({ routes }: Dependencies & Stora
 
 export const StorageSidebarItem = withInjectables<Dependencies, StorageSidebarItemProps>(NonInjectedStorageSidebarItem, {
   getProps: (di, props) => ({
-    routes: di.inject(storageRouteTabsInjectable),
     ...props,
+    routes: di.inject(storageRouteTabsInjectable),
+    renderTabRoutesSidebarItems: di.inject(renderTabRoutesSidebarItemsInjectable),
+    isRouteActive: di.inject(isRouteActiveInjectable),
   }),
 });

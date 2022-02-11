@@ -7,7 +7,7 @@ import { routeInjectionToken } from "../../../router/router.injectable";
 import type { Route } from "../../../router/router";
 import { helmService } from "../../../helm/helm-service";
 import { apiPrefix } from "../../../../common/vars";
-import type { RawHelmChart } from "../../../../common/k8s-api/endpoints/helm-charts.api";
+import type { RawHelmChart } from "../../../../common/k8s-api/endpoints";
 
 interface GetChartResponse {
   readme: string;

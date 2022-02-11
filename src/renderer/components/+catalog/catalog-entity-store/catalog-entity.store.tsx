@@ -4,18 +4,20 @@
  */
 
 import { computed, makeObservable, observable, reaction } from "mobx";
-import type { CatalogEntityRegistry } from "../../../api/catalog-entity-registry";
-import type { CatalogEntity } from "../../../api/catalog-entity";
+import type { CatalogEntityRegistry } from "../../../catalog/entity/registry";
 import { ItemStore } from "../../../../common/item.store";
-import { CatalogCategory, catalogCategoryRegistry } from "../../../../common/catalog";
 import { autoBind, disposer } from "../../../../common/utils";
+import type { CatalogCategory } from "../../../../common/catalog/category";
+import type { CatalogEntity } from "../../../../common/catalog/entity";
+import type { CatalogCategoryRegistry } from "../../../catalog/category/registry";
 
 interface Dependencies {
-  registry: CatalogEntityRegistry;
+  readonly entityRegistry: CatalogEntityRegistry;
+  readonly categoryRegistry: CatalogCategoryRegistry;
 }
 
 export class CatalogEntityStore extends ItemStore<CatalogEntity> {
-  constructor(private dependencies: Dependencies) {
+  constructor(private readonly dependencies: Dependencies) {
     super();
     makeObservable(this);
     autoBind(this);
@@ -26,10 +28,10 @@ export class CatalogEntityStore extends ItemStore<CatalogEntity> {
 
   @computed get entities() {
     if (!this.activeCategory) {
-      return this.dependencies.registry.filteredItems;
+      return this.dependencies.entityRegistry.filteredEntities.get();
     }
 
-    return this.dependencies.registry.getItemsForCategory(this.activeCategory, { filtered: true });
+    return this.dependencies.entityRegistry.filterEntitiesByCategory(this.activeCategory, { filtered: true });
   }
 
   @computed get selectedItem() {
@@ -47,7 +49,7 @@ export class CatalogEntityStore extends ItemStore<CatalogEntity> {
     if (this.activeCategory) {
       this.activeCategory.emit("load");
     } else {
-      for (const category of catalogCategoryRegistry.items) {
+      for (const category of this.dependencies.categoryRegistry.categories.get()) {
         category.emit("load");
       }
     }
@@ -57,6 +59,6 @@ export class CatalogEntityStore extends ItemStore<CatalogEntity> {
   }
 
   onRun(entity: CatalogEntity): void {
-    this.dependencies.registry.onRun(entity);
+    this.dependencies.entityRegistry.onRun(entity);
   }
 }

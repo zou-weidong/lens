@@ -4,22 +4,18 @@
  */
 import { getInjectable } from "@ogre-tools/injectable";
 import { InstallChartTabStore } from "./store";
-import createDockTabStoreInjectable from "../dock-tab-store/create-dock-tab-store.injectable";
-import type { IReleaseUpdateDetails } from "../../../../common/k8s-api/endpoints/helm-releases.api";
-import createStorageInjectable from "../../../utils/create-storage/create-storage.injectable";
+import type { IReleaseUpdateDetails } from "../../../../common/k8s-api/endpoints";
+import installChartTabStorageInjectable from "./storage.injectable";
+import { DockTabStore } from "../dock-tab.store";
 
 const installChartTabStoreInjectable = getInjectable({
+  instantiate: (di) => new InstallChartTabStore({
+    versionsStore: new DockTabStore<string[]>(),
+    detailsStore: new DockTabStore<IReleaseUpdateDetails>(),
+  }, {
+    storage: di.inject(installChartTabStorageInjectable),
+  }),
   id: "install-chart-tab-store",
-
-  instantiate: (di) => {
-    const createDockTabStore = di.inject(createDockTabStoreInjectable);
-
-    return new InstallChartTabStore({
-      createStorage: di.inject(createStorageInjectable),
-      versionsStore: createDockTabStore<string[]>(),
-      detailsStore: createDockTabStore<IReleaseUpdateDetails>(),
-    });
-  },
 });
 
 export default installChartTabStoreInjectable;

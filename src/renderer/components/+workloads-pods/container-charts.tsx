@@ -5,19 +5,27 @@
 
 import React, { useContext } from "react";
 import { observer } from "mobx-react";
-import type { IPodMetrics } from "../../../common/k8s-api/endpoints";
-import { BarChart, cpuOptions, memoryOptions } from "../chart";
-import { isMetricsEmpty, normalizeMetrics } from "../../../common/k8s-api/endpoints/metrics.api";
+import type { ChartDataSets } from "../chart";
+import { BarChart } from "../chart";
+import { isMetricsEmpty, normalizeMetrics } from "../../../common/k8s-api/endpoints";
 import { NoMetrics } from "../resource-metrics/no-metrics";
-import { IResourceMetricsValue, ResourceMetricsContext } from "../resource-metrics";
-import { ThemeStore } from "../../theme.store";
+import { ResourceMetricsContext } from "../resource-metrics";
 import { mapValues } from "lodash";
+import { withInjectables } from "@ogre-tools/injectable-react";
+import type { ActiveTheme } from "../../themes/active.injectable";
+import activeThemeInjectable from "../../themes/active.injectable";
+import type { MetricsTabs } from "../chart/options";
+import { metricTabOptions } from "../chart/options";
 
-type IContext = IResourceMetricsValue<any, { metrics: IPodMetrics }>;
+export interface ContainerChartsProps {}
 
-export const ContainerCharts = observer(() => {
-  const { params: { metrics }, tabId } = useContext<IContext>(ResourceMetricsContext);
-  const { chartCapacityColor } = ThemeStore.getInstance().activeTheme.colors;
+interface Dependencies {
+  activeTheme: ActiveTheme;
+}
+
+const NonInjectedContainerCharts = observer(({ activeTheme }: Dependencies & ContainerChartsProps) => {
+  const { metrics, tab } = useContext(ResourceMetricsContext);
+  const { chartCapacityColor } = activeTheme.value.colors;
 
   if (!metrics) return null;
   if (isMetricsEmpty(metrics)) return <NoMetrics/>;
@@ -34,9 +42,8 @@ export const ContainerCharts = observer(() => {
     fsReads,
   } = mapValues(metrics, metric => normalizeMetrics(metric).data.result[0].values);
 
-  const datasets = [
-    // CPU
-    [
+  const datasets: Partial<Record<MetricsTabs, ChartDataSets[]>> = {
+    CPU: [
       {
         id: "cpuUsage",
         label: `Usage`,
@@ -59,8 +66,7 @@ export const ContainerCharts = observer(() => {
         data: cpuLimits.map(([x, y]) => ({ x, y })),
       },
     ],
-    // Memory
-    [
+    Memory: [
       {
         id: "memoryUsage",
         label: `Usage`,
@@ -83,8 +89,7 @@ export const ContainerCharts = observer(() => {
         data: memoryLimits.map(([x, y]) => ({ x, y })),
       },
     ],
-    // Filesystem
-    [
+    Filesystem: [
       {
         id: "fsUsage",
         label: `Usage`,
@@ -107,15 +112,20 @@ export const ContainerCharts = observer(() => {
         data: fsReads.map(([x, y]) => ({ x, y })),
       },
     ],
-  ];
-
-  const options = tabId == 0 ? cpuOptions : memoryOptions;
+  };
 
   return (
     <BarChart
-      name={`metrics-${tabId}`}
-      options={options}
-      data={{ datasets: datasets[tabId] }}
+      name={`metrics-${tab}`}
+      options={metricTabOptions[tab]}
+      data={{ datasets: datasets[tab] }}
     />
   );
+});
+
+export const ContainerCharts = withInjectables<Dependencies, ContainerChartsProps>(NonInjectedContainerCharts, {
+  getProps: (di, props) => ({
+    ...props,
+    activeTheme: di.inject(activeThemeInjectable),
+  }),
 });

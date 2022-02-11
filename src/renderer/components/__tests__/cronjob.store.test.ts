@@ -2,10 +2,13 @@
  * Copyright (c) OpenLens Authors. All rights reserved.
  * Licensed under MIT License. See LICENSE in root directory for more information.
  */
-import { cronJobStore } from "../+workloads-cronjobs/cronjob.store";
+import type { CronJobStore } from "../+workloads-cronjobs/store";
+import cronJobStoreInjectable from "../+workloads-cronjobs/store.injectable";
+import type { CronJobSpec } from "../../../common/k8s-api/endpoints";
 import { CronJob } from "../../../common/k8s-api/endpoints";
+import { getDiForUnitTesting } from "../../getDiForUnitTesting";
 
-const spec = {
+const spec: CronJobSpec = {
   schedule: "test",
   concurrencyPolicy: "test",
   suspend: true,
@@ -15,7 +18,7 @@ const spec = {
       template: {
         metadata: {},
         spec: {
-          containers: [] as any,
+          containers: [],
           restartPolicy: "restart",
           terminationGracePeriodSeconds: 1,
           dnsPolicy: "no",
@@ -38,6 +41,10 @@ const scheduledCronJob = new CronJob({
     uid: "scheduledCronJob",
     namespace: "default",
   },
+  spec: {
+    ...spec,
+    suspend: false,
+  },
 });
 
 const suspendedCronJob = new CronJob({
@@ -49,6 +56,7 @@ const suspendedCronJob = new CronJob({
     uid: "suspendedCronJob",
     namespace: "default",
   },
+  spec,
 });
 
 const otherSuspendedCronJob = new CronJob({
@@ -60,14 +68,18 @@ const otherSuspendedCronJob = new CronJob({
     uid: "otherSuspendedCronJob",
     namespace: "default",
   },
+  spec,
 });
 
-scheduledCronJob.spec = { ...spec };
-suspendedCronJob.spec = { ...spec };
-otherSuspendedCronJob.spec = { ...spec };
-scheduledCronJob.spec.suspend = false;
-
 describe("CronJob Store tests", () => {
+  let cronJobStore: CronJobStore;
+
+  beforeEach(() => {
+    const di = getDiForUnitTesting();
+
+    cronJobStore = di.inject(cronJobStoreInjectable);
+  });
+
   it("gets CronJob statuses in proper sorting order", () => {
     const statuses = Object.entries(cronJobStore.getStatuses([
       suspendedCronJob,

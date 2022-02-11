@@ -3,7 +3,8 @@
  * Licensed under MIT License. See LICENSE in root directory for more information.
  */
 
-import { CustomResourceDefinition, CustomResourceDefinitionSpec } from "../endpoints";
+import type { CustomResourceDefinitionSpec } from "../endpoints";
+import { CustomResourceDefinition } from "../endpoints";
 
 describe("Crds", () => {
   describe("getVersion()", () => {
@@ -17,6 +18,14 @@ describe("Crds", () => {
           uid: "12345",
         },
         spec: {
+          group: "",
+          names: {
+            kind: "foo",
+            listKind: "foo",
+            plural: "foo",
+            singular: "foo",
+          },
+          scope: "Cluster",
           versions: [
             {
               name: "123",
@@ -45,6 +54,14 @@ describe("Crds", () => {
           uid: "12345",
         },
         spec: {
+          group: "",
+          names: {
+            kind: "foo",
+            listKind: "foo",
+            plural: "foo",
+            singular: "foo",
+          },
+          scope: "Cluster",
           versions: [
             {
               name: "123",
@@ -73,6 +90,14 @@ describe("Crds", () => {
           uid: "12345",
         },
         spec: {
+          group: "",
+          names: {
+            kind: "foo",
+            listKind: "foo",
+            plural: "foo",
+            singular: "foo",
+          },
+          scope: "Cluster",
           versions: [
             {
               name: "123",
@@ -101,6 +126,14 @@ describe("Crds", () => {
           uid: "12345",
         },
         spec: {
+          group: "",
+          names: {
+            kind: "foo",
+            listKind: "foo",
+            plural: "foo",
+            singular: "foo",
+          },
+          scope: "Cluster",
           version: "abc",
           versions: [
             {

@@ -7,7 +7,7 @@ import * as Catalog from "./catalog";
 import * as Navigation from "./navigation";
 import * as K8sApi from "./k8s-api";
 import * as Power from "./power";
-import { IpcMain as Ipc } from "../ipc/ipc-main";
+import { IpcMain as Ipc } from "../ipc/main/ipc-main";
 import { LensMainExtension as LensExtension } from "../lens-main-extension";
 
 export {

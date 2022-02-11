@@ -10,22 +10,26 @@ import { disposeOnUnmount, observer } from "mobx-react";
 import type { Pod } from "../../../common/k8s-api/endpoints";
 import { action, makeObservable, observable, reaction } from "mobx";
 import { cssNames } from "../../utils";
-import { Notifications } from "../notifications";
 import { Button } from "../button";
-import type { ForwardedPort } from "../../port-forward";
-import {
-  aboutPortForwarding,
-  notifyErrorPortForwarding,
-  openPortForward,
-  PortForwardStore,
-  predictProtocol,
-} from "../../port-forward";
-
+import type { ForwardedPort } from "../../port-forward/item";
 import { Spinner } from "../spinner";
 import { withInjectables } from "@ogre-tools/injectable-react";
-import portForwardStoreInjectable from "../../port-forward/port-forward-store/port-forward-store.injectable";
-import portForwardDialogModelInjectable from "../../port-forward/port-forward-dialog-model/port-forward-dialog-model.injectable";
-import logger from "../../../common/logger";
+import portForwardStoreInjectable from "../../port-forward/store.injectable";
+import type { PortForwardStore } from "../../port-forward/store";
+import type { OpenPortForwardDialog } from "../+network-port-forwards/dialog/open.injectable";
+import { predictProtocol } from "../../port-forward/utils";
+import type { OpenPortForward } from "../../port-forward/open.injectable";
+import { Notifications } from "../../../extensions/renderer-api/components";
+import type { AboutPortForwardingNotification } from "../../port-forward/about-notification.injectable";
+import type { PortForwardingErrorNotification } from "../../port-forward/error-notification.injectable";
+import type { ErrorNotification } from "../notifications/error.injectable";
+import type { LensLogger } from "../../../common/logger";
+import podsLoggerInjectable from "./logger.injectable";
+import openPortForwardDialogInjectable from "../+network-port-forwards/dialog/open.injectable";
+import aboutPortForwardingNotificationInjectable from "../../port-forward/about-notification.injectable";
+import portForwardingErrorNotificationInjectable from "../../port-forward/error-notification.injectable";
+import openPortForwardInjectable from "../../port-forward/open.injectable";
+import errorNotificationInjectable from "../notifications/error.injectable";
 
 export interface PodContainerPortProps {
   pod: Pod;
@@ -38,7 +42,12 @@ export interface PodContainerPortProps {
 
 interface Dependencies {
   portForwardStore: PortForwardStore;
-  openPortForwardDialog: (item: ForwardedPort, options: { openInBrowser: boolean; onClose: () => void }) => void;
+  openPortForwardDialog: OpenPortForwardDialog;
+  openPortForward: OpenPortForward;
+  aboutPortForwardingNotification: AboutPortForwardingNotification;
+  portForwardingErrorNotification: PortForwardingErrorNotification;
+  errorNotification: ErrorNotification;
+  logger: LensLogger;
 }
 
 @observer
@@ -115,17 +124,17 @@ class NonInjectedPodContainerPort extends React.Component<PodContainerPortProps 
       }
 
       if (portForward.status === "Active") {
-        openPortForward(portForward);
+        this.props.openPortForward(portForward);
 
         // if this is the first port-forward show the about notification
         if (!length) {
-          aboutPortForwarding();
+          this.props.aboutPortForwardingNotification();
         }
       } else {
-        notifyErrorPortForwarding(`Error occurred starting port-forward, the local port may not be available or the ${portForward.kind} ${portForward.name} may not be reachable`);
+        this.props.portForwardingErrorNotification(`Error occurred starting port-forward, the local port may not be available or the ${portForward.kind} ${portForward.name} may not be reachable`);
       }
     } catch (error) {
-      logger.error("[POD-CONTAINER-PORT]:", error, portForward);
+      this.props.logger.error(String(error), portForward);
     } finally {
       this.checkExistingPortForwarding();
       this.waiting = false;
@@ -192,14 +201,15 @@ class NonInjectedPodContainerPort extends React.Component<PodContainerPortProps 
   }
 }
 
-export const PodContainerPort = withInjectables<Dependencies, PodContainerPortProps>(
-  NonInjectedPodContainerPort,
-
-  {
-    getProps: (di, props) => ({
-      portForwardStore: di.inject(portForwardStoreInjectable),
-      openPortForwardDialog: di.inject(portForwardDialogModelInjectable).open,
-      ...props,
-    }),
-  },
-);
+export const PodContainerPort = withInjectables<Dependencies, PodContainerPortProps>(NonInjectedPodContainerPort, {
+  getProps: (di, props) => ({
+    ...props,
+    portForwardStore: di.inject(portForwardStoreInjectable),
+    logger: di.inject(podsLoggerInjectable),
+    aboutPortForwardingNotification: di.inject(aboutPortForwardingNotificationInjectable),
+    portForwardingErrorNotification: di.inject(portForwardingErrorNotificationInjectable),
+    errorNotification: di.inject(errorNotificationInjectable),
+    openPortForward: di.inject(openPortForwardInjectable),
+    openPortForwardDialog: di.inject(openPortForwardDialogInjectable),
+  }),
+});

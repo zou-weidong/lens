@@ -8,19 +8,19 @@ import type { TabLayoutRoute } from "../layout/tab-layout";
 import { PersistentVolumes } from "../+storage-volumes";
 import { StorageClasses } from "../+storage-classes";
 import { PersistentVolumeClaims } from "../+storage-volume-claims";
-import type { IsAllowedResource } from "../../../common/utils/is-allowed-resource.injectable";
-import isAllowedResourceInjectable from "../../../common/utils/is-allowed-resource.injectable";
+import type { AllowedResources } from "../../clusters/allowed-resources.injectable";
+import allowedResourcesInjectable from "../../clusters/allowed-resources.injectable";
 import * as routes from "../../../common/routes";
 
 interface Dependencies {
-  isAllowedResource: IsAllowedResource;
+  allowedResources: AllowedResources;
 }
 
-function getRouteTabs({ isAllowedResource }: Dependencies) {
+function getRouteTabs({ allowedResources }: Dependencies) {
   return computed(() => {
     const tabs: TabLayoutRoute[] = [];
 
-    if (isAllowedResource("persistentvolumeclaims")) {
+    if (allowedResources.has("persistentvolumeclaims")) {
       tabs.push({
         title: "Persistent Volume Claims",
         component: PersistentVolumeClaims,
@@ -29,7 +29,7 @@ function getRouteTabs({ isAllowedResource }: Dependencies) {
       });
     }
 
-    if (isAllowedResource("persistentvolumes")) {
+    if (allowedResources.has("persistentvolumes")) {
       tabs.push({
         title: "Persistent Volumes",
         component: PersistentVolumes,
@@ -38,7 +38,7 @@ function getRouteTabs({ isAllowedResource }: Dependencies) {
       });
     }
 
-    if (isAllowedResource("storageclasses")) {
+    if (allowedResources.has("storageclasses")) {
       tabs.push({
         title: "Storage Classes",
         component: StorageClasses,
@@ -55,7 +55,7 @@ const storageRouteTabsInjectable = getInjectable({
   id: "storage-route-tabs",
 
   instantiate: (di) => getRouteTabs({
-    isAllowedResource: di.inject(isAllowedResourceInjectable),
+    allowedResources: di.inject(allowedResourcesInjectable),
   }),
 });
 

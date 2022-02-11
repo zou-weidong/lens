@@ -11,14 +11,22 @@ import { computed, makeObservable } from "mobx";
 import { Icon } from "../icon";
 import { SubHeader } from "../layout/sub-header";
 import { Table, TableCell, TableHead, TableRow } from "../table";
-import { nodesStore } from "../+nodes/nodes.store";
-import { eventStore } from "../+events/event.store";
+import type { NodeStore } from "../+nodes/store";
 import { boundMethod, cssNames, prevDefault } from "../../utils";
 import type { ItemObject } from "../../../common/item.store";
 import { Spinner } from "../spinner";
-import { ThemeStore } from "../../theme.store";
-import { kubeSelectedUrlParam, toggleDetails } from "../kube-detail-params";
-import { apiManager } from "../../../common/k8s-api/api-manager";
+import type { ActiveTheme } from "../../themes/active.injectable";
+import { withInjectables } from "@ogre-tools/injectable-react";
+import activeThemeInjectable from "../../themes/active.injectable";
+import type { ToggleDetails } from "../kube-object/details/toggle.injectable";
+import type { PageParam } from "../../navigation/page-param";
+import kubeSelectedUrlParamInjectable from "../kube-object/details/selected.injectable";
+import toggleDetailsInjectable from "../kube-object/details/toggle.injectable";
+import type { KubeEventStore } from "../+events/store";
+import type { ApiManager } from "../../../common/k8s-api/api-manager";
+import kubeEventStoreInjectable from "../+events/store.injectable";
+import apiManagerInjectable from "../../../common/k8s-api/api-manager.injectable";
+import nodeStoreInjectable from "../+nodes/store.injectable";
 
 export interface ClusterIssuesProps {
   className?: string;
@@ -38,24 +46,28 @@ enum sortBy {
   age = "age",
 }
 
-@observer
-export class ClusterIssues extends React.Component<ClusterIssuesProps> {
-  private sortCallbacks = {
-    [sortBy.type]: (warning: IWarning) => warning.kind,
-    [sortBy.object]: (warning: IWarning) => warning.getName(),
-    [sortBy.age]: (warning: IWarning) => warning.timeDiffFromNow,
-  };
+interface Dependencies {
+  activeTheme: ActiveTheme;
+  kubeSelectedUrlParam: PageParam<string>;
+  toggleDetails: ToggleDetails;
+  kubeEventStore: KubeEventStore;
+  apiManager: ApiManager;
+  nodeStore: NodeStore;
+}
 
-  constructor(props: ClusterIssuesProps) {
+@observer
+class NonInjectedClusterIssues extends React.Component<ClusterIssuesProps & Dependencies> {
+  constructor(props: ClusterIssuesProps & Dependencies) {
     super(props);
     makeObservable(this);
   }
 
   @computed get warnings() {
+    const { nodeStore, kubeEventStore } = this.props;
     const warnings: IWarning[] = [];
 
     // Node bad conditions
-    nodesStore.items.forEach(node => {
+    nodeStore.items.forEach(node => {
       const { kind, selfLink, getId, getName, getAge, getTimeDiffFromNow } = node;
 
       node.getWarningConditions().forEach(({ message }) => {
@@ -72,9 +84,7 @@ export class ClusterIssues extends React.Component<ClusterIssuesProps> {
     });
 
     // Warning events for Workloads
-    const events = eventStore.getWarnings();
-
-    events.forEach(error => {
+    kubeEventStore.getWarnings().forEach(error => {
       const { message, involvedObject, getAge, getTimeDiffFromNow } = error;
       const { uid, name, kind } = involvedObject;
 
@@ -85,7 +95,7 @@ export class ClusterIssues extends React.Component<ClusterIssuesProps> {
         age: getAge(),
         message,
         kind,
-        selfLink: apiManager.lookupApiLink(involvedObject, error),
+        selfLink: this.props.apiManager.lookupApiLink(involvedObject, error),
       });
     });
 
@@ -94,6 +104,7 @@ export class ClusterIssues extends React.Component<ClusterIssuesProps> {
 
   @boundMethod
   getTableRow(uid: string) {
+    const { kubeSelectedUrlParam, toggleDetails } = this.props;
     const { warnings } = this;
     const warning = warnings.find(warn => warn.getId() == uid);
     const { getId, getName, message, kind, selfLink, age } = warning;
@@ -124,7 +135,7 @@ export class ClusterIssues extends React.Component<ClusterIssuesProps> {
   renderContent() {
     const { warnings } = this;
 
-    if (!eventStore.isLoaded) {
+    if (!this.props.kubeEventStore.isLoaded) {
       return (
         <Spinner center/>
       );
@@ -151,11 +162,15 @@ export class ClusterIssues extends React.Component<ClusterIssuesProps> {
           items={warnings}
           virtual
           selectable
-          sortable={this.sortCallbacks}
+          sortable={{
+            [sortBy.type]: (warning: IWarning) => warning.kind,
+            [sortBy.object]: (warning: IWarning) => warning.getName(),
+            [sortBy.age]: (warning: IWarning) => warning.timeDiffFromNow,
+          }}
           sortByDefault={{ sortBy: sortBy.object, orderBy: "asc" }}
           sortSyncWithUrl={false}
           getTableRow={this.getTableRow}
-          className={cssNames("box grow", ThemeStore.getInstance().activeTheme.type)}
+          className={cssNames("box grow", this.props.activeTheme.value.type)}
         >
           <TableHead nowrap>
             <TableCell className="message">Message</TableCell>
@@ -176,3 +191,15 @@ export class ClusterIssues extends React.Component<ClusterIssuesProps> {
     );
   }
 }
+
+export const ClusterIssues = withInjectables<Dependencies, ClusterIssuesProps>(NonInjectedClusterIssues, {
+  getProps: (di, props) => ({
+    ...props,
+    activeTheme: di.inject(activeThemeInjectable),
+    kubeSelectedUrlParam: di.inject(kubeSelectedUrlParamInjectable),
+    toggleDetails: di.inject(toggleDetailsInjectable),
+    kubeEventStore: di.inject(kubeEventStoreInjectable),
+    apiManager: di.inject(apiManagerInjectable),
+    nodeStore: di.inject(nodeStoreInjectable),
+  }),
+});

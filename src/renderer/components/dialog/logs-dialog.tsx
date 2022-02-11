@@ -6,12 +6,17 @@
 import "./logs-dialog.scss";
 
 import React from "react";
-import { Dialog, DialogProps } from "../dialog";
+import type { DialogProps } from "../dialog";
+import { Dialog } from "../dialog";
 import { Wizard, WizardStep } from "../wizard";
-import { Notifications } from "../notifications";
 import { Button } from "../button";
 import { Icon } from "../icon";
 import { clipboard } from "electron";
+import { withInjectables } from "@ogre-tools/injectable-react";
+import { observer } from "mobx-react";
+import type { OkNotification } from "../notifications/ok.injectable";
+import okNotificationInjectable from "../notifications/ok.injectable";
+import { cssNames } from "../../utils";
 
 // todo: make as external BrowserWindow (?)
 
@@ -20,38 +25,57 @@ export interface LogsDialogProps extends DialogProps {
   logs: string;
 }
 
-export class LogsDialog extends React.Component<LogsDialogProps> {
-  public logsElem: HTMLElement;
+interface Dependencies {
+  okNotification: OkNotification;
+}
 
-  copyToClipboard = () => {
-    clipboard.writeText(this.props.logs);
-    Notifications.ok(`Logs copied to clipboard.`);
+const NonInjectedLogsDialog = observer(({
+  okNotification,
+  title,
+  logs,
+  className,
+  ...dialogProps
+}: Dependencies & LogsDialogProps) => {
+  const copyToClipboard = () => {
+    clipboard.writeText(logs);
+    okNotification(`Logs copied to clipboard.`);
   };
 
-  render() {
-    const { title, logs, ...dialogProps } = this.props;
-    const header = <h5>{title}</h5>;
-    const customButtons = (
-      <div className="buttons flex gaps align-center justify-space-between">
-        <Button plain onClick={this.copyToClipboard}>
-          <Icon material="assignment"/> Copy to clipboard
-        </Button>
-        <Button plain onClick={dialogProps.close}>
-          Close
-        </Button>
-      </div>
-    );
+  return (
+    <Dialog
+      className={cssNames("LogsDialog", className)}
+      {...dialogProps}
+    >
+      <Wizard
+        header={<h5>{title}</h5>}
+        done={dialogProps.close}
+      >
+        <WizardStep
+          scrollable={false}
+          customButtons={(
+            <div className="buttons flex gaps align-center justify-space-between">
+              <Button plain onClick={copyToClipboard}>
+                <Icon material="assignment"/> Copy to clipboard
+              </Button>
+              <Button plain onClick={dialogProps.close}>
+                Close
+              </Button>
+            </div>
+          )}
+        >
+          <code className="block">
+            {logs || "There are no logs available."}
+          </code>
+        </WizardStep>
+      </Wizard>
+    </Dialog>
+  );
+});
 
-    return (
-      <Dialog {...dialogProps} className="LogsDialog">
-        <Wizard header={header} done={dialogProps.close}>
-          <WizardStep scrollable={false} customButtons={customButtons}>
-            <code className="block" ref={e => this.logsElem = e}>
-              {logs || "There are no logs available."}
-            </code>
-          </WizardStep>
-        </Wizard>
-      </Dialog>
-    );
-  }
-}
+export const LogsDialog = withInjectables<Dependencies, LogsDialogProps>(NonInjectedLogsDialog, {
+  getProps: (di, props) => ({
+    ...props,
+    okNotification: di.inject(okNotificationInjectable),
+  }),
+});
+

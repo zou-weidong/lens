@@ -12,11 +12,14 @@ import type { RouteComponentProps } from "react-router";
 import { KubeObjectListLayout } from "../kube-object-list-layout";
 import type { KubeObject } from "../../../common/k8s-api/kube-object";
 import { computed, makeObservable } from "mobx";
-import { crdStore } from "./crd.store";
+import type { CustomResourceDefinitionStore } from "./definitions/store";
 import type { TableSortCallbacks } from "../table";
-import { apiManager } from "../../../common/k8s-api/api-manager";
-import { parseJsonPath } from "../../utils/jsonPath";
+import { parseJsonPath } from "../../utils";
 import type { CRDRouteParams } from "../../../common/routes";
+import type { ApiManager } from "../../../common/k8s-api/api-manager";
+import { withInjectables } from "@ogre-tools/injectable-react";
+import apiManagerInjectable from "../../../common/k8s-api/api-manager.injectable";
+import customResourceDefinitionStoreInjectable from "./definitions/store.injectable";
 
 export interface CustomResourceDefinitionResourcesProps extends RouteComponentProps<CRDRouteParams> {
 }
@@ -27,9 +30,14 @@ enum columnId {
   age = "age",
 }
 
+interface Dependencies {
+  apiManager: ApiManager;
+  customResourceDefinitionStore: CustomResourceDefinitionStore;
+}
+
 @observer
-export class CustomResourceDefinitionResources extends React.Component<CustomResourceDefinitionResourcesProps> {
-  constructor(props: CustomResourceDefinitionResourcesProps) {
+class NonInjectedCustomResourceDefinitionResources extends React.Component<CustomResourceDefinitionResourcesProps & Dependencies> {
+  constructor(props: CustomResourceDefinitionResourcesProps & Dependencies) {
     super(props);
     makeObservable(this);
   }
@@ -37,11 +45,11 @@ export class CustomResourceDefinitionResources extends React.Component<CustomRes
   @computed get crd() {
     const { group, name } = this.props.match.params;
 
-    return crdStore.getByGroup(group, name);
+    return this.props.customResourceDefinitionStore.getByGroup(group, name);
   }
 
   @computed get store() {
-    return apiManager.getStore(this.crd?.getResourceApiBase());
+    return this.props.apiManager.getStore(this.crd?.getResourceApiBase());
   }
 
   render() {
@@ -127,3 +135,11 @@ export class CustomResourceDefinitionResources extends React.Component<CustomRes
     );
   }
 }
+
+export const CustomResourceDefinitionResources = withInjectables<Dependencies, CustomResourceDefinitionResourcesProps>(NonInjectedCustomResourceDefinitionResources, {
+  getProps: (di, props) => ({
+    ...props,
+    apiManager: di.inject(apiManagerInjectable),
+    customResourceDefinitionStore: di.inject(customResourceDefinitionStoreInjectable),
+  }),
+});

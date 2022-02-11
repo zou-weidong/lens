@@ -7,7 +7,7 @@
  * @jest-environment jsdom
  */
 
-import { clearKubeconfigEnvVars } from "../utils/clear-kube-env-vars";
+import { clearKubeconfigEnvVars } from "../utils";
 
 describe("clearKubeconfigEnvVars tests", () => {
   it("should not touch non kubeconfig keys", () => {

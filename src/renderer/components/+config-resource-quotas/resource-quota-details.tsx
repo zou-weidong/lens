@@ -10,7 +10,7 @@ import { observer } from "mobx-react";
 import { DrawerItem, DrawerTitle } from "../drawer";
 import { cpuUnitsToNumber, cssNames, unitsToBytes, metricUnitsToNumber } from "../../utils";
 import type { KubeObjectDetailsProps } from "../kube-object-details";
-import { ResourceQuota } from "../../../common/k8s-api/endpoints/resource-quota.api";
+import { ResourceQuota } from "../../../common/k8s-api/endpoints";
 import { LineProgress } from "../line-progress";
 import { Table, TableCell, TableHead, TableRow } from "../table";
 import { KubeObjectMeta } from "../kube-object-meta";

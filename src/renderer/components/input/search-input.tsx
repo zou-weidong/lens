@@ -9,8 +9,10 @@ import React, { createRef } from "react";
 import { observer } from "mobx-react";
 import { boundMethod, cssNames } from "../../utils";
 import { Icon } from "../icon";
-import { Input, InputProps } from "./input";
-import { isMac } from "../../../common/vars";
+import type { InputProps } from "./input";
+import { Input } from "./input";
+import { withInjectables } from "@ogre-tools/injectable-react";
+import isMacInjectable from "../../../common/vars/is-mac.injectable";
 
 export interface SearchInputProps extends InputProps {
   compact?: boolean; // show only search-icon when not focused
@@ -26,8 +28,12 @@ const defaultProps: Partial<SearchInputProps> = {
   placeholder: "Search...",
 };
 
+interface Dependencies {
+  isMac: boolean;
+}
+
 @observer
-export class SearchInput extends React.Component<SearchInputProps> {
+class NonInjectedSearchInput extends React.Component<SearchInputProps & Dependencies> {
   static defaultProps = defaultProps as object;
 
   private inputRef = createRef<Input>();
@@ -43,8 +49,8 @@ export class SearchInput extends React.Component<SearchInputProps> {
 
   @boundMethod
   onGlobalKey(evt: KeyboardEvent) {
-    if (evt.key === "f" && (isMac ? evt.metaKey : evt.ctrlKey)) {
-      this.inputRef.current.focus();
+    if (evt.key === "f" && (this.props.isMac ? evt.metaKey : evt.ctrlKey)) {
+      this.inputRef.current?.focus();
     }
   }
 
@@ -63,7 +69,7 @@ export class SearchInput extends React.Component<SearchInputProps> {
     if (this.props.onClear) {
       this.props.onClear();
     } else {
-      this.inputRef.current.setValue("");
+      this.inputRef.current?.setValue("");
     }
   }
 
@@ -88,3 +94,10 @@ export class SearchInput extends React.Component<SearchInputProps> {
     );
   }
 }
+
+export const SearchInput = withInjectables<Dependencies, SearchInputProps>(NonInjectedSearchInput, {
+  getProps: (di, props) => ({
+    ...props,
+    isMac: di.inject(isMacInjectable),
+  }),
+});

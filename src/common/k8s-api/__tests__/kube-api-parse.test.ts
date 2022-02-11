@@ -3,17 +3,9 @@
  * Licensed under MIT License. See LICENSE in root directory for more information.
  */
 
-jest.mock("../kube-object");
-jest.mock("../kube-api");
-jest.mock("../api-manager", () => ({
-  apiManager() {
-    return {
-      registerStore: jest.fn(),
-    };
-  },
-}));
-
-import { IKubeApiParsed, parseKubeApi } from "../kube-api-parse";
+import { getDiForUnitTesting } from "../../../renderer/getDiForUnitTesting";
+import type { IKubeApiParsed, ParseKubeApi } from "../url/parse.injectable";
+import parseKubeApiInjectable from "../url/parse.injectable";
 
 /**
  * [<input-url>, <expected-result>]
@@ -120,6 +112,14 @@ const throwtests = [
 ];
 
 describe("parseApi unit tests", () => {
+  let parseKubeApi: ParseKubeApi;
+
+  beforeEach(() => {
+    const di = getDiForUnitTesting();
+
+    parseKubeApi = di.inject(parseKubeApiInjectable);
+  });
+
   it.each(tests)("testing %j", (url, expected) => {
     expect(parseKubeApi(url)).toStrictEqual(expected);
   });

@@ -3,8 +3,6 @@
  * Licensed under MIT License. See LICENSE in root directory for more information.
  */
 
-import { runInAction } from "mobx";
-
 /**
  * Get the value behind `key`. If it was not present, first insert `value`
  * @param map The map to interact with
@@ -81,10 +79,19 @@ export function strictGet<K, V>(map: Map<K, V>, key: K): V {
  * @param key The key to toggle the "is in"-ness of
  */
 export function toggle<K>(set: Set<K>, key: K): void {
-  runInAction(() => {
-    // Returns true if value was already in Set; otherwise false.
-    if (!set.delete(key)) {
-      set.add(key);
-    }
-  });
+  // Returns true if value was already in Set; otherwise false.
+  if (!set.delete(key)) {
+    set.add(key);
+  }
+}
+
+/**
+ * Set many items onto a map
+ * @param map The map to set onto
+ * @param entries A list of key-value pairs
+ */
+export function multiSet<K, V>(map: Map<K, V>, entries: [K, V][]): void {
+  for (const [key, value] of entries) {
+    map.set(key, value);
+  }
 }

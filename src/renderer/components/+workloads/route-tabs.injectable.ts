@@ -14,14 +14,14 @@ import { Jobs } from "../+workloads-jobs";
 import { CronJobs } from "../+workloads-cronjobs";
 import { ReplicaSets } from "../+workloads-replicasets";
 import * as routes from "../../../common/routes";
-import type { IsAllowedResource } from "../../../common/utils/is-allowed-resource.injectable";
-import isAllowedResourceInjectable from "../../../common/utils/is-allowed-resource.injectable";
+import type { AllowedResources } from "../../clusters/allowed-resources.injectable";
+import allowedResourcesInjectable from "../../clusters/allowed-resources.injectable";
 
 interface Dependencies {
-  isAllowedResource: IsAllowedResource;
+  allowedResources: AllowedResources;
 }
 
-function getRouteTabs({ isAllowedResource }: Dependencies) {
+function getRouteTabs({ allowedResources }: Dependencies) {
   return computed(() => {
     const tabs: TabLayoutRoute[] = [
       {
@@ -32,7 +32,7 @@ function getRouteTabs({ isAllowedResource }: Dependencies) {
       },
     ];
 
-    if (isAllowedResource("pods")) {
+    if (allowedResources.has("pods")) {
       tabs.push({
         title: "Pods",
         component: Pods,
@@ -41,7 +41,7 @@ function getRouteTabs({ isAllowedResource }: Dependencies) {
       });
     }
 
-    if (isAllowedResource("deployments")) {
+    if (allowedResources.has("deployments")) {
       tabs.push({
         title: "Deployments",
         component: Deployments,
@@ -50,7 +50,7 @@ function getRouteTabs({ isAllowedResource }: Dependencies) {
       });
     }
 
-    if (isAllowedResource("daemonsets")) {
+    if (allowedResources.has("daemonsets")) {
       tabs.push({
         title: "DaemonSets",
         component: DaemonSets,
@@ -59,7 +59,7 @@ function getRouteTabs({ isAllowedResource }: Dependencies) {
       });
     }
 
-    if (isAllowedResource("statefulsets")) {
+    if (allowedResources.has("statefulsets")) {
       tabs.push({
         title: "StatefulSets",
         component: StatefulSets,
@@ -68,7 +68,7 @@ function getRouteTabs({ isAllowedResource }: Dependencies) {
       });
     }
 
-    if (isAllowedResource("replicasets")) {
+    if (allowedResources.has("replicasets")) {
       tabs.push({
         title: "ReplicaSets",
         component: ReplicaSets,
@@ -77,7 +77,7 @@ function getRouteTabs({ isAllowedResource }: Dependencies) {
       });
     }
 
-    if (isAllowedResource("jobs")) {
+    if (allowedResources.has("jobs")) {
       tabs.push({
         title: "Jobs",
         component: Jobs,
@@ -86,7 +86,7 @@ function getRouteTabs({ isAllowedResource }: Dependencies) {
       });
     }
 
-    if (isAllowedResource("cronjobs")) {
+    if (allowedResources.has("cronjobs")) {
       tabs.push({
         title: "CronJobs",
         component: CronJobs,
@@ -103,7 +103,7 @@ const workloadsRouteTabsInjectable = getInjectable({
   id: "workloads-route-tabs",
 
   instantiate: (di) => getRouteTabs({
-    isAllowedResource: di.inject(isAllowedResourceInjectable),
+    allowedResources: di.inject(allowedResourcesInjectable),
   }),
 });
 

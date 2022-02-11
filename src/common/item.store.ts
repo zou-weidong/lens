@@ -20,8 +20,8 @@ export abstract class ItemStore<Item extends ItemObject> {
   @observable failedLoading = false;
   @observable isLoading = false;
   @observable isLoaded = false;
-  @observable items = observable.array<Item>([], { deep: false });
-  @observable selectedItemsIds = observable.set<string>();
+  @observable readonly items = observable.array<Item>([], { deep: false });
+  @observable readonly selectedItemsIds = observable.set<string>();
 
   constructor() {
     makeObservable(this);

@@ -3,23 +3,14 @@
  * Licensed under MIT License. See LICENSE in root directory for more information.
  */
 import { getInjectable } from "@ogre-tools/injectable";
-import createStorageInjectable from "../../../utils/create-storage/create-storage.injectable";
-import { TableModel, TableStorageModel } from "./table-model";
+import tableModelStorageInjectable from "./storage.injectable";
+import { TableModel } from "./table-model";
 
 const tableModelInjectable = getInjectable({
+  instantiate: (di) => new TableModel({
+    storage: di.inject(tableModelStorageInjectable),
+  }),
   id: "table-model",
-
-  instantiate: (di) => {
-    const createStorage = di.inject(createStorageInjectable);
-
-    const storage = createStorage<TableStorageModel>("table_settings", {
-      sortParams: {},
-    });
-
-    return new TableModel({
-      storage,
-    });
-  },
 });
 
 export default tableModelInjectable;

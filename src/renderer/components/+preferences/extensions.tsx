@@ -7,27 +7,30 @@ import { withInjectables } from "@ogre-tools/injectable-react";
 import type { IComputedValue } from "mobx";
 import { observer } from "mobx-react";
 import React from "react";
-import type { RegisteredAppPreference } from "./app-preferences/app-preference-registration";
-import appPreferencesInjectable from "./app-preferences/app-preferences.injectable";
+import type { RegisteredAppPreference } from "./app-preferences.injectable";
+import appPreferencesInjectable from "./app-preferences.injectable";
 import { ExtensionSettings } from "./extension-settings";
 
 interface Dependencies {
   appPreferenceItems: IComputedValue<RegisteredAppPreference[]>;
 }
 
-const NonInjectedExtensions: React.FC<Dependencies> = ({ appPreferenceItems }) => {
-
-  const settings = appPreferenceItems.get();
-
-  return (
-    <section id="extensions">
-      <h2>Extensions</h2>
-      {settings.filter(e => !e.showInPreferencesTab).map((setting) =>
-        <ExtensionSettings key={setting.id} setting={setting} size="small" />,
-      )}
-    </section>
-  );
-};
+const NonInjectedExtensions = observer(({ appPreferenceItems }: Dependencies) => (
+  <section id="extensions">
+    <h2>Extensions</h2>
+    {
+      appPreferenceItems.get()
+        .filter(e => !e.showInPreferencesTab)
+        .map((setting) => (
+          <ExtensionSettings
+            key={setting.id}
+            setting={setting}
+            size="small"
+          />
+        ))
+    }
+  </section>
+));
 
 export const Extensions = withInjectables<Dependencies>(
   observer(NonInjectedExtensions),

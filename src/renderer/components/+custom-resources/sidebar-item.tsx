@@ -7,28 +7,38 @@ import { withInjectables } from "@ogre-tools/injectable-react";
 import type { IComputedValue } from "mobx";
 import { observer } from "mobx-react";
 import customResourcesRouteTabsInjectable, { type CustomResourceGroupTabLayoutRoute } from "./route-tabs.injectable";
-import type { IsAllowedResource } from "../../../common/utils/is-allowed-resource.injectable";
-import isAllowedResourceInjectable from "../../../common/utils/is-allowed-resource.injectable";
+import type { AllowedResources } from "../../clusters/allowed-resources.injectable";
+import allowedResourcesInjectable from "../../clusters/allowed-resources.injectable";
 import { crdURL, crdRoute } from "../../../common/routes";
-import { isActiveRoute } from "../../navigation";
 import { Icon } from "../icon";
-import { SidebarItem } from "../layout/sidebar-item";
+import { SidebarItem } from "../layout/sidebar/item";
 import subscribeStoresInjectable from "../../kube-watch-api/subscribe-stores.injectable";
 import type { SubscribeStores } from "../../kube-watch-api/kube-watch-api";
-import { crdStore } from "./crd.store";
+import type { CustomResourceDefinitionStore } from "./definitions/store";
 import { Spinner } from "../spinner";
+import type { IsRouteActive } from "../../navigation/is-route-active.injectable";
+import isRouteActiveInjectable from "../../navigation/is-route-active.injectable";
+import customResourceDefinitionStoreInjectable from "./definitions/store.injectable";
 
 export interface CustomResourcesSidebarItemProps {}
 
 interface Dependencies {
   routes: IComputedValue<CustomResourceGroupTabLayoutRoute[]>;
-  isAllowedResource: IsAllowedResource;
+  allowedResources: AllowedResources;
   subscribeStores: SubscribeStores;
+  isRouteActive: IsRouteActive;
+  customResourceDefinitionStore: CustomResourceDefinitionStore;
 }
 
-const NonInjectedCustomResourcesSidebarItem = observer(({ routes, isAllowedResource, subscribeStores }: Dependencies & CustomResourcesSidebarItemProps) => {
+const NonInjectedCustomResourcesSidebarItem = observer(({
+  routes,
+  allowedResources,
+  subscribeStores,
+  isRouteActive,
+  customResourceDefinitionStore,
+}: Dependencies & CustomResourcesSidebarItemProps) => {
   useEffect(() => subscribeStores([
-    crdStore,
+    customResourceDefinitionStore,
   ]), []);
 
   return (
@@ -36,8 +46,8 @@ const NonInjectedCustomResourcesSidebarItem = observer(({ routes, isAllowedResou
       id="custom-resources"
       text="Custom Resources"
       url={crdURL()}
-      isActive={isActiveRoute(crdRoute)}
-      isHidden={!isAllowedResource("customresourcedefinitions")}
+      isActive={isRouteActive(crdRoute)}
+      isHidden={!allowedResources.has("customresourcedefinitions")}
       icon={<Icon material="extension"/>}
     >
       {routes.get().map((route) => (
@@ -57,7 +67,7 @@ const NonInjectedCustomResourcesSidebarItem = observer(({ routes, isAllowedResou
           ))}
         </SidebarItem>
       ))}
-      {crdStore.isLoading && (
+      {customResourceDefinitionStore.isLoading && (
         <div className="flex justify-center">
           <Spinner />
         </div>
@@ -68,9 +78,11 @@ const NonInjectedCustomResourcesSidebarItem = observer(({ routes, isAllowedResou
 
 export const CustomResourcesSidebarItem = withInjectables<Dependencies, CustomResourcesSidebarItemProps>(NonInjectedCustomResourcesSidebarItem, {
   getProps: (di, props) => ({
-    routes: di.inject(customResourcesRouteTabsInjectable),
-    isAllowedResource: di.inject(isAllowedResourceInjectable),
-    subscribeStores: di.inject(subscribeStoresInjectable),
     ...props,
+    routes: di.inject(customResourcesRouteTabsInjectable),
+    allowedResources: di.inject(allowedResourcesInjectable),
+    subscribeStores: di.inject(subscribeStoresInjectable),
+    isRouteActive: di.inject(isRouteActiveInjectable),
+    customResourceDefinitionStore: di.inject(customResourceDefinitionStoreInjectable),
   }),
 });

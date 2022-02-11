@@ -3,10 +3,11 @@
  * Licensed under MIT License. See LICENSE in root directory for more information.
  */
 import { getInjectable } from "@ogre-tools/injectable";
+import type {
+  HelmRelease } from "../../../../common/k8s-api/endpoints";
 import {
   deleteRelease,
-  HelmRelease,
-} from "../../../../common/k8s-api/endpoints/helm-releases.api";
+} from "../../../../common/k8s-api/endpoints";
 import releasesInjectable from "../releases.injectable";
 
 const deleteReleaseInjectable = getInjectable({

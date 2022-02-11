@@ -8,9 +8,9 @@ import styles from "./badge.module.scss";
 import React from "react";
 import { computed, makeObservable, observable } from "mobx";
 import { observer } from "mobx-react";
-import { cssNames } from "../../utils/cssNames";
-import { TooltipDecoratorProps, withTooltip } from "../tooltip";
-import { boundMethod } from "../../utils";
+import { cssNames, boundMethod } from "../../utils";
+import type { TooltipDecoratorProps } from "../tooltip";
+import { withTooltip } from "../tooltip";
 
 export interface BadgeProps extends React.HTMLAttributes<any>, TooltipDecoratorProps {
   small?: boolean;

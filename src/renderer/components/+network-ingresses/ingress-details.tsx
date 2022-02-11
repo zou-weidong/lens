@@ -9,26 +9,32 @@ import React from "react";
 import { disposeOnUnmount, observer } from "mobx-react";
 import { makeObservable, observable, reaction } from "mobx";
 import { DrawerItem, DrawerTitle } from "../drawer";
-import { ILoadBalancerIngress, Ingress } from "../../../common/k8s-api/endpoints";
+import type { ILoadBalancerIngress, IIngressMetrics } from "../../../common/k8s-api/endpoints";
+import { Ingress, getBackendServiceNamePort, getMetricsForIngress } from "../../../common/k8s-api/endpoints";
 import { Table, TableCell, TableHead, TableRow } from "../table";
 import { ResourceMetrics } from "../resource-metrics";
 import type { KubeObjectDetailsProps } from "../kube-object-details";
 import { IngressCharts } from "./ingress-charts";
 import { KubeObjectMeta } from "../kube-object-meta";
-import { getBackendServiceNamePort, getMetricsForIngress, type IIngressMetrics } from "../../../common/k8s-api/endpoints/ingress.api";
-import { getActiveClusterEntity } from "../../api/catalog-entity-registry";
-import { ClusterMetricsResourceType } from "../../../common/cluster-types";
+import { ClusterMetricsResourceType } from "../../../common/clusters/cluster-types";
 import { boundMethod } from "../../utils";
 import logger from "../../../common/logger";
+import type { ShouldDisplayMetric } from "../../clusters/should-display-metric.injectable";
+import { withInjectables } from "@ogre-tools/injectable-react";
+import shouldDisplayMetricInjectable from "../../clusters/should-display-metric.injectable";
 
 export interface IngressDetailsProps extends KubeObjectDetailsProps<Ingress> {
 }
 
+interface Dependencies {
+  shouldDisplayMetric: ShouldDisplayMetric;
+}
+
 @observer
-export class IngressDetails extends React.Component<IngressDetailsProps> {
+class NonInjectedIngressDetails extends React.Component<IngressDetailsProps & Dependencies> {
   @observable metrics: IIngressMetrics = null;
 
-  constructor(props: IngressDetailsProps) {
+  constructor(props: IngressDetailsProps & Dependencies) {
     super(props);
     makeObservable(this);
   }
@@ -114,7 +120,7 @@ export class IngressDetails extends React.Component<IngressDetailsProps> {
   }
 
   render() {
-    const { object: ingress } = this.props;
+    const { object: ingress, shouldDisplayMetric } = this.props;
 
     if (!ingress) {
       return null;
@@ -128,20 +134,19 @@ export class IngressDetails extends React.Component<IngressDetailsProps> {
 
     const { spec, status } = ingress;
     const ingressPoints = status?.loadBalancer?.ingress;
-    const { metrics } = this;
-    const metricTabs = [
-      "Network",
-      "Duration",
-    ];
-    const isMetricHidden = getActiveClusterEntity()?.isMetricHidden(ClusterMetricsResourceType.Ingress);
     const { serviceName, servicePort } = ingress.getServiceNamePort();
 
     return (
       <div className="IngressDetails">
-        {!isMetricHidden && (
+        {shouldDisplayMetric(ClusterMetricsResourceType.Ingress) && (
           <ResourceMetrics
             loader={this.loadMetrics}
-            tabs={metricTabs} object={ingress} params={{ metrics }}
+            tabs={[
+              "Network",
+              "Duration",
+            ]}
+            object={ingress}
+            metrics={this.metrics}
           >
             <IngressCharts/>
           </ResourceMetrics>
@@ -169,3 +174,10 @@ export class IngressDetails extends React.Component<IngressDetailsProps> {
     );
   }
 }
+
+export const IngressDetails = withInjectables<Dependencies, IngressDetailsProps>(NonInjectedIngressDetails, {
+  getProps: (di, props) => ({
+    shouldDisplayMetric: di.inject(shouldDisplayMetricInjectable),
+    ...props,
+  }),
+});

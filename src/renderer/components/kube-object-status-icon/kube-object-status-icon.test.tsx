@@ -4,7 +4,8 @@
  */
 import { getDiForUnitTesting } from "../../getDiForUnitTesting";
 import rendererExtensionsInjectable from "../../../extensions/renderer-extensions.injectable";
-import { DiRender, renderFor } from "../test-utils/renderFor";
+import type { DiRender } from "../test-utils/renderFor";
+import { renderFor } from "../test-utils/renderFor";
 import { computed } from "mobx";
 import { LensRendererExtension } from "../../../extensions/lens-renderer-extension";
 import { KubeObjectStatusLevel } from "../../../extensions/renderer-api/kube-object-status";
@@ -12,6 +13,7 @@ import { KubeObject } from "../../../common/k8s-api/kube-object";
 import { KubeObjectStatusIcon } from "./kube-object-status-icon";
 import React from "react";
 import type { KubeObjectStatusRegistration } from "./kube-object-status-registration";
+import { SemVer } from "semver";
 
 describe("kube-object-status-icon", () => {
   let render: DiRender;
@@ -253,8 +255,14 @@ class SomeTestExtension extends LensRendererExtension {
       absolutePath: "irrelevant",
       isBundled: false,
       isCompatible: false,
-      isEnabled: false,
-      manifest: { name: "some-id", version: "some-version" },
+      manifest: {
+        name: "some-id",
+        version: new SemVer("1.0.0"),
+        description: "",
+        engines: {
+          lens: ">=1.0.0",
+        },
+      },
       manifestPath: "irrelevant",
     });
 

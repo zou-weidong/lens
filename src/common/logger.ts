@@ -3,68 +3,19 @@
  * Licensed under MIT License. See LICENSE in root directory for more information.
  */
 
-import { app, ipcMain } from "electron";
-import winston, { format } from "winston";
-import type Transport from "winston-transport";
-import { consoleFormat } from "winston-console-format";
-import { isDebugging, isTestEnv } from "./vars";
-import BrowserConsole from "winston-transport-browserconsole";
+import { asLegacyGlobalForExtensionApi } from "../extensions/di-legacy-globals/for-extension-api";
+import { baseLoggerInjectionToken } from "./logger/base-logger.token";
 
-const logLevel = process.env.LOG_LEVEL
-  ? process.env.LOG_LEVEL
-  : isDebugging
-    ? "debug"
-    : isTestEnv
-      ? "error"
-      : "info";
-
-const transports: Transport[] = [];
-
-if (ipcMain) {
-  transports.push(
-    new winston.transports.Console({
-      handleExceptions: false,
-      level: logLevel,
-      format: format.combine(
-        format.colorize({ level: true, message: false }),
-        format.padLevels(),
-        format.ms(),
-        consoleFormat({
-          showMeta: true,
-          inspectOptions: {
-            depth: 4,
-            colors: true,
-            maxArrayLength: 10,
-            breakLength: 120,
-            compact: Infinity,
-          },
-        }),
-      ),
-    }),
-  );
-
-  if (!isTestEnv) {
-    transports.push(
-      new winston.transports.File({
-        handleExceptions: false,
-        level: logLevel,
-        filename: "lens.log",
-        /**
-         * SAFTEY: the `ipcMain` check above should mean that this is only
-         * called in the main process
-         */
-        dirname: app.getPath("logs"),
-        maxsize: 16 * 1024,
-        maxFiles: 16,
-        tailable: true,
-      }),
-    );
-  }
-} else {
-  transports.push(new BrowserConsole());
+export interface LensLogger {
+  error: (message: string, meta?: Record<string, any>) => void;
+  info: (message: string, meta?: Record<string, any>) => void;
+  debug: (message: string, meta?: Record<string, any>) => void;
+  warn: (message: string, meta?: Record<string, any>) => void;
 }
 
-export default winston.createLogger({
-  format: format.simple(),
-  transports,
-});
+/**
+ * @deprecated use either di.inject(baseLoggerInjectableToken) or di.inject(createChildLoggerInjectable)
+ */
+const logger = asLegacyGlobalForExtensionApi(baseLoggerInjectionToken);
+
+export default logger;

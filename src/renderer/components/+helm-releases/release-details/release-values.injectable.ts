@@ -3,34 +3,36 @@
  * Licensed under MIT License. See LICENSE in root directory for more information.
  */
 import { getInjectable } from "@ogre-tools/injectable";
-import { getReleaseValues } from "../../../../common/k8s-api/endpoints/helm-releases.api";
+import { getReleaseValues } from "../../../../common/k8s-api/endpoints";
 import { asyncComputed } from "@ogre-tools/injectable-react";
 import releaseInjectable from "./release.injectable";
-import { Notifications } from "../../notifications";
 import userSuppliedValuesAreShownInjectable from "./user-supplied-values-are-shown.injectable";
+import errorNotificationInjectable from "../../notifications/error.injectable";
 
 const releaseValuesInjectable = getInjectable({
-  id: "release-values",
+  instantiate: (di) => {
+    const helmRelease = di.inject(releaseInjectable);
+    const userSuppliedValuesAreShown = di.inject(userSuppliedValuesAreShownInjectable);
+    const errorNotification = di.inject(errorNotificationInjectable);
 
-  instantiate: (di) =>
-    asyncComputed(async () => {
-      const release = di.inject(releaseInjectable).get();
+    return asyncComputed(async () => {
+      const release = helmRelease.get();
 
       // TODO: Figure out way to get rid of defensive code
       if (!release) {
         return "";
       }
 
-      const userSuppliedValuesAreShown = di.inject(userSuppliedValuesAreShownInjectable).value;
-
       try {
-        return await getReleaseValues(release.getName(), release.getNs(), !userSuppliedValuesAreShown) ?? "";
+        return await getReleaseValues(release.getName(), release.getNs(), !userSuppliedValuesAreShown.value) ?? "";
       } catch (error) {
-        Notifications.error(`Failed to load values for ${release.getName()}: ${error}`);
-
-        return "";
+        errorNotification(`Failed to load values for ${release.getName()}: ${error}`);
       }
-    }),
+
+      return "";
+    });
+  },
+  id: "release-values",
 });
 
 export default releaseValuesInjectable;

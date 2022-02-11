@@ -3,8 +3,14 @@
  * Licensed under MIT License. See LICENSE in root directory for more information.
  */
 
-import { ThemeStore } from "../../renderer/theme.store";
+import type { Theme } from "../../renderer/themes/theme";
+import { asLegacyGlobalForExtensionApi } from "../di-legacy-globals/for-extension-api";
+import activeThemeInjectable from "../../renderer/themes/active.injectable";
 
-export function getActiveTheme() {
-  return ThemeStore.getInstance().activeTheme;
+const activeTheme = asLegacyGlobalForExtensionApi(activeThemeInjectable);
+
+export type { Theme };
+
+export function getActiveTheme(): Theme {
+  return activeTheme.value;
 }

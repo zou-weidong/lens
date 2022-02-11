@@ -5,20 +5,28 @@
 import { observable, makeObservable, action, untracked } from "mobx";
 import type { NamespaceStore } from "../namespace-store/namespace.store";
 import type { SelectOption } from "../../select";
-import { isMac } from "../../../../common/vars";
 
 interface Dependencies {
   namespaceStore: NamespaceStore;
+  isMac: boolean;
 }
 
 export class NamespaceSelectFilterModel {
-  constructor(private dependencies: Dependencies) {
+  private readonly namespaceStore: NamespaceStore;
+  private isSelectionKey: (event: React.KeyboardEvent) => boolean;
+
+  constructor({ isMac, namespaceStore }: Dependencies) {
     makeObservable(this, {
       menuIsOpen: observable,
       closeMenu: action,
       openMenu: action,
       reset: action,
     });
+
+    this.namespaceStore = namespaceStore;
+    this.isSelectionKey = isMac
+      ? (event) => event.key === "Meta"
+      : (event) => event.key === "Control";
   }
 
   menuIsOpen = false;
@@ -32,29 +40,29 @@ export class NamespaceSelectFilterModel {
   };
 
   get selectedNames() {
-    return untracked(() => this.dependencies.namespaceStore.selectedNames);
+    return untracked(() => this.namespaceStore.selectedNames);
   }
 
   isSelected = (namespace: string | string[]) =>
-    this.dependencies.namespaceStore.hasContext(namespace);
+    this.namespaceStore.hasContext(namespace);
 
   selectSingle = (namespace: string) => {
-    this.dependencies.namespaceStore.selectSingle(namespace);
+    this.namespaceStore.selectSingle(namespace);
   };
 
   selectAll = () => {
-    this.dependencies.namespaceStore.selectAll();
+    this.namespaceStore.selectAll();
   };
 
   onChange = ([{ value: namespace }]: SelectOption[]) => {
     if (namespace) {
       if (this.isMultiSelection) {
-        this.dependencies.namespaceStore.toggleSingle(namespace);
+        this.namespaceStore.toggleSingle(namespace);
       } else {
-        this.dependencies.namespaceStore.selectSingle(namespace);
+        this.namespaceStore.selectSingle(namespace);
       }
     } else {
-      this.dependencies.namespaceStore.selectAll();
+      this.namespaceStore.selectAll();
     }
   };
 
@@ -69,13 +77,13 @@ export class NamespaceSelectFilterModel {
   private isMultiSelection = false;
 
   onKeyDown = (event: React.KeyboardEvent) => {
-    if (isSelectionKey(event)) {
+    if (this.isSelectionKey(event)) {
       this.isMultiSelection = true;
     }
   };
 
   onKeyUp = (event: React.KeyboardEvent) => {
-    if (isSelectionKey(event)) {
+    if (this.isSelectionKey(event)) {
       this.isMultiSelection = false;
     }
   };
@@ -85,11 +93,3 @@ export class NamespaceSelectFilterModel {
     this.closeMenu();
   };
 }
-
-const isSelectionKey = (event: React.KeyboardEvent): boolean  => {
-  if (isMac) {
-    return event.key === "Meta";
-  }
-
-  return event.key === "Control"; // windows or linux
-};

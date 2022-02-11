@@ -3,24 +3,21 @@
  * Licensed under MIT License. See LICENSE in root directory for more information.
  */
 
-import { apiManager } from "../../../../common/k8s-api/api-manager";
-import { RoleBinding, roleBindingApi, RoleBindingSubject } from "../../../../common/k8s-api/endpoints";
+import type { RoleBinding, RoleBindingApi, RoleBindingSubject } from "../../../../common/k8s-api/endpoints";
 import { KubeObjectStore } from "../../../../common/k8s-api/kube-object.store";
 import { HashSet } from "../../../utils";
 import { hashRoleBindingSubject } from "./hashers";
 
-export class RoleBindingsStore extends KubeObjectStore<RoleBinding> {
-  api = roleBindingApi;
+export class RoleBindingStore extends KubeObjectStore<RoleBinding, RoleBindingApi> {
+  constructor(api: RoleBindingApi) {
+    super(api);
+  }
 
   protected sortItems(items: RoleBinding[]) {
     return super.sortItems(items, [
       roleBinding => roleBinding.kind,
       roleBinding => roleBinding.getName(),
     ]);
-  }
-
-  protected async createItem(params: { name: string; namespace: string }, data?: Partial<RoleBinding>) {
-    return roleBindingApi.create(params, data);
   }
 
   async updateSubjects(roleBinding: RoleBinding, subjects: RoleBindingSubject[]) {
@@ -40,7 +37,3 @@ export class RoleBindingsStore extends KubeObjectStore<RoleBinding> {
     return this.updateSubjects(roleBinding, currentSubjects.toJSON());
   }
 }
-
-export const roleBindingsStore = new RoleBindingsStore();
-
-apiManager.registerStore(roleBindingsStore);

@@ -5,78 +5,93 @@
 
 import get from "lodash/get";
 import { autoBind } from "../../utils";
-import { IAffinity, WorkloadKubeObject } from "../workload-kube-object";
+import type { Affinity, Toleration } from "../common-types";
+import type { DerivedKubeApiOptions } from "../kube-api";
 import { KubeApi } from "../kube-api";
 import { metricsApi } from "./metrics.api";
 import type { KubeJsonApiData } from "../kube-json-api";
-import type { IPodContainer, IPodMetrics } from "./pods.api";
-import { isClusterPageContext } from "../../utils/cluster-id-url-parsing";
-import type { LabelSelector } from "../kube-object";
+import type { PodContainer, IPodMetrics } from "./pod.api";
+import type { KubeObjectMetadata, LabelSelector } from "../kube-object";
+import { KubeObject } from "../kube-object";
 
-export class Job extends WorkloadKubeObject {
+export interface JobSpec {
+  parallelism?: number;
+  completions?: number;
+  backoffLimit?: number;
+  selector?: LabelSelector;
+  template: {
+    metadata: {
+      creationTimestamp?: string;
+      labels?: Partial<Record<string, string>>;
+      annotations?: Partial<Record<string, string>>;
+    };
+    spec: {
+      containers: PodContainer[];
+      restartPolicy: string;
+      terminationGracePeriodSeconds: number;
+      dnsPolicy: string;
+      hostPID: boolean;
+      affinity?: Affinity;
+      nodeSelector?: Partial<Record<string, string>>;
+      tolerations?: Toleration[];
+      schedulerName: string;
+    };
+  };
+  containers?: PodContainer[];
+  restartPolicy?: string;
+  terminationGracePeriodSeconds?: number;
+  dnsPolicy?: string;
+  serviceAccountName?: string;
+  serviceAccount?: string;
+  schedulerName?: string;
+}
+
+export interface JobStatus {
+  conditions: {
+    type: string;
+    status: string;
+    lastProbeTime: string;
+    lastTransitionTime: string;
+    message?: string;
+  }[];
+  startTime: string;
+  completionTime: string;
+  succeeded: number;
+}
+
+export class Job extends KubeObject<KubeObjectMetadata, JobStatus, JobSpec> {
   static kind = "Job";
   static namespaced = true;
   static apiBase = "/apis/batch/v1/jobs";
 
-  constructor(data: KubeJsonApiData) {
+  constructor(data: KubeJsonApiData<KubeObjectMetadata, JobStatus, JobSpec>) {
     super(data);
     autoBind(this);
   }
 
-  declare spec: {
-    parallelism?: number;
-    completions?: number;
-    backoffLimit?: number;
-    selector?: LabelSelector;
-    template: {
-      metadata: {
-        creationTimestamp?: string;
-        labels?: {
-          [name: string]: string;
-        };
-        annotations?: {
-          [name: string]: string;
-        };
-      };
-      spec: {
-        containers: IPodContainer[];
-        restartPolicy: string;
-        terminationGracePeriodSeconds: number;
-        dnsPolicy: string;
-        hostPID: boolean;
-        affinity?: IAffinity;
-        nodeSelector?: {
-          [selector: string]: string;
-        };
-        tolerations?: {
-          key: string;
-          operator: string;
-          effect: string;
-          tolerationSeconds: number;
-        }[];
-        schedulerName: string;
-      };
-    };
-    containers?: IPodContainer[];
-    restartPolicy?: string;
-    terminationGracePeriodSeconds?: number;
-    dnsPolicy?: string;
-    serviceAccountName?: string;
-    serviceAccount?: string;
-    schedulerName?: string;
-  };
-  declare status: {
-    conditions: {
-      type: string;
-      status: string;
-      lastProbeTime: string;
-      lastTransitionTime: string;
-      message?: string;
-    }[];
-    startTime: string;
-    completionTime: string;
-    succeeded: number;
-  };
+  getSelectors(): string[] {
+    return KubeObject.stringifyLabels(this.spec?.selector?.matchLabels);
+  }
+
+  getNodeSelectors(): string[] {
+    return KubeObject.stringifyLabels(this.spec?.template?.spec?.nodeSelector);
+  }
+
+  getTemplateLabels(): string[] {
+    return KubeObject.stringifyLabels(this.spec?.template?.metadata?.labels);
+  }
+
+  getTolerations(): Toleration[] {
+    return this.spec?.template?.spec?.tolerations ?? [];
+  }
+
+  getAffinity(): Affinity {
+    return this.spec?.template?.spec?.affinity ?? {};
+  }
+
+  getAffinityNumber() {
+    return Object.keys(this.getAffinity()).length;
+  }
 
   getDesiredCompletions() {
     return this.spec.completions || 0;
@@ -87,7 +102,7 @@ export class Job extends WorkloadKubeObject {
   }
 
   getParallelism() {
-    return this.spec.parallelism;
+    return this.spec.parallelism || 1;
   }
 
   getCondition() {
@@ -97,13 +112,19 @@ export class Job extends WorkloadKubeObject {
   }
 
   getImages() {
-    const containers: IPodContainer[] = get(this, "spec.template.spec.containers", []);
+    const containers: PodContainer[] = get(this, "spec.template.spec.containers", []);
 
     return [...containers].map(container => container.image);
   }
 }
 
 export class JobApi extends KubeApi<Job> {
+  constructor(opts: DerivedKubeApiOptions = {}) {
+    super({
+      objectConstructor: Job,
+      ...opts,
+    });
+  }
 }
 
 export function getMetricsForJobs(jobs: Job[], namespace: string, selector = ""): Promise<IPodMetrics> {
@@ -122,15 +143,3 @@ export function getMetricsForJobs(jobs: Job[], namespace: string, selector = "")
     namespace,
   });
 }
-
-let jobApi: JobApi;
-
-if (isClusterPageContext()) {
-  jobApi = new JobApi({
-    objectConstructor: Job,
-  });
-}
-
-export {
-  jobApi,
-};

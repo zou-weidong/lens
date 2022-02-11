@@ -10,6 +10,7 @@ import { computed, ObservableMap, runInAction } from "mobx";
 import type { MenuRegistration } from "./menu-registration";
 import { getDiForUnitTesting } from "../getDiForUnitTesting";
 import mainExtensionsInjectable from "../../extensions/main-extensions.injectable";
+import { SemVer } from "semver";
 
 describe("electron-menu-items", () => {
   let di: DiContainer;
@@ -108,8 +109,14 @@ class SomeTestExtension extends LensMainExtension {
       absolutePath: "irrelevant",
       isBundled: false,
       isCompatible: false,
-      isEnabled: false,
-      manifest: { name: id, version: "some-version" },
+      manifest: {
+        name: id,
+        version: new SemVer("1.0.0"),
+        description: "foo",
+        engines: {
+          lens: ">=1.0.0",
+        },
+      },
       manifestPath: "irrelevant",
     });
 
