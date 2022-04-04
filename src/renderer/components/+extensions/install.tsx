@@ -57,9 +57,7 @@ const NonInjectedInstall: React.FC<Dependencies & InstallProps> = ({
         <Input
           className="box grow mr-6"
           theme="round-black"
-          disabled={
-            extensionInstallationStateStore.anyPreInstallingOrInstalling
-          }
+          disabled={extensionInstallationStateStore.anyPreInstallingOrInstalling}
           placeholder={"Name or file path or URL"}
           showErrorsAsTooltip={{ preferredPositions: TooltipPosition.BOTTOM }}
           validators={installPath ? installInputValidator : undefined}
