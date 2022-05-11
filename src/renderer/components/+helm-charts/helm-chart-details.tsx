@@ -23,7 +23,11 @@ import createInstallChartTabInjectable from "../dock/install-chart/create-instal
 import { Notifications } from "../notifications";
 import HelmLogoPlaceholder from "./helm-placeholder.svg";
 import type { SingleValue } from "react-select";
-import { AbortController } from "abort-controller";
+import type { RequestInit } from "node-fetch";
+
+// TODO: upgrade node-fetch once we are starting to use ES modules
+type LegacyAbortSignal = NonNullable<RequestInit["signal"]>;
+
 
 export interface HelmChartDetailsProps {
   chart: HelmChart;
@@ -101,7 +105,12 @@ class NonInjectedHelmChartDetails extends Component<HelmChartDetailsProps & Depe
       this.abortController.abort();
       this.abortController = new AbortController();
       const { chart: { name, repo }} = this.props;
-      const { readme } = await getChartDetails(repo, name, { version: chart.version, reqInit: { signal: this.abortController.signal }});
+      const { readme } = await getChartDetails(repo, name, {
+        version: chart.version,
+        reqInit: {
+          signal: this.abortController.signal as LegacyAbortSignal,
+        },
+      });
 
       this.readme.set(readme);
     } catch (error) {
