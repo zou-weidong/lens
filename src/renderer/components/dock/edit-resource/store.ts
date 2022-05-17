@@ -35,10 +35,12 @@ export interface EditResourceTabStoreDependencies extends DockTabStoreDependenci
 }
 
 function getEditSelfLinkFor(object: RawKubeObject): string {
-  if (object.metadata.labels?.[EditResourceLabelName]) {
+  const lensVersionLabel = object.metadata.labels?.[EditResourceLabelName];
+
+  if (lensVersionLabel) {
     const { apiVersionWithGroup, ...parsedApi } = parseKubeApi(object.metadata.selfLink);
 
-    parsedApi.apiVersion = object.metadata.labels?.[EditResourceLabelName];
+    parsedApi.apiVersion = lensVersionLabel;
 
     return createKubeApiURL({
       ...parsedApi,
