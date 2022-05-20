@@ -6,7 +6,8 @@
 import type { DerivedKubeApiOptions, IgnoredKubeApiOptions } from "../kube-api";
 import { KubeApi } from "../kube-api";
 import { metricsApi } from "./metrics.api";
-import type { PodContainer, PodMetricData, PodSpec } from "./pod.api";
+import type { PodMetricData, PodSpec } from "./pod.api";
+import type { Container } from "./types/container";
 import type { KubeObjectScope, KubeObjectStatus, LabelSelector } from "../kube-object";
 import { KubeObject } from "../kube-object";
 
@@ -23,7 +24,7 @@ export interface JobSpec {
     };
     spec: PodSpec;
   };
-  containers?: PodContainer[];
+  containers?: Container[];
   restartPolicy?: string;
   terminationGracePeriodSeconds?: number;
   dnsPolicy?: string;
