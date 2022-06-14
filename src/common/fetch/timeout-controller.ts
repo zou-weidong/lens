@@ -3,8 +3,6 @@
  * Licensed under MIT License. See LICENSE in root directory for more information.
  */
 
-import AbortController from "abort-controller";
-
 /**
  * Creates an AbortController with an associated timeout
  * @param timeout The number of miliseconds before this controller will auto abort
