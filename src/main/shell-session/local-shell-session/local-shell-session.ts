@@ -11,6 +11,8 @@ import type { ClusterId } from "../../../common/cluster-types";
 import { ShellSession } from "../shell-session";
 import type { Kubectl } from "../../kubectl/kubectl";
 import { baseBinariesDir } from "../../../common/vars";
+import { TerminalChannels } from "../../../common/terminal/channels";
+import logger from "../../logger";
 
 export class LocalShellSession extends ShellSession {
   ShellType = "shell";
@@ -36,7 +38,13 @@ export class LocalShellSession extends ShellSession {
     const shell = env.PTYSHELL;
 
     if (!shell) {
-      throw new Error("PTYSHELL is not defined with the environment");
+      this.send({
+        type: TerminalChannels.ERROR,
+        data: "PTYSHELL is not defined with the environment",
+      });
+      logger.warn(`[LOCAL-SHELL-SESSION]: PTYSHELL env var is not defined for ${this.terminalId}`);
+
+      return;
     }
 
     const args = await this.getShellArgs(shell);
