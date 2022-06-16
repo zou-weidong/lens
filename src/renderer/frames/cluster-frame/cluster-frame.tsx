@@ -38,7 +38,7 @@ interface Dependencies {
   subscribeStores: SubscribeStores;
 }
 
-export const NonInjectedClusterFrame = observer(({
+const NonInjectedClusterFrame = observer(({
   namespaceStore,
   currentRouteComponent,
   startUrl,
