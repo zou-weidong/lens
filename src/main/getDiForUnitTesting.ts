@@ -99,6 +99,7 @@ import updateHelmReleaseInjectable from "./helm/helm-service/update-helm-release
 import waitUntilBundledExtensionsAreLoadedInjectable from "./start-main-application/lens-window/application-window/wait-until-bundled-extensions-are-loaded.injectable";
 import { registerMobX } from "@ogre-tools/injectable-extension-for-mobx";
 import electronInjectable from "./utils/resolve-system-proxy/electron.injectable";
+import readFileSyncInjectable from "../common/fs/read-file-sync.injectable";
 
 export function getDiForUnitTesting(opts: { doGeneralOverrides?: boolean } = {}) {
   const {
@@ -169,6 +170,7 @@ export function getDiForUnitTesting(opts: { doGeneralOverrides?: boolean } = {})
       readJsonFileInjectable,
       readFileInjectable,
       execFileInjectable,
+      readFileSyncInjectable,
     ]);
 
     // TODO: Remove usages of globally exported appEventBus to get rid of this
