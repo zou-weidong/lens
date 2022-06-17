@@ -89,7 +89,10 @@ describe("installing update", () => {
       });
 
       it("notifies the user that checking for updates is happening", () => {
-        expect(showInfoNotificationMock).toHaveBeenCalledWith("Checking for updates...");
+        expect(showInfoNotificationMock).toHaveBeenCalledWith(
+          "Checking for updates...",
+          { id: "checking-for-updates" },
+        );
       });
 
       it("renders", () => {
@@ -108,7 +111,10 @@ describe("installing update", () => {
         });
 
         it("notifies the user", () => {
-          expect(showInfoNotificationMock).toHaveBeenCalledWith("No new updates available");
+          expect(showInfoNotificationMock).toHaveBeenCalledWith(
+            "No new updates available",
+            { id: "no-updates-available" },
+          );
         });
 
         it("does not start downloading update", () => {
@@ -135,7 +141,10 @@ describe("installing update", () => {
         });
 
         it("notifies the user that download is happening", () => {
-          expect(showInfoNotificationMock).toHaveBeenCalledWith("Download for version some-version started...");
+          expect(showInfoNotificationMock).toHaveBeenCalledWith(
+            "Download for version some-version started...",
+            { id: "download-for-update-started" },
+          );
         });
 
         it("renders", () => {
@@ -152,7 +161,10 @@ describe("installing update", () => {
           });
 
           it("notifies the user about failed download", () => {
-            expect(showInfoNotificationMock).toHaveBeenCalledWith("Download of update failed");
+            expect(showInfoNotificationMock).toHaveBeenCalledWith(
+              "Download of update failed",
+              { id: "download-for-update-failed" },
+            );
           });
 
           it("renders", () => {

@@ -19,25 +19,25 @@ const applicationUpdateStatusListenerInjectable = getInjectable({
     const eventHandlers: Record<ApplicationUpdateStatusEventId, { handle: (version?: string) => void }> = {
       "checking-for-updates": {
         handle: () => {
-          showInfoNotification("Checking for updates...");
+          showInfoNotification("Checking for updates...", { id: "checking-for-updates" });
         },
       },
 
       "no-updates-available": {
         handle: () => {
-          showInfoNotification("No new updates available");
+          showInfoNotification("No new updates available", { id: "no-updates-available" });
         },
       },
 
       "download-for-update-started": {
         handle: (version) => {
-          showInfoNotification(`Download for version ${version} started...`);
+          showInfoNotification(`Download for version ${version} started...`, { id: "download-for-update-started" });
         },
       },
 
       "download-for-update-failed": {
         handle: () => {
-          showInfoNotification("Download of update failed");
+          showInfoNotification("Download of update failed", { id: "download-for-update-failed" });
         },
       },
     };
