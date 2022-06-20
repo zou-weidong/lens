@@ -59,7 +59,8 @@ import goForwardInjectable from "./components/layout/top-bar/go-forward.injectab
 import closeWindowInjectable from "./components/layout/top-bar/close-window.injectable";
 import maximizeWindowInjectable from "./components/layout/top-bar/maximize-window.injectable";
 import toggleMaximizeWindowInjectable from "./components/layout/top-bar/toggle-maximize-window.injectable";
-import clusterFrameParentElementInjectable from "./components/cluster-manager/parent-element.injectable";
+import getElementByIdInjectable from "./components/cluster-manager/get-element-by-id.injectable";
+import { getOrInsertWith } from "./utils";
 
 export const getDiForUnitTesting = (opts: { doGeneralOverrides?: boolean } = {}) => {
   const {
@@ -92,7 +93,11 @@ export const getDiForUnitTesting = (opts: { doGeneralOverrides?: boolean } = {})
 
     di.override(terminalSpawningPoolInjectable, () => document.createElement("div"));
     di.override(hostedClusterIdInjectable, () => undefined);
-    di.override(clusterFrameParentElementInjectable, () => document.createElement("div"));
+    di.override(getElementByIdInjectable, () => {
+      const elements = new Map<string, HTMLElement>();
+
+      return (id) => getOrInsertWith(elements, id, () => document.createElement("div"));
+    });
 
     di.override(getAbsolutePathInjectable, () => getAbsolutePathFake);
     di.override(joinPathsInjectable, () => joinPathsFake);
