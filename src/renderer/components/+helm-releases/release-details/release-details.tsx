@@ -21,7 +21,7 @@ import { Spinner } from "../../spinner";
 import { Table, TableCell, TableHead, TableRow } from "../../table";
 import { Button } from "../../button";
 import { Notifications } from "../../notifications";
-import type { ThemeStore } from "../../../themes/store";
+import type { LensTheme } from "../../../themes/store";
 import type { ApiManager } from "../../../../common/k8s-api/api-manager";
 import { SubTitle } from "../../layout/sub-title";
 import { Checkbox } from "../../checkbox";
@@ -37,10 +37,10 @@ import userSuppliedValuesAreShownInjectable from "./user-supplied-values-are-sho
 import { KubeObjectAge } from "../../kube-object/age";
 import type { KubeJsonApiData } from "../../../../common/k8s-api/kube-json-api";
 import { entries } from "../../../../common/utils/objects";
-import themeStoreInjectable from "../../../themes/store.injectable";
 import type { GetDetailsUrl } from "../../kube-detail-params/get-details-url.injectable";
 import apiManagerInjectable from "../../../../common/k8s-api/api-manager/manager.injectable";
 import getDetailsUrlInjectable from "../../kube-detail-params/get-details-url.injectable";
+import activeThemeInjectable from "../../../themes/active.injectable";
 
 export interface ReleaseDetailsProps {
   hideDetails(): void;
@@ -53,7 +53,7 @@ interface Dependencies {
   updateRelease: (name: string, namespace: string, payload: HelmReleaseUpdatePayload) => Promise<HelmReleaseUpdateDetails>;
   createUpgradeChartTab: (release: HelmRelease) => void;
   userSuppliedValuesAreShown: { toggle: () => void; value: boolean };
-  themeStore: ThemeStore;
+  activeTheme: IComputedValue<LensTheme>;
   apiManager: ApiManager;
   getDetailsUrl: GetDetailsUrl;
 }
@@ -260,12 +260,12 @@ class NonInjectedReleaseDetails extends Component<ReleaseDetailsProps & Dependen
   }
 
   render() {
-    const { hideDetails, themeStore } = this.props;
+    const { hideDetails, activeTheme } = this.props;
     const release = this.props.release.get();
 
     return (
       <Drawer
-        className={cssNames("ReleaseDetails", themeStore.activeTheme.type)}
+        className={cssNames("ReleaseDetails", activeTheme.get().type)}
         usePortal={true}
         open={Boolean(release)}
         title={release ? `Release: ${release.getName()}` : ""}
@@ -293,7 +293,7 @@ export const ReleaseDetails = withInjectables<Dependencies, ReleaseDetailsProps>
     userSuppliedValuesAreShown: di.inject(userSuppliedValuesAreShownInjectable),
     updateRelease: di.inject(updateReleaseInjectable),
     createUpgradeChartTab: di.inject(createUpgradeChartTabInjectable),
-    themeStore: di.inject(themeStoreInjectable),
+    activeTheme: di.inject(activeThemeInjectable),
     apiManager: di.inject(apiManagerInjectable),
     getDetailsUrl: di.inject(getDetailsUrlInjectable),
   }),
