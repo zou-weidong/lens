@@ -402,6 +402,7 @@ export const getApplicationBuilder = () => {
 
       const namespaceStoreStub = {
         contextNamespaces: [],
+        items: [],
       } as unknown as NamespaceStore;
 
       const clusterFrameContextFake = new ClusterFrameContext(
