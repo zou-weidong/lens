@@ -18,6 +18,12 @@ import { navigateToRouteInjectionToken } from "../../common/front-end-routing/na
 import assert from "assert";
 import type { FakeExtensionData } from "../../renderer/components/test-utils/get-renderer-extension-fake";
 import { getRendererExtensionFakeFor } from "../../renderer/components/test-utils/get-renderer-extension-fake";
+import hostedClusterIdInjectable from "../../renderer/cluster-frame-context/hosted-cluster-id.injectable";
+
+// TODO: Make tooltips free of side effects by making it deterministic
+jest.mock("../../renderer/components/tooltip/withTooltip", () => ({
+  withTooltip: (target: any) => target,
+}));
 
 describe("cluster - sidebar and tab navigation for extensions", () => {
   let applicationBuilder: ApplicationBuilder;
@@ -33,6 +39,8 @@ describe("cluster - sidebar and tab navigation for extensions", () => {
     applicationBuilder.setEnvironmentToClusterFrame();
 
     applicationBuilder.beforeApplicationStart(({ rendererDi }) => {
+      rendererDi.override(hostedClusterIdInjectable, () => "some-hosted-cluster-id");
+
       rendererDi.override(
         directoryForLensLocalStorageInjectable,
         () => "/some-directory-for-lens-local-storage",
@@ -95,7 +103,7 @@ describe("cluster - sidebar and tab navigation for extensions", () => {
           const writeJsonFileFake = rendererDi.inject(writeJsonFileInjectable);
 
           await writeJsonFileFake(
-            "/some-directory-for-lens-local-storage/app.json",
+            "/some-directory-for-lens-local-storage/some-hosted-cluster-id.json",
             {
               sidebar: {
                 expanded: { "some-extension-name-some-parent-id": true },
@@ -131,7 +139,7 @@ describe("cluster - sidebar and tab navigation for extensions", () => {
           const writeJsonFileFake = rendererDi.inject(writeJsonFileInjectable);
 
           await writeJsonFileFake(
-            "/some-directory-for-lens-local-storage/app.json",
+            "/some-directory-for-lens-local-storage/some-hosted-cluster-id.json",
             {
               sidebar: {
                 expanded: { "some-extension-name-some-unknown-parent-id": true },
@@ -161,7 +169,7 @@ describe("cluster - sidebar and tab navigation for extensions", () => {
           const writeJsonFileFake = rendererDi.inject(writeJsonFileInjectable);
 
           await writeJsonFileFake(
-            "/some-directory-for-lens-local-storage/app.json",
+            "/some-directory-for-lens-local-storage/some-hosted-cluster-id.json",
             {
               someThingButSidebar: {},
             },
@@ -283,7 +291,7 @@ describe("cluster - sidebar and tab navigation for extensions", () => {
             const pathExistsFake = rendererDi.inject(pathExistsInjectable);
 
             const actual = await pathExistsFake(
-              "/some-directory-for-lens-local-storage/app.json",
+              "/some-directory-for-lens-local-storage/some-hosted-cluster-id.json",
             );
 
             expect(actual).toBe(false);
@@ -295,7 +303,7 @@ describe("cluster - sidebar and tab navigation for extensions", () => {
             const readJsonFileFake = rendererDi.inject(readJsonFileInjectable);
 
             const actual = await readJsonFileFake(
-              "/some-directory-for-lens-local-storage/app.json",
+              "/some-directory-for-lens-local-storage/some-hosted-cluster-id.json",
             );
 
             expect(actual).toEqual({
