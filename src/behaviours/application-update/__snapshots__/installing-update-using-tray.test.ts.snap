@@ -4,34 +4,458 @@ exports[`installing update using tray when started renders 1`] = `
 <body>
   <div>
     <div
-      class="StatusBar"
+      class="ClusterManager"
     >
       <div
-        class="leftSide"
-      />
+        class="topBar"
+      >
+        <div
+          class="items"
+        >
+          <i
+            class="Icon material interactive focusable"
+            data-testid="home-button"
+            tabindex="0"
+          >
+            <span
+              class="icon"
+              data-icon-name="home"
+            >
+              home
+            </span>
+          </i>
+          <i
+            class="Icon material interactive disabled focusable"
+            data-testid="history-back"
+          >
+            <span
+              class="icon"
+              data-icon-name="arrow_back"
+            >
+              arrow_back
+            </span>
+          </i>
+          <i
+            class="Icon material interactive disabled focusable"
+            data-testid="history-forward"
+          >
+            <span
+              class="icon"
+              data-icon-name="arrow_forward"
+            >
+              arrow_forward
+            </span>
+          </i>
+        </div>
+        <div
+          class="items"
+        />
+      </div>
+      <main>
+        <div
+          id="lens-views"
+        />
+        <div
+          class="flex justify-center Welcome align-center"
+          data-testid="welcome-page"
+        >
+          <div
+            data-testid="welcome-banner-container"
+            style="width: 320px;"
+          >
+            <i
+              class="Icon logo svg focusable"
+            >
+              <span
+                class="icon"
+              />
+            </i>
+            <div
+              class="flex justify-center"
+            >
+              <div
+                data-testid="welcome-text-container"
+                style="width: 320px;"
+              >
+                <h2>
+                  Welcome to OpenLens 5!
+                </h2>
+                <p>
+                  To get you started we have auto-detected your clusters in your
+                   
+                  kubeconfig file and added them to the catalog, your centralized
+                   
+                  view for managing all your cloud-native resources.
+                  <br />
+                  <br />
+                  If you have any questions or feedback, please join our 
+                  <a
+                    class="link"
+                    href="https://join.slack.com/t/k8slens/shared_invite/zt-wcl8jq3k-68R5Wcmk1o95MLBE5igUDQ"
+                    rel="noreferrer"
+                    target="_blank"
+                  >
+                    Lens Community slack channel
+                  </a>
+                  .
+                </p>
+                <ul
+                  class="block"
+                  data-testid="welcome-menu-container"
+                  style="width: 320px;"
+                >
+                  <li
+                    class="flex grid-12"
+                  >
+                    <i
+                      class="Icon box col-1 material focusable"
+                    >
+                      <span
+                        class="icon"
+                        data-icon-name="view_list"
+                      >
+                        view_list
+                      </span>
+                    </i>
+                    <a
+                      class="box col-10"
+                    >
+                      Browse Clusters in Catalog
+                    </a>
+                    <i
+                      class="Icon box col-1 material focusable"
+                    >
+                      <span
+                        class="icon"
+                        data-icon-name="navigate_next"
+                      >
+                        navigate_next
+                      </span>
+                    </i>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
       <div
-        class="rightSide"
-      />
+        class="HotbarMenu flex column"
+      >
+        <div
+          class="HotbarItems flex column gaps"
+        />
+        <div
+          class="HotbarSelector"
+        >
+          <i
+            class="Icon Icon previous material interactive focusable"
+            tabindex="0"
+          >
+            <span
+              class="icon"
+              data-icon-name="play_arrow"
+            >
+              play_arrow
+            </span>
+          </i>
+          <div
+            class="HotbarIndex"
+          >
+            <div
+              class="badge Badge small clickable"
+              id="hotbarIndex"
+            >
+              0
+            </div>
+          </div>
+          <i
+            class="Icon material interactive focusable"
+            tabindex="0"
+          >
+            <span
+              class="icon"
+              data-icon-name="play_arrow"
+            >
+              play_arrow
+            </span>
+          </i>
+        </div>
+      </div>
+      <div
+        class="StatusBar"
+      >
+        <div
+          class="leftSide"
+        />
+        <div
+          class="rightSide"
+        />
+      </div>
     </div>
     <div
       class="Notifications flex column align-flex-end"
     />
+  </div>
+  <div
+    aria-atomic="true"
+    aria-live="assertive"
+    id="rbd-announcement-0"
+    style="position: absolute; width: 1px; height: 1px; margin: -1px; border: 0px; padding: 0px; overflow: hidden; clip-path: inset(100%);"
+  />
+  <div
+    id="rbd-hidden-text-0-hidden-text-0"
+    style="display: none;"
+  >
+    
+  Press space bar to start a drag.
+  When dragging you can use the arrow keys to move the item around and escape to cancel.
+  Some screen readers may require you to be in focus mode or to use your pass through key
+
   </div>
 </body>
 `;
 
 exports[`installing update using tray when started when user checks for updates using tray renders 1`] = `
 <body>
+  <div
+    aria-atomic="true"
+    aria-live="assertive"
+    id="rbd-announcement-0"
+    style="position: absolute; width: 1px; height: 1px; margin: -1px; border: 0px; padding: 0px; overflow: hidden; clip-path: inset(100%);"
+  />
+  <div
+    aria-atomic="true"
+    aria-live="assertive"
+    id="rbd-announcement-1"
+    style="position: absolute; width: 1px; height: 1px; margin: -1px; border: 0px; padding: 0px; overflow: hidden; clip-path: inset(100%);"
+  />
+  <div
+    aria-atomic="true"
+    aria-live="assertive"
+    id="rbd-announcement-2"
+    style="position: absolute; width: 1px; height: 1px; margin: -1px; border: 0px; padding: 0px; overflow: hidden; clip-path: inset(100%);"
+  />
+  <div
+    aria-atomic="true"
+    aria-live="assertive"
+    id="rbd-announcement-3"
+    style="position: absolute; width: 1px; height: 1px; margin: -1px; border: 0px; padding: 0px; overflow: hidden; clip-path: inset(100%);"
+  />
+  <div
+    aria-atomic="true"
+    aria-live="assertive"
+    id="rbd-announcement-4"
+    style="position: absolute; width: 1px; height: 1px; margin: -1px; border: 0px; padding: 0px; overflow: hidden; clip-path: inset(100%);"
+  />
+  <div
+    aria-atomic="true"
+    aria-live="assertive"
+    id="rbd-announcement-5"
+    style="position: absolute; width: 1px; height: 1px; margin: -1px; border: 0px; padding: 0px; overflow: hidden; clip-path: inset(100%);"
+  />
+  <div
+    aria-atomic="true"
+    aria-live="assertive"
+    id="rbd-announcement-6"
+    style="position: absolute; width: 1px; height: 1px; margin: -1px; border: 0px; padding: 0px; overflow: hidden; clip-path: inset(100%);"
+  />
+  <div
+    aria-atomic="true"
+    aria-live="assertive"
+    id="rbd-announcement-7"
+    style="position: absolute; width: 1px; height: 1px; margin: -1px; border: 0px; padding: 0px; overflow: hidden; clip-path: inset(100%);"
+  />
   <div>
     <div
-      class="StatusBar"
+      class="ClusterManager"
     >
       <div
-        class="leftSide"
-      />
+        class="topBar"
+      >
+        <div
+          class="items"
+        >
+          <i
+            class="Icon material interactive focusable"
+            data-testid="home-button"
+            tabindex="0"
+          >
+            <span
+              class="icon"
+              data-icon-name="home"
+            >
+              home
+            </span>
+          </i>
+          <i
+            class="Icon material interactive disabled focusable"
+            data-testid="history-back"
+          >
+            <span
+              class="icon"
+              data-icon-name="arrow_back"
+            >
+              arrow_back
+            </span>
+          </i>
+          <i
+            class="Icon material interactive disabled focusable"
+            data-testid="history-forward"
+          >
+            <span
+              class="icon"
+              data-icon-name="arrow_forward"
+            >
+              arrow_forward
+            </span>
+          </i>
+        </div>
+        <div
+          class="items"
+        />
+      </div>
+      <main>
+        <div
+          id="lens-views"
+        />
+        <div
+          class="flex justify-center Welcome align-center"
+          data-testid="welcome-page"
+        >
+          <div
+            data-testid="welcome-banner-container"
+            style="width: 320px;"
+          >
+            <i
+              class="Icon logo svg focusable"
+            >
+              <span
+                class="icon"
+              />
+            </i>
+            <div
+              class="flex justify-center"
+            >
+              <div
+                data-testid="welcome-text-container"
+                style="width: 320px;"
+              >
+                <h2>
+                  Welcome to OpenLens 5!
+                </h2>
+                <p>
+                  To get you started we have auto-detected your clusters in your
+                   
+                  kubeconfig file and added them to the catalog, your centralized
+                   
+                  view for managing all your cloud-native resources.
+                  <br />
+                  <br />
+                  If you have any questions or feedback, please join our 
+                  <a
+                    class="link"
+                    href="https://join.slack.com/t/k8slens/shared_invite/zt-wcl8jq3k-68R5Wcmk1o95MLBE5igUDQ"
+                    rel="noreferrer"
+                    target="_blank"
+                  >
+                    Lens Community slack channel
+                  </a>
+                  .
+                </p>
+                <ul
+                  class="block"
+                  data-testid="welcome-menu-container"
+                  style="width: 320px;"
+                >
+                  <li
+                    class="flex grid-12"
+                  >
+                    <i
+                      class="Icon box col-1 material focusable"
+                    >
+                      <span
+                        class="icon"
+                        data-icon-name="view_list"
+                      >
+                        view_list
+                      </span>
+                    </i>
+                    <a
+                      class="box col-10"
+                    >
+                      Browse Clusters in Catalog
+                    </a>
+                    <i
+                      class="Icon box col-1 material focusable"
+                    >
+                      <span
+                        class="icon"
+                        data-icon-name="navigate_next"
+                      >
+                        navigate_next
+                      </span>
+                    </i>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
       <div
-        class="rightSide"
-      />
+        class="HotbarMenu flex column"
+      >
+        <div
+          class="HotbarItems flex column gaps"
+        />
+        <div
+          class="HotbarSelector"
+        >
+          <i
+            class="Icon Icon previous material interactive focusable"
+            tabindex="0"
+          >
+            <span
+              class="icon"
+              data-icon-name="play_arrow"
+            >
+              play_arrow
+            </span>
+          </i>
+          <div
+            class="HotbarIndex"
+          >
+            <div
+              class="badge Badge small clickable"
+              id="hotbarIndex"
+            >
+              0
+            </div>
+          </div>
+          <i
+            class="Icon material interactive focusable"
+            tabindex="0"
+          >
+            <span
+              class="icon"
+              data-icon-name="play_arrow"
+            >
+              play_arrow
+            </span>
+          </i>
+        </div>
+      </div>
+      <div
+        class="StatusBar"
+      >
+        <div
+          class="leftSide"
+        />
+        <div
+          class="rightSide"
+        />
+      </div>
     </div>
     <div
       class="Notifications flex column align-flex-end"
@@ -78,6 +502,22 @@ exports[`installing update using tray when started when user checks for updates 
       </div>
     </div>
   </div>
+  <div
+    aria-atomic="true"
+    aria-live="assertive"
+    id="rbd-announcement-8"
+    style="position: absolute; width: 1px; height: 1px; margin: -1px; border: 0px; padding: 0px; overflow: hidden; clip-path: inset(100%);"
+  />
+  <div
+    id="rbd-hidden-text-8-hidden-text-8"
+    style="display: none;"
+  >
+    
+  Press space bar to start a drag.
+  When dragging you can use the arrow keys to move the item around and escape to cancel.
+  Some screen readers may require you to be in focus mode or to use your pass through key
+
+  </div>
 </body>
 `;
 
@@ -85,14 +525,194 @@ exports[`installing update using tray when started when user checks for updates 
 <body>
   <div>
     <div
-      class="StatusBar"
+      class="ClusterManager"
     >
       <div
-        class="leftSide"
-      />
+        class="topBar"
+      >
+        <div
+          class="items"
+        >
+          <i
+            class="Icon material interactive focusable"
+            data-testid="home-button"
+            tabindex="0"
+          >
+            <span
+              class="icon"
+              data-icon-name="home"
+            >
+              home
+            </span>
+          </i>
+          <i
+            class="Icon material interactive disabled focusable"
+            data-testid="history-back"
+          >
+            <span
+              class="icon"
+              data-icon-name="arrow_back"
+            >
+              arrow_back
+            </span>
+          </i>
+          <i
+            class="Icon material interactive disabled focusable"
+            data-testid="history-forward"
+          >
+            <span
+              class="icon"
+              data-icon-name="arrow_forward"
+            >
+              arrow_forward
+            </span>
+          </i>
+        </div>
+        <div
+          class="items"
+        />
+      </div>
+      <main>
+        <div
+          id="lens-views"
+        />
+        <div
+          class="flex justify-center Welcome align-center"
+          data-testid="welcome-page"
+        >
+          <div
+            data-testid="welcome-banner-container"
+            style="width: 320px;"
+          >
+            <i
+              class="Icon logo svg focusable"
+            >
+              <span
+                class="icon"
+              />
+            </i>
+            <div
+              class="flex justify-center"
+            >
+              <div
+                data-testid="welcome-text-container"
+                style="width: 320px;"
+              >
+                <h2>
+                  Welcome to OpenLens 5!
+                </h2>
+                <p>
+                  To get you started we have auto-detected your clusters in your
+                   
+                  kubeconfig file and added them to the catalog, your centralized
+                   
+                  view for managing all your cloud-native resources.
+                  <br />
+                  <br />
+                  If you have any questions or feedback, please join our 
+                  <a
+                    class="link"
+                    href="https://join.slack.com/t/k8slens/shared_invite/zt-wcl8jq3k-68R5Wcmk1o95MLBE5igUDQ"
+                    rel="noreferrer"
+                    target="_blank"
+                  >
+                    Lens Community slack channel
+                  </a>
+                  .
+                </p>
+                <ul
+                  class="block"
+                  data-testid="welcome-menu-container"
+                  style="width: 320px;"
+                >
+                  <li
+                    class="flex grid-12"
+                  >
+                    <i
+                      class="Icon box col-1 material focusable"
+                    >
+                      <span
+                        class="icon"
+                        data-icon-name="view_list"
+                      >
+                        view_list
+                      </span>
+                    </i>
+                    <a
+                      class="box col-10"
+                    >
+                      Browse Clusters in Catalog
+                    </a>
+                    <i
+                      class="Icon box col-1 material focusable"
+                    >
+                      <span
+                        class="icon"
+                        data-icon-name="navigate_next"
+                      >
+                        navigate_next
+                      </span>
+                    </i>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
       <div
-        class="rightSide"
-      />
+        class="HotbarMenu flex column"
+      >
+        <div
+          class="HotbarItems flex column gaps"
+        />
+        <div
+          class="HotbarSelector"
+        >
+          <i
+            class="Icon Icon previous material interactive focusable"
+            tabindex="0"
+          >
+            <span
+              class="icon"
+              data-icon-name="play_arrow"
+            >
+              play_arrow
+            </span>
+          </i>
+          <div
+            class="HotbarIndex"
+          >
+            <div
+              class="badge Badge small clickable"
+              id="hotbarIndex"
+            >
+              0
+            </div>
+          </div>
+          <i
+            class="Icon material interactive focusable"
+            tabindex="0"
+          >
+            <span
+              class="icon"
+              data-icon-name="play_arrow"
+            >
+              play_arrow
+            </span>
+          </i>
+        </div>
+      </div>
+      <div
+        class="StatusBar"
+      >
+        <div
+          class="leftSide"
+        />
+        <div
+          class="rightSide"
+        />
+      </div>
     </div>
     <div
       class="Notifications flex column align-flex-end"
@@ -179,6 +799,22 @@ exports[`installing update using tray when started when user checks for updates 
       </div>
     </div>
   </div>
+  <div
+    aria-atomic="true"
+    aria-live="assertive"
+    id="rbd-announcement-21"
+    style="position: absolute; width: 1px; height: 1px; margin: -1px; border: 0px; padding: 0px; overflow: hidden; clip-path: inset(100%);"
+  />
+  <div
+    id="rbd-hidden-text-21-hidden-text-21"
+    style="display: none;"
+  >
+    
+  Press space bar to start a drag.
+  When dragging you can use the arrow keys to move the item around and escape to cancel.
+  Some screen readers may require you to be in focus mode or to use your pass through key
+
+  </div>
 </body>
 `;
 
@@ -186,14 +822,194 @@ exports[`installing update using tray when started when user checks for updates 
 <body>
   <div>
     <div
-      class="StatusBar"
+      class="ClusterManager"
     >
       <div
-        class="leftSide"
-      />
+        class="topBar"
+      >
+        <div
+          class="items"
+        >
+          <i
+            class="Icon material interactive focusable"
+            data-testid="home-button"
+            tabindex="0"
+          >
+            <span
+              class="icon"
+              data-icon-name="home"
+            >
+              home
+            </span>
+          </i>
+          <i
+            class="Icon material interactive disabled focusable"
+            data-testid="history-back"
+          >
+            <span
+              class="icon"
+              data-icon-name="arrow_back"
+            >
+              arrow_back
+            </span>
+          </i>
+          <i
+            class="Icon material interactive disabled focusable"
+            data-testid="history-forward"
+          >
+            <span
+              class="icon"
+              data-icon-name="arrow_forward"
+            >
+              arrow_forward
+            </span>
+          </i>
+        </div>
+        <div
+          class="items"
+        />
+      </div>
+      <main>
+        <div
+          id="lens-views"
+        />
+        <div
+          class="flex justify-center Welcome align-center"
+          data-testid="welcome-page"
+        >
+          <div
+            data-testid="welcome-banner-container"
+            style="width: 320px;"
+          >
+            <i
+              class="Icon logo svg focusable"
+            >
+              <span
+                class="icon"
+              />
+            </i>
+            <div
+              class="flex justify-center"
+            >
+              <div
+                data-testid="welcome-text-container"
+                style="width: 320px;"
+              >
+                <h2>
+                  Welcome to OpenLens 5!
+                </h2>
+                <p>
+                  To get you started we have auto-detected your clusters in your
+                   
+                  kubeconfig file and added them to the catalog, your centralized
+                   
+                  view for managing all your cloud-native resources.
+                  <br />
+                  <br />
+                  If you have any questions or feedback, please join our 
+                  <a
+                    class="link"
+                    href="https://join.slack.com/t/k8slens/shared_invite/zt-wcl8jq3k-68R5Wcmk1o95MLBE5igUDQ"
+                    rel="noreferrer"
+                    target="_blank"
+                  >
+                    Lens Community slack channel
+                  </a>
+                  .
+                </p>
+                <ul
+                  class="block"
+                  data-testid="welcome-menu-container"
+                  style="width: 320px;"
+                >
+                  <li
+                    class="flex grid-12"
+                  >
+                    <i
+                      class="Icon box col-1 material focusable"
+                    >
+                      <span
+                        class="icon"
+                        data-icon-name="view_list"
+                      >
+                        view_list
+                      </span>
+                    </i>
+                    <a
+                      class="box col-10"
+                    >
+                      Browse Clusters in Catalog
+                    </a>
+                    <i
+                      class="Icon box col-1 material focusable"
+                    >
+                      <span
+                        class="icon"
+                        data-icon-name="navigate_next"
+                      >
+                        navigate_next
+                      </span>
+                    </i>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
       <div
-        class="rightSide"
-      />
+        class="HotbarMenu flex column"
+      >
+        <div
+          class="HotbarItems flex column gaps"
+        />
+        <div
+          class="HotbarSelector"
+        >
+          <i
+            class="Icon Icon previous material interactive focusable"
+            tabindex="0"
+          >
+            <span
+              class="icon"
+              data-icon-name="play_arrow"
+            >
+              play_arrow
+            </span>
+          </i>
+          <div
+            class="HotbarIndex"
+          >
+            <div
+              class="badge Badge small clickable"
+              id="hotbarIndex"
+            >
+              0
+            </div>
+          </div>
+          <i
+            class="Icon material interactive focusable"
+            tabindex="0"
+          >
+            <span
+              class="icon"
+              data-icon-name="play_arrow"
+            >
+              play_arrow
+            </span>
+          </i>
+        </div>
+      </div>
+      <div
+        class="StatusBar"
+      >
+        <div
+          class="leftSide"
+        />
+        <div
+          class="rightSide"
+        />
+      </div>
     </div>
     <div
       class="Notifications flex column align-flex-end"
@@ -320,6 +1136,22 @@ exports[`installing update using tray when started when user checks for updates 
       </div>
     </div>
   </div>
+  <div
+    aria-atomic="true"
+    aria-live="assertive"
+    id="rbd-announcement-26"
+    style="position: absolute; width: 1px; height: 1px; margin: -1px; border: 0px; padding: 0px; overflow: hidden; clip-path: inset(100%);"
+  />
+  <div
+    id="rbd-hidden-text-26-hidden-text-26"
+    style="display: none;"
+  >
+    
+  Press space bar to start a drag.
+  When dragging you can use the arrow keys to move the item around and escape to cancel.
+  Some screen readers may require you to be in focus mode or to use your pass through key
+
+  </div>
 </body>
 `;
 
@@ -327,14 +1159,194 @@ exports[`installing update using tray when started when user checks for updates 
 <body>
   <div>
     <div
-      class="StatusBar"
+      class="ClusterManager"
     >
       <div
-        class="leftSide"
-      />
+        class="topBar"
+      >
+        <div
+          class="items"
+        >
+          <i
+            class="Icon material interactive focusable"
+            data-testid="home-button"
+            tabindex="0"
+          >
+            <span
+              class="icon"
+              data-icon-name="home"
+            >
+              home
+            </span>
+          </i>
+          <i
+            class="Icon material interactive disabled focusable"
+            data-testid="history-back"
+          >
+            <span
+              class="icon"
+              data-icon-name="arrow_back"
+            >
+              arrow_back
+            </span>
+          </i>
+          <i
+            class="Icon material interactive disabled focusable"
+            data-testid="history-forward"
+          >
+            <span
+              class="icon"
+              data-icon-name="arrow_forward"
+            >
+              arrow_forward
+            </span>
+          </i>
+        </div>
+        <div
+          class="items"
+        />
+      </div>
+      <main>
+        <div
+          id="lens-views"
+        />
+        <div
+          class="flex justify-center Welcome align-center"
+          data-testid="welcome-page"
+        >
+          <div
+            data-testid="welcome-banner-container"
+            style="width: 320px;"
+          >
+            <i
+              class="Icon logo svg focusable"
+            >
+              <span
+                class="icon"
+              />
+            </i>
+            <div
+              class="flex justify-center"
+            >
+              <div
+                data-testid="welcome-text-container"
+                style="width: 320px;"
+              >
+                <h2>
+                  Welcome to OpenLens 5!
+                </h2>
+                <p>
+                  To get you started we have auto-detected your clusters in your
+                   
+                  kubeconfig file and added them to the catalog, your centralized
+                   
+                  view for managing all your cloud-native resources.
+                  <br />
+                  <br />
+                  If you have any questions or feedback, please join our 
+                  <a
+                    class="link"
+                    href="https://join.slack.com/t/k8slens/shared_invite/zt-wcl8jq3k-68R5Wcmk1o95MLBE5igUDQ"
+                    rel="noreferrer"
+                    target="_blank"
+                  >
+                    Lens Community slack channel
+                  </a>
+                  .
+                </p>
+                <ul
+                  class="block"
+                  data-testid="welcome-menu-container"
+                  style="width: 320px;"
+                >
+                  <li
+                    class="flex grid-12"
+                  >
+                    <i
+                      class="Icon box col-1 material focusable"
+                    >
+                      <span
+                        class="icon"
+                        data-icon-name="view_list"
+                      >
+                        view_list
+                      </span>
+                    </i>
+                    <a
+                      class="box col-10"
+                    >
+                      Browse Clusters in Catalog
+                    </a>
+                    <i
+                      class="Icon box col-1 material focusable"
+                    >
+                      <span
+                        class="icon"
+                        data-icon-name="navigate_next"
+                      >
+                        navigate_next
+                      </span>
+                    </i>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
       <div
-        class="rightSide"
-      />
+        class="HotbarMenu flex column"
+      >
+        <div
+          class="HotbarItems flex column gaps"
+        />
+        <div
+          class="HotbarSelector"
+        >
+          <i
+            class="Icon Icon previous material interactive focusable"
+            tabindex="0"
+          >
+            <span
+              class="icon"
+              data-icon-name="play_arrow"
+            >
+              play_arrow
+            </span>
+          </i>
+          <div
+            class="HotbarIndex"
+          >
+            <div
+              class="badge Badge small clickable"
+              id="hotbarIndex"
+            >
+              0
+            </div>
+          </div>
+          <i
+            class="Icon material interactive focusable"
+            tabindex="0"
+          >
+            <span
+              class="icon"
+              data-icon-name="play_arrow"
+            >
+              play_arrow
+            </span>
+          </i>
+        </div>
+      </div>
+      <div
+        class="StatusBar"
+      >
+        <div
+          class="leftSide"
+        />
+        <div
+          class="rightSide"
+        />
+      </div>
     </div>
     <div
       class="Notifications flex column align-flex-end"
@@ -491,6 +1503,22 @@ Lens should restart automatically, if it doesn't please restart manually. Instal
       </div>
     </div>
   </div>
+  <div
+    aria-atomic="true"
+    aria-live="assertive"
+    id="rbd-announcement-31"
+    style="position: absolute; width: 1px; height: 1px; margin: -1px; border: 0px; padding: 0px; overflow: hidden; clip-path: inset(100%);"
+  />
+  <div
+    id="rbd-hidden-text-31-hidden-text-31"
+    style="display: none;"
+  >
+    
+  Press space bar to start a drag.
+  When dragging you can use the arrow keys to move the item around and escape to cancel.
+  Some screen readers may require you to be in focus mode or to use your pass through key
+
+  </div>
 </body>
 `;
 
@@ -498,14 +1526,194 @@ exports[`installing update using tray when started when user checks for updates 
 <body>
   <div>
     <div
-      class="StatusBar"
+      class="ClusterManager"
     >
       <div
-        class="leftSide"
-      />
+        class="topBar"
+      >
+        <div
+          class="items"
+        >
+          <i
+            class="Icon material interactive focusable"
+            data-testid="home-button"
+            tabindex="0"
+          >
+            <span
+              class="icon"
+              data-icon-name="home"
+            >
+              home
+            </span>
+          </i>
+          <i
+            class="Icon material interactive disabled focusable"
+            data-testid="history-back"
+          >
+            <span
+              class="icon"
+              data-icon-name="arrow_back"
+            >
+              arrow_back
+            </span>
+          </i>
+          <i
+            class="Icon material interactive disabled focusable"
+            data-testid="history-forward"
+          >
+            <span
+              class="icon"
+              data-icon-name="arrow_forward"
+            >
+              arrow_forward
+            </span>
+          </i>
+        </div>
+        <div
+          class="items"
+        />
+      </div>
+      <main>
+        <div
+          id="lens-views"
+        />
+        <div
+          class="flex justify-center Welcome align-center"
+          data-testid="welcome-page"
+        >
+          <div
+            data-testid="welcome-banner-container"
+            style="width: 320px;"
+          >
+            <i
+              class="Icon logo svg focusable"
+            >
+              <span
+                class="icon"
+              />
+            </i>
+            <div
+              class="flex justify-center"
+            >
+              <div
+                data-testid="welcome-text-container"
+                style="width: 320px;"
+              >
+                <h2>
+                  Welcome to OpenLens 5!
+                </h2>
+                <p>
+                  To get you started we have auto-detected your clusters in your
+                   
+                  kubeconfig file and added them to the catalog, your centralized
+                   
+                  view for managing all your cloud-native resources.
+                  <br />
+                  <br />
+                  If you have any questions or feedback, please join our 
+                  <a
+                    class="link"
+                    href="https://join.slack.com/t/k8slens/shared_invite/zt-wcl8jq3k-68R5Wcmk1o95MLBE5igUDQ"
+                    rel="noreferrer"
+                    target="_blank"
+                  >
+                    Lens Community slack channel
+                  </a>
+                  .
+                </p>
+                <ul
+                  class="block"
+                  data-testid="welcome-menu-container"
+                  style="width: 320px;"
+                >
+                  <li
+                    class="flex grid-12"
+                  >
+                    <i
+                      class="Icon box col-1 material focusable"
+                    >
+                      <span
+                        class="icon"
+                        data-icon-name="view_list"
+                      >
+                        view_list
+                      </span>
+                    </i>
+                    <a
+                      class="box col-10"
+                    >
+                      Browse Clusters in Catalog
+                    </a>
+                    <i
+                      class="Icon box col-1 material focusable"
+                    >
+                      <span
+                        class="icon"
+                        data-icon-name="navigate_next"
+                      >
+                        navigate_next
+                      </span>
+                    </i>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
       <div
-        class="rightSide"
-      />
+        class="HotbarMenu flex column"
+      >
+        <div
+          class="HotbarItems flex column gaps"
+        />
+        <div
+          class="HotbarSelector"
+        >
+          <i
+            class="Icon Icon previous material interactive focusable"
+            tabindex="0"
+          >
+            <span
+              class="icon"
+              data-icon-name="play_arrow"
+            >
+              play_arrow
+            </span>
+          </i>
+          <div
+            class="HotbarIndex"
+          >
+            <div
+              class="badge Badge small clickable"
+              id="hotbarIndex"
+            >
+              0
+            </div>
+          </div>
+          <i
+            class="Icon material interactive focusable"
+            tabindex="0"
+          >
+            <span
+              class="icon"
+              data-icon-name="play_arrow"
+            >
+              play_arrow
+            </span>
+          </i>
+        </div>
+      </div>
+      <div
+        class="StatusBar"
+      >
+        <div
+          class="leftSide"
+        />
+        <div
+          class="rightSide"
+        />
+      </div>
     </div>
     <div
       class="Notifications flex column align-flex-end"
@@ -591,6 +1799,22 @@ exports[`installing update using tray when started when user checks for updates 
         </div>
       </div>
     </div>
+  </div>
+  <div
+    aria-atomic="true"
+    aria-live="assertive"
+    id="rbd-announcement-14"
+    style="position: absolute; width: 1px; height: 1px; margin: -1px; border: 0px; padding: 0px; overflow: hidden; clip-path: inset(100%);"
+  />
+  <div
+    id="rbd-hidden-text-14-hidden-text-14"
+    style="display: none;"
+  >
+    
+  Press space bar to start a drag.
+  When dragging you can use the arrow keys to move the item around and escape to cancel.
+  Some screen readers may require you to be in focus mode or to use your pass through key
+
   </div>
 </body>
 `;
