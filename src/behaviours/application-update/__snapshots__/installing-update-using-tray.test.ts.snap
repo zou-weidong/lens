@@ -197,75 +197,11 @@ exports[`installing update using tray when started renders 1`] = `
       class="Notifications flex column align-flex-end"
     />
   </div>
-  <div
-    aria-atomic="true"
-    aria-live="assertive"
-    id="rbd-announcement-0"
-    style="position: absolute; width: 1px; height: 1px; margin: -1px; border: 0px; padding: 0px; overflow: hidden; clip-path: inset(100%);"
-  />
-  <div
-    id="rbd-hidden-text-0-hidden-text-0"
-    style="display: none;"
-  >
-    
-  Press space bar to start a drag.
-  When dragging you can use the arrow keys to move the item around and escape to cancel.
-  Some screen readers may require you to be in focus mode or to use your pass through key
-
-  </div>
 </body>
 `;
 
 exports[`installing update using tray when started when user checks for updates using tray renders 1`] = `
 <body>
-  <div
-    aria-atomic="true"
-    aria-live="assertive"
-    id="rbd-announcement-0"
-    style="position: absolute; width: 1px; height: 1px; margin: -1px; border: 0px; padding: 0px; overflow: hidden; clip-path: inset(100%);"
-  />
-  <div
-    aria-atomic="true"
-    aria-live="assertive"
-    id="rbd-announcement-1"
-    style="position: absolute; width: 1px; height: 1px; margin: -1px; border: 0px; padding: 0px; overflow: hidden; clip-path: inset(100%);"
-  />
-  <div
-    aria-atomic="true"
-    aria-live="assertive"
-    id="rbd-announcement-2"
-    style="position: absolute; width: 1px; height: 1px; margin: -1px; border: 0px; padding: 0px; overflow: hidden; clip-path: inset(100%);"
-  />
-  <div
-    aria-atomic="true"
-    aria-live="assertive"
-    id="rbd-announcement-3"
-    style="position: absolute; width: 1px; height: 1px; margin: -1px; border: 0px; padding: 0px; overflow: hidden; clip-path: inset(100%);"
-  />
-  <div
-    aria-atomic="true"
-    aria-live="assertive"
-    id="rbd-announcement-4"
-    style="position: absolute; width: 1px; height: 1px; margin: -1px; border: 0px; padding: 0px; overflow: hidden; clip-path: inset(100%);"
-  />
-  <div
-    aria-atomic="true"
-    aria-live="assertive"
-    id="rbd-announcement-5"
-    style="position: absolute; width: 1px; height: 1px; margin: -1px; border: 0px; padding: 0px; overflow: hidden; clip-path: inset(100%);"
-  />
-  <div
-    aria-atomic="true"
-    aria-live="assertive"
-    id="rbd-announcement-6"
-    style="position: absolute; width: 1px; height: 1px; margin: -1px; border: 0px; padding: 0px; overflow: hidden; clip-path: inset(100%);"
-  />
-  <div
-    aria-atomic="true"
-    aria-live="assertive"
-    id="rbd-announcement-7"
-    style="position: absolute; width: 1px; height: 1px; margin: -1px; border: 0px; padding: 0px; overflow: hidden; clip-path: inset(100%);"
-  />
   <div>
     <div
       class="ClusterManager"
@@ -501,22 +437,6 @@ exports[`installing update using tray when started when user checks for updates 
         </div>
       </div>
     </div>
-  </div>
-  <div
-    aria-atomic="true"
-    aria-live="assertive"
-    id="rbd-announcement-8"
-    style="position: absolute; width: 1px; height: 1px; margin: -1px; border: 0px; padding: 0px; overflow: hidden; clip-path: inset(100%);"
-  />
-  <div
-    id="rbd-hidden-text-8-hidden-text-8"
-    style="display: none;"
-  >
-    
-  Press space bar to start a drag.
-  When dragging you can use the arrow keys to move the item around and escape to cancel.
-  Some screen readers may require you to be in focus mode or to use your pass through key
-
   </div>
 </body>
 `;
@@ -798,22 +718,6 @@ exports[`installing update using tray when started when user checks for updates 
         </div>
       </div>
     </div>
-  </div>
-  <div
-    aria-atomic="true"
-    aria-live="assertive"
-    id="rbd-announcement-21"
-    style="position: absolute; width: 1px; height: 1px; margin: -1px; border: 0px; padding: 0px; overflow: hidden; clip-path: inset(100%);"
-  />
-  <div
-    id="rbd-hidden-text-21-hidden-text-21"
-    style="display: none;"
-  >
-    
-  Press space bar to start a drag.
-  When dragging you can use the arrow keys to move the item around and escape to cancel.
-  Some screen readers may require you to be in focus mode or to use your pass through key
-
   </div>
 </body>
 `;
@@ -1135,22 +1039,6 @@ exports[`installing update using tray when started when user checks for updates 
         </div>
       </div>
     </div>
-  </div>
-  <div
-    aria-atomic="true"
-    aria-live="assertive"
-    id="rbd-announcement-26"
-    style="position: absolute; width: 1px; height: 1px; margin: -1px; border: 0px; padding: 0px; overflow: hidden; clip-path: inset(100%);"
-  />
-  <div
-    id="rbd-hidden-text-26-hidden-text-26"
-    style="display: none;"
-  >
-    
-  Press space bar to start a drag.
-  When dragging you can use the arrow keys to move the item around and escape to cancel.
-  Some screen readers may require you to be in focus mode or to use your pass through key
-
   </div>
 </body>
 `;
@@ -1503,22 +1391,6 @@ Lens should restart automatically, if it doesn't please restart manually. Instal
       </div>
     </div>
   </div>
-  <div
-    aria-atomic="true"
-    aria-live="assertive"
-    id="rbd-announcement-31"
-    style="position: absolute; width: 1px; height: 1px; margin: -1px; border: 0px; padding: 0px; overflow: hidden; clip-path: inset(100%);"
-  />
-  <div
-    id="rbd-hidden-text-31-hidden-text-31"
-    style="display: none;"
-  >
-    
-  Press space bar to start a drag.
-  When dragging you can use the arrow keys to move the item around and escape to cancel.
-  Some screen readers may require you to be in focus mode or to use your pass through key
-
-  </div>
 </body>
 `;
 
@@ -1799,22 +1671,6 @@ exports[`installing update using tray when started when user checks for updates 
         </div>
       </div>
     </div>
-  </div>
-  <div
-    aria-atomic="true"
-    aria-live="assertive"
-    id="rbd-announcement-14"
-    style="position: absolute; width: 1px; height: 1px; margin: -1px; border: 0px; padding: 0px; overflow: hidden; clip-path: inset(100%);"
-  />
-  <div
-    id="rbd-hidden-text-14-hidden-text-14"
-    style="display: none;"
-  >
-    
-  Press space bar to start a drag.
-  When dragging you can use the arrow keys to move the item around and escape to cancel.
-  Some screen readers may require you to be in focus mode or to use your pass through key
-
   </div>
 </body>
 `;
