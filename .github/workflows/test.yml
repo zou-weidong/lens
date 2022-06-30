@@ -63,6 +63,8 @@ jobs:
 
       - run: make test
         name: Run tests
+        env:
+          NODE_OPTIONS: "--max-old-space-size=8192"
 
       - run: make test-extensions
         name: Run In-tree Extension tests
