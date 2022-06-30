@@ -154,9 +154,9 @@ exports[`installing update when started renders 1`] = `
           >
             <span
               class="icon"
-              data-icon-name="play_arrow"
+              data-icon-name="arrow_left"
             >
-              play_arrow
+              arrow_left
             </span>
           </i>
           <div
@@ -175,9 +175,9 @@ exports[`installing update when started renders 1`] = `
           >
             <span
               class="icon"
-              data-icon-name="play_arrow"
+              data-icon-name="arrow_right"
             >
-              play_arrow
+              arrow_right
             </span>
           </i>
         </div>
@@ -354,9 +354,9 @@ exports[`installing update when started when user checks for updates renders 1`]
           >
             <span
               class="icon"
-              data-icon-name="play_arrow"
+              data-icon-name="arrow_left"
             >
-              play_arrow
+              arrow_left
             </span>
           </i>
           <div
@@ -375,9 +375,9 @@ exports[`installing update when started when user checks for updates renders 1`]
           >
             <span
               class="icon"
-              data-icon-name="play_arrow"
+              data-icon-name="arrow_right"
             >
-              play_arrow
+              arrow_right
             </span>
           </i>
         </div>
@@ -554,9 +554,9 @@ exports[`installing update when started when user checks for updates when new up
           >
             <span
               class="icon"
-              data-icon-name="play_arrow"
+              data-icon-name="arrow_left"
             >
-              play_arrow
+              arrow_left
             </span>
           </i>
           <div
@@ -575,9 +575,9 @@ exports[`installing update when started when user checks for updates when new up
           >
             <span
               class="icon"
-              data-icon-name="play_arrow"
+              data-icon-name="arrow_right"
             >
-              play_arrow
+              arrow_right
             </span>
           </i>
         </div>
@@ -772,9 +772,9 @@ exports[`installing update when started when user checks for updates when new up
           >
             <span
               class="icon"
-              data-icon-name="play_arrow"
+              data-icon-name="arrow_left"
             >
-              play_arrow
+              arrow_left
             </span>
           </i>
           <div
@@ -793,9 +793,9 @@ exports[`installing update when started when user checks for updates when new up
           >
             <span
               class="icon"
-              data-icon-name="play_arrow"
+              data-icon-name="arrow_right"
             >
-              play_arrow
+              arrow_right
             </span>
           </i>
         </div>
@@ -990,9 +990,9 @@ exports[`installing update when started when user checks for updates when new up
           >
             <span
               class="icon"
-              data-icon-name="play_arrow"
+              data-icon-name="arrow_left"
             >
-              play_arrow
+              arrow_left
             </span>
           </i>
           <div
@@ -1011,9 +1011,9 @@ exports[`installing update when started when user checks for updates when new up
           >
             <span
               class="icon"
-              data-icon-name="play_arrow"
+              data-icon-name="arrow_right"
             >
-              play_arrow
+              arrow_right
             </span>
           </i>
         </div>
@@ -1190,9 +1190,9 @@ exports[`installing update when started when user checks for updates when no new
           >
             <span
               class="icon"
-              data-icon-name="play_arrow"
+              data-icon-name="arrow_left"
             >
-              play_arrow
+              arrow_left
             </span>
           </i>
           <div
@@ -1211,9 +1211,9 @@ exports[`installing update when started when user checks for updates when no new
           >
             <span
               class="icon"
-              data-icon-name="play_arrow"
+              data-icon-name="arrow_right"
             >
-              play_arrow
+              arrow_right
             </span>
           </i>
         </div>

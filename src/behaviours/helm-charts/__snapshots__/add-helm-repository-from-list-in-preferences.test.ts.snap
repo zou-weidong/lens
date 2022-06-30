@@ -530,9 +530,9 @@ exports[`add helm repository from list in preferences when navigating to prefere
           >
             <span
               class="icon"
-              data-icon-name="play_arrow"
+              data-icon-name="arrow_left"
             >
-              play_arrow
+              arrow_left
             </span>
           </i>
           <div
@@ -551,9 +551,9 @@ exports[`add helm repository from list in preferences when navigating to prefere
           >
             <span
               class="icon"
-              data-icon-name="play_arrow"
+              data-icon-name="arrow_right"
             >
-              play_arrow
+              arrow_right
             </span>
           </i>
         </div>
@@ -1113,9 +1113,9 @@ exports[`add helm repository from list in preferences when navigating to prefere
           >
             <span
               class="icon"
-              data-icon-name="play_arrow"
+              data-icon-name="arrow_left"
             >
-              play_arrow
+              arrow_left
             </span>
           </i>
           <div
@@ -1134,9 +1134,9 @@ exports[`add helm repository from list in preferences when navigating to prefere
           >
             <span
               class="icon"
-              data-icon-name="play_arrow"
+              data-icon-name="arrow_right"
             >
-              play_arrow
+              arrow_right
             </span>
           </i>
         </div>
@@ -1698,9 +1698,9 @@ exports[`add helm repository from list in preferences when navigating to prefere
           >
             <span
               class="icon"
-              data-icon-name="play_arrow"
+              data-icon-name="arrow_left"
             >
-              play_arrow
+              arrow_left
             </span>
           </i>
           <div
@@ -1719,9 +1719,9 @@ exports[`add helm repository from list in preferences when navigating to prefere
           >
             <span
               class="icon"
-              data-icon-name="play_arrow"
+              data-icon-name="arrow_right"
             >
-              play_arrow
+              arrow_right
             </span>
           </i>
         </div>
@@ -2332,9 +2332,9 @@ exports[`add helm repository from list in preferences when navigating to prefere
           >
             <span
               class="icon"
-              data-icon-name="play_arrow"
+              data-icon-name="arrow_left"
             >
-              play_arrow
+              arrow_left
             </span>
           </i>
           <div
@@ -2353,9 +2353,9 @@ exports[`add helm repository from list in preferences when navigating to prefere
           >
             <span
               class="icon"
-              data-icon-name="play_arrow"
+              data-icon-name="arrow_right"
             >
-              play_arrow
+              arrow_right
             </span>
           </i>
         </div>
@@ -2915,9 +2915,9 @@ exports[`add helm repository from list in preferences when navigating to prefere
           >
             <span
               class="icon"
-              data-icon-name="play_arrow"
+              data-icon-name="arrow_left"
             >
-              play_arrow
+              arrow_left
             </span>
           </i>
           <div
@@ -2936,9 +2936,9 @@ exports[`add helm repository from list in preferences when navigating to prefere
           >
             <span
               class="icon"
-              data-icon-name="play_arrow"
+              data-icon-name="arrow_right"
             >
-              play_arrow
+              arrow_right
             </span>
           </i>
         </div>
@@ -3491,9 +3491,9 @@ exports[`add helm repository from list in preferences when navigating to prefere
           >
             <span
               class="icon"
-              data-icon-name="play_arrow"
+              data-icon-name="arrow_left"
             >
-              play_arrow
+              arrow_left
             </span>
           </i>
           <div
@@ -3512,9 +3512,9 @@ exports[`add helm repository from list in preferences when navigating to prefere
           >
             <span
               class="icon"
-              data-icon-name="play_arrow"
+              data-icon-name="arrow_right"
             >
-              play_arrow
+              arrow_right
             </span>
           </i>
         </div>
@@ -4104,9 +4104,9 @@ exports[`add helm repository from list in preferences when navigating to prefere
           >
             <span
               class="icon"
-              data-icon-name="play_arrow"
+              data-icon-name="arrow_left"
             >
-              play_arrow
+              arrow_left
             </span>
           </i>
           <div
@@ -4125,9 +4125,9 @@ exports[`add helm repository from list in preferences when navigating to prefere
           >
             <span
               class="icon"
-              data-icon-name="play_arrow"
+              data-icon-name="arrow_right"
             >
-              play_arrow
+              arrow_right
             </span>
           </i>
         </div>
@@ -4719,9 +4719,9 @@ exports[`add helm repository from list in preferences when navigating to prefere
           >
             <span
               class="icon"
-              data-icon-name="play_arrow"
+              data-icon-name="arrow_left"
             >
-              play_arrow
+              arrow_left
             </span>
           </i>
           <div
@@ -4740,9 +4740,9 @@ exports[`add helm repository from list in preferences when navigating to prefere
           >
             <span
               class="icon"
-              data-icon-name="play_arrow"
+              data-icon-name="arrow_right"
             >
-              play_arrow
+              arrow_right
             </span>
           </i>
         </div>
@@ -5393,9 +5393,9 @@ exports[`add helm repository from list in preferences when navigating to prefere
           >
             <span
               class="icon"
-              data-icon-name="play_arrow"
+              data-icon-name="arrow_left"
             >
-              play_arrow
+              arrow_left
             </span>
           </i>
           <div
@@ -5414,9 +5414,9 @@ exports[`add helm repository from list in preferences when navigating to prefere
           >
             <span
               class="icon"
-              data-icon-name="play_arrow"
+              data-icon-name="arrow_right"
             >
-              play_arrow
+              arrow_right
             </span>
           </i>
         </div>
@@ -5969,9 +5969,9 @@ exports[`add helm repository from list in preferences when navigating to prefere
           >
             <span
               class="icon"
-              data-icon-name="play_arrow"
+              data-icon-name="arrow_left"
             >
-              play_arrow
+              arrow_left
             </span>
           </i>
           <div
@@ -5990,9 +5990,9 @@ exports[`add helm repository from list in preferences when navigating to prefere
           >
             <span
               class="icon"
-              data-icon-name="play_arrow"
+              data-icon-name="arrow_right"
             >
-              play_arrow
+              arrow_right
             </span>
           </i>
         </div>

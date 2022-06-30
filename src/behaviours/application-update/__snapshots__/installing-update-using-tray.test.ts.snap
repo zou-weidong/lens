@@ -154,9 +154,9 @@ exports[`installing update using tray when started renders 1`] = `
           >
             <span
               class="icon"
-              data-icon-name="play_arrow"
+              data-icon-name="arrow_left"
             >
-              play_arrow
+              arrow_left
             </span>
           </i>
           <div
@@ -175,9 +175,9 @@ exports[`installing update using tray when started renders 1`] = `
           >
             <span
               class="icon"
-              data-icon-name="play_arrow"
+              data-icon-name="arrow_right"
             >
-              play_arrow
+              arrow_right
             </span>
           </i>
         </div>
@@ -354,9 +354,9 @@ exports[`installing update using tray when started when user checks for updates 
           >
             <span
               class="icon"
-              data-icon-name="play_arrow"
+              data-icon-name="arrow_left"
             >
-              play_arrow
+              arrow_left
             </span>
           </i>
           <div
@@ -375,9 +375,9 @@ exports[`installing update using tray when started when user checks for updates 
           >
             <span
               class="icon"
-              data-icon-name="play_arrow"
+              data-icon-name="arrow_right"
             >
-              play_arrow
+              arrow_right
             </span>
           </i>
         </div>
@@ -595,9 +595,9 @@ exports[`installing update using tray when started when user checks for updates 
           >
             <span
               class="icon"
-              data-icon-name="play_arrow"
+              data-icon-name="arrow_left"
             >
-              play_arrow
+              arrow_left
             </span>
           </i>
           <div
@@ -616,9 +616,9 @@ exports[`installing update using tray when started when user checks for updates 
           >
             <span
               class="icon"
-              data-icon-name="play_arrow"
+              data-icon-name="arrow_right"
             >
-              play_arrow
+              arrow_right
             </span>
           </i>
         </div>
@@ -894,9 +894,9 @@ exports[`installing update using tray when started when user checks for updates 
           >
             <span
               class="icon"
-              data-icon-name="play_arrow"
+              data-icon-name="arrow_left"
             >
-              play_arrow
+              arrow_left
             </span>
           </i>
           <div
@@ -915,9 +915,9 @@ exports[`installing update using tray when started when user checks for updates 
           >
             <span
               class="icon"
-              data-icon-name="play_arrow"
+              data-icon-name="arrow_right"
             >
-              play_arrow
+              arrow_right
             </span>
           </i>
         </div>
@@ -1233,9 +1233,9 @@ exports[`installing update using tray when started when user checks for updates 
           >
             <span
               class="icon"
-              data-icon-name="play_arrow"
+              data-icon-name="arrow_left"
             >
-              play_arrow
+              arrow_left
             </span>
           </i>
           <div
@@ -1254,9 +1254,9 @@ exports[`installing update using tray when started when user checks for updates 
           >
             <span
               class="icon"
-              data-icon-name="play_arrow"
+              data-icon-name="arrow_right"
             >
-              play_arrow
+              arrow_right
             </span>
           </i>
         </div>
@@ -1514,9 +1514,9 @@ exports[`installing update using tray when started when user checks for updates 
           >
             <span
               class="icon"
-              data-icon-name="play_arrow"
+              data-icon-name="arrow_left"
             >
-              play_arrow
+              arrow_left
             </span>
           </i>
           <div
@@ -1535,9 +1535,9 @@ exports[`installing update using tray when started when user checks for updates 
           >
             <span
               class="icon"
-              data-icon-name="play_arrow"
+              data-icon-name="arrow_right"
             >
-              play_arrow
+              arrow_right
             </span>
           </i>
         </div>

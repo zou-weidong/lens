@@ -153,9 +153,9 @@ exports[`navigate to extension page renders 1`] = `
         >
           <span
             class="icon"
-            data-icon-name="play_arrow"
+            data-icon-name="arrow_left"
           >
-            play_arrow
+            arrow_left
           </span>
         </i>
         <div
@@ -174,9 +174,9 @@ exports[`navigate to extension page renders 1`] = `
         >
           <span
             class="icon"
-            data-icon-name="play_arrow"
+            data-icon-name="arrow_right"
           >
-            play_arrow
+            arrow_right
           </span>
         </i>
       </div>
@@ -271,9 +271,9 @@ exports[`navigate to extension page when extension navigates to child route rend
         >
           <span
             class="icon"
-            data-icon-name="play_arrow"
+            data-icon-name="arrow_left"
           >
-            play_arrow
+            arrow_left
           </span>
         </i>
         <div
@@ -292,9 +292,9 @@ exports[`navigate to extension page when extension navigates to child route rend
         >
           <span
             class="icon"
-            data-icon-name="play_arrow"
+            data-icon-name="arrow_right"
           >
-            play_arrow
+            arrow_right
           </span>
         </i>
       </div>
@@ -405,9 +405,9 @@ exports[`navigate to extension page when extension navigates to route with param
         >
           <span
             class="icon"
-            data-icon-name="play_arrow"
+            data-icon-name="arrow_left"
           >
-            play_arrow
+            arrow_left
           </span>
         </i>
         <div
@@ -426,9 +426,9 @@ exports[`navigate to extension page when extension navigates to route with param
         >
           <span
             class="icon"
-            data-icon-name="play_arrow"
+            data-icon-name="arrow_right"
           >
-            play_arrow
+            arrow_right
           </span>
         </i>
       </div>
@@ -539,9 +539,9 @@ exports[`navigate to extension page when extension navigates to route without pa
         >
           <span
             class="icon"
-            data-icon-name="play_arrow"
+            data-icon-name="arrow_left"
           >
-            play_arrow
+            arrow_left
           </span>
         </i>
         <div
@@ -560,9 +560,9 @@ exports[`navigate to extension page when extension navigates to route without pa
         >
           <span
             class="icon"
-            data-icon-name="play_arrow"
+            data-icon-name="arrow_right"
           >
-            play_arrow
+            arrow_right
           </span>
         </i>
       </div>
@@ -673,9 +673,9 @@ exports[`navigate to extension page when extension navigates to route without pa
         >
           <span
             class="icon"
-            data-icon-name="play_arrow"
+            data-icon-name="arrow_left"
           >
-            play_arrow
+            arrow_left
           </span>
         </i>
         <div
@@ -694,9 +694,9 @@ exports[`navigate to extension page when extension navigates to route without pa
         >
           <span
             class="icon"
-            data-icon-name="play_arrow"
+            data-icon-name="arrow_right"
           >
-            play_arrow
+            arrow_right
           </span>
         </i>
       </div>

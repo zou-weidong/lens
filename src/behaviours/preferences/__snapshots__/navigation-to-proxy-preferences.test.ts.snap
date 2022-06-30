@@ -591,9 +591,9 @@ exports[`preferences - navigation to proxy preferences given in preferences, whe
         >
           <span
             class="icon"
-            data-icon-name="play_arrow"
+            data-icon-name="arrow_left"
           >
-            play_arrow
+            arrow_left
           </span>
         </i>
         <div
@@ -612,9 +612,9 @@ exports[`preferences - navigation to proxy preferences given in preferences, whe
         >
           <span
             class="icon"
-            data-icon-name="play_arrow"
+            data-icon-name="arrow_right"
           >
-            play_arrow
+            arrow_right
           </span>
         </i>
       </div>
@@ -903,9 +903,9 @@ exports[`preferences - navigation to proxy preferences given in preferences, whe
         >
           <span
             class="icon"
-            data-icon-name="play_arrow"
+            data-icon-name="arrow_left"
           >
-            play_arrow
+            arrow_left
           </span>
         </i>
         <div
@@ -924,9 +924,9 @@ exports[`preferences - navigation to proxy preferences given in preferences, whe
         >
           <span
             class="icon"
-            data-icon-name="play_arrow"
+            data-icon-name="arrow_right"
           >
-            play_arrow
+            arrow_right
           </span>
         </i>
       </div>
